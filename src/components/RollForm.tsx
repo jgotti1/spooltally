@@ -100,11 +100,11 @@ export function RollForm({ roll }: RollFormProps) {
     if (!roll && level === "full") {
       const match = existingRolls.find(
         (r) =>
-          r.level === "full" &&
           r.brand === brand &&
           r.material === material &&
           r.color === color &&
-          r.sizeGrams === sizeGrams,
+          r.sizeGrams === sizeGrams &&
+          (r.level === "full" || r.remainingGrams === 0),
       );
       if (match) {
         setDuplicateMatch(match);
@@ -134,6 +134,31 @@ export function RollForm({ roll }: RollFormProps) {
   async function handleAddSeparately() {
     setDuplicateMatch(null);
     await performSave();
+  }
+
+  async function handleReplaceEntry() {
+    if (!duplicateMatch) return;
+    setError("");
+    setSaving(true);
+    try {
+      await updateRoll(duplicateMatch.id, {
+        brand,
+        material,
+        color,
+        sizeGrams,
+        price: Number(price) || 0,
+        level,
+        quantity: Math.max(1, quantity),
+        excludeFromReorder,
+      });
+      setSaving(false);
+      setDuplicateMatch(null);
+      resetForm();
+      router.push("/inventory");
+    } catch {
+      setError("Couldn't update that roll. Please try again.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -256,40 +281,80 @@ export function RollForm({ roll }: RollFormProps) {
 
       {duplicateMatch ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
-          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            You already have {duplicateMatch.quantity} full {sizeGrams}g roll{duplicateMatch.quantity === 1 ? "" : "s"} of{" "}
-            {brand} {color} {material}.
-          </p>
-          <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-300/80">
-            Add {Math.max(1, quantity)} more to that entry instead of creating a duplicate, or add this as a separate
-            roll anyway.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={handleMergeIntoExisting}
-              className="flex h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saving ? "Updating…" : `Add to existing (→ ${duplicateMatch.quantity + Math.max(1, quantity)} total)`}
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={handleAddSeparately}
-              className="flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-xs font-semibold text-amber-800 transition-colors disabled:cursor-not-allowed disabled:opacity-70 dark:border-amber-500/30 dark:bg-transparent dark:text-amber-200"
-            >
-              Add as separate roll
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => setDuplicateMatch(null)}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70 dark:text-amber-300 dark:hover:bg-amber-500/10"
-            >
-              Cancel
-            </button>
-          </div>
+          {duplicateMatch.level === "full" ? (
+            <>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                You already have {duplicateMatch.quantity} full {sizeGrams}g roll
+                {duplicateMatch.quantity === 1 ? "" : "s"} of {brand} {color} {material}.
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-300/80">
+                Add {Math.max(1, quantity)} more to that entry instead of creating a duplicate, or add this as a
+                separate roll anyway.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleMergeIntoExisting}
+                  className="flex h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? "Updating…" : `Add to existing (→ ${duplicateMatch.quantity + Math.max(1, quantity)} total)`}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleAddSeparately}
+                  className="flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-xs font-semibold text-amber-800 transition-colors disabled:cursor-not-allowed disabled:opacity-70 dark:border-amber-500/30 dark:bg-transparent dark:text-amber-200"
+                >
+                  Add as separate roll
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setDuplicateMatch(null)}
+                  className="flex h-10 items-center justify-center rounded-lg px-4 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                You have a 0g entry for {brand} {color} {material} (marked needs reorder).
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-300/80">
+                Replace that entry with this roll instead of creating a duplicate, or add this as a separate roll
+                anyway.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleReplaceEntry}
+                  className="flex h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? "Updating…" : "Replace that entry"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleAddSeparately}
+                  className="flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-xs font-semibold text-amber-800 transition-colors disabled:cursor-not-allowed disabled:opacity-70 dark:border-amber-500/30 dark:bg-transparent dark:text-amber-200"
+                >
+                  Add as separate roll
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setDuplicateMatch(null)}
+                  className="flex h-10 items-center justify-center rounded-lg px-4 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="flex gap-3">
