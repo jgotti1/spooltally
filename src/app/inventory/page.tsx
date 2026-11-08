@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
-import { addRoll, deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
@@ -104,6 +104,8 @@ export default function InventoryPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [quickAdding, setQuickAdding] = useState(false);
+  const [selectedRollId, setSelectedRollId] = useState<string | null>(null);
+  const [quickAddWarning, setQuickAddWarning] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -178,33 +180,30 @@ export default function InventoryPage() {
     }
   }
 
-  async function handleQuickAddLastRoll() {
-    if (!user || rolls.length === 0) return;
-    const last = rolls[0];
+  function handleSelectRoll(rollId: string) {
+    setSelectedRollId(rollId);
+    setQuickAddWarning("");
+  }
+
+  async function handleQuickAdd() {
+    if (!selectedRollId) {
+      setQuickAddWarning("Select a roll from the list first, then click Quick add.");
+      return;
+    }
+    const roll = rolls.find((r) => r.id === selectedRollId);
+    if (!roll) {
+      setSelectedRollId(null);
+      setQuickAddWarning("That roll no longer exists. Select another.");
+      return;
+    }
+    if (roll.level !== "full") {
+      setQuickAddWarning("Quick add only works on full rolls. Edit this roll to change its quantity.");
+      return;
+    }
+    setQuickAddWarning("");
     setQuickAdding(true);
     try {
-      const match = rolls.find(
-        (r) =>
-          r.level === "full" &&
-          r.brand === last.brand &&
-          r.material === last.material &&
-          r.color === last.color &&
-          r.sizeGrams === last.sizeGrams,
-      );
-      if (match) {
-        await incrementRollQuantity(match.id, 1, match.sizeGrams);
-      } else {
-        await addRoll(user.uid, {
-          brand: last.brand,
-          material: last.material,
-          color: last.color,
-          sizeGrams: last.sizeGrams,
-          price: last.price,
-          level: "full",
-          quantity: 1,
-          excludeFromReorder: false,
-        });
-      }
+      await incrementRollQuantity(roll.id, 1, roll.sizeGrams);
     } catch (error) {
       setRollsError(error instanceof Error ? error.message : "Couldn't quick-add a roll. Please try again.");
     } finally {
@@ -235,9 +234,9 @@ export default function InventoryPage() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={handleQuickAddLastRoll}
+              onClick={handleQuickAdd}
               disabled={rolls.length === 0 || quickAdding}
-              title="Duplicate your most recently added roll, or add +1 if a matching full roll already exists"
+              title="Select a full roll below, then click here to add +1 to its quantity"
               className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
             >
               <DuplicateIcon />
@@ -336,6 +335,12 @@ export default function InventoryPage() {
           </button>
         </div>
 
+        {quickAddWarning && (
+          <p className="mt-6 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+            {quickAddWarning}
+          </p>
+        )}
+
         {rollsError && (
           <p className="mt-6 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
             {rollsError}
@@ -370,13 +375,24 @@ export default function InventoryPage() {
                     className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${
-                      status === "reorder"
-                        ? "bg-rose-50/60 dark:bg-rose-500/[0.06]"
-                        : status === "warn"
-                          ? "bg-amber-50/60 dark:bg-amber-500/[0.06]"
-                          : ""
+                      selectedRollId === roll.id
+                        ? "bg-blue-50/70 ring-1 ring-inset ring-blue-300 dark:bg-blue-500/[0.08] dark:ring-blue-400/40"
+                        : status === "reorder"
+                          ? "bg-rose-50/60 dark:bg-rose-500/[0.06]"
+                          : status === "warn"
+                            ? "bg-amber-50/60 dark:bg-amber-500/[0.06]"
+                            : ""
                     }`}
                   >
+                    <input
+                      type="radio"
+                      name="quickAddSelect"
+                      checked={selectedRollId === roll.id}
+                      onChange={() => handleSelectRoll(roll.id)}
+                      aria-label="Select this roll for quick add"
+                      title="Select for quick add"
+                      className="h-4 w-4 shrink-0 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
+                    />
                     <div className="min-w-[160px] flex-1">
                       <p className="font-semibold text-slate-900 dark:text-white">
                         {roll.color} {roll.material}
@@ -452,20 +468,33 @@ export default function InventoryPage() {
                 <div
                   key={roll.id}
                   className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
-                    status === "reorder"
-                      ? "border-rose-300 dark:border-rose-500/40"
-                      : status === "warn"
-                        ? "border-amber-300 dark:border-amber-500/40"
-                        : "border-slate-200 dark:border-white/10"
+                    selectedRollId === roll.id
+                      ? "border-blue-400 ring-1 ring-inset ring-blue-300 dark:border-blue-400/60 dark:ring-blue-400/40"
+                      : status === "reorder"
+                        ? "border-rose-300 dark:border-rose-500/40"
+                        : status === "warn"
+                          ? "border-amber-300 dark:border-amber-500/40"
+                          : "border-slate-200 dark:border-white/10"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{roll.color}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {roll.brand} · {roll.material}
-                      </p>
-                    </div>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="quickAddSelect"
+                        checked={selectedRollId === roll.id}
+                        onChange={() => handleSelectRoll(roll.id)}
+                        aria-label="Select this roll for quick add"
+                        title="Select for quick add"
+                        className="mt-1 h-4 w-4 shrink-0 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{roll.color}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {roll.brand} · {roll.material}
+                        </p>
+                      </div>
+                    </label>
                     <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                       {ROLL_LEVEL_LABELS[roll.level]}
                       {roll.level === "full" && roll.quantity > 1 ? ` ×${roll.quantity}` : ""}
