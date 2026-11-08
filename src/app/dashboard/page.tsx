@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { groupLowRolls } from "@/lib/inventory-status";
+import { subscribeToProjects, type Project } from "@/lib/projects";
 
 function SpoolIcon() {
   return (
@@ -57,6 +58,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [rolls, setRolls] = useState<Roll[]>([]);
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -80,8 +82,20 @@ export default function DashboardPage() {
     return subscribeToRolls(user.uid, setRolls);
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToProjects(user.uid, setProjects);
+  }, [user]);
+
   const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
   const reorderCount = useMemo(() => groupLowRolls(rolls, settings).length, [rolls, settings]);
+  const activeProjectCount = useMemo(() => projects.filter((p) => p.status === "Active").length, [projects]);
+  const projectsNeedingReorderCount = useMemo(() => {
+    const rollsById = new Map(rolls.map((r) => [r.id, r]));
+    return projects.filter((p) =>
+      p.colorsNeeded.some((need) => need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0)),
+    ).length;
+  }, [projects, rolls]);
 
   if (loading || !user) {
     return (
@@ -175,15 +189,39 @@ export default function DashboardPage() {
               >
                 {reorderCount}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Needs reorder</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Rolls needing reorder</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
+                {activeProjectCount}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Active projects</p>
+            </div>
+            <div>
+              <p
+                className={`text-2xl font-semibold tracking-[-0.02em] ${
+                  projectsNeedingReorderCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-950 dark:text-white"
+                }`}
+              >
+                {projectsNeedingReorderCount}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Projects missing filament</p>
             </div>
           </div>
-          <Link
-            href="/inventory"
-            className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
-          >
-            View inventory →
-          </Link>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+            <Link
+              href="/inventory"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              View inventory →
+            </Link>
+            <Link
+              href="/projects"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              View projects →
+            </Link>
+          </div>
         </div>
       </div>
     </main>
