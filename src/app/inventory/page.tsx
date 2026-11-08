@@ -10,7 +10,7 @@ import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
 import { deleteRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
-import { groupLowRolls, statusByKey } from "@/lib/inventory-status";
+import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
 import { SORT_OPTIONS, sortRolls, type SortOption } from "@/lib/inventory-sort";
 
 function PlusIcon() {
@@ -267,7 +267,7 @@ export default function InventoryPage() {
           ) : viewMode === "list" ? (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
               {sorted.map((roll, i) => {
-                const status = stockStatusByKey.get(`${roll.material}__${roll.color}`);
+                const status = stockStatusByKey.get(groupKey(roll));
                 return (
                   <div
                     key={roll.id}
@@ -332,7 +332,7 @@ export default function InventoryPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sorted.map((roll) => {
-                const status = stockStatusByKey.get(`${roll.material}__${roll.color}`);
+                const status = stockStatusByKey.get(groupKey(roll));
                 return (
                 <div
                   key={roll.id}

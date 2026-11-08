@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
@@ -8,7 +8,15 @@ import { BackLink } from "@/components/BackLink";
 import { RollForm } from "@/components/RollForm";
 import { getRoll, type Roll } from "@/lib/rolls";
 
-export default function EditRollPage() {
+function LoadingScreen() {
+  return (
+    <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+    </main>
+  );
+}
+
+function EditRollPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -40,11 +48,7 @@ export default function EditRollPage() {
   }, [params.id, user]);
 
   if (loading || !user || (roll === undefined && !notFound)) {
-    return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
-      </main>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -66,5 +70,13 @@ export default function EditRollPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function EditRollPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <EditRollPageInner />
+    </Suspense>
   );
 }

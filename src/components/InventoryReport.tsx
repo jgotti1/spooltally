@@ -122,7 +122,7 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
                 className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-sm dark:border-white/10"
               >
                 <span className="text-slate-700 dark:text-slate-200">
-                  {g.color} {g.material}
+                  {g.brand} {g.color} {g.material}
                   <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
                     ~{g.rollsEquivalent.toFixed(2)} rolls ({Math.round(g.totalGrams)} g)
                   </span>
