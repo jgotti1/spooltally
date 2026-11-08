@@ -1,0 +1,616 @@
+"use client";
+
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { ComboSelect } from "@/components/ComboSelect";
+import { CloseLink } from "@/components/CloseLink";
+import { COLOR_OPTIONS, MATERIAL_OPTIONS } from "@/lib/inventory-constants";
+import { subscribeToRolls, type Roll } from "@/lib/rolls";
+import { subscribeToProjects, addProject, updateProject, type Project } from "@/lib/projects";
+import { addEstimate, updateEstimate, type Estimate, type EstimateColorUsage } from "@/lib/estimates";
+import {
+  getEstimatorSettings,
+  saveEstimatorSettings,
+  DEFAULT_ESTIMATOR_SETTINGS,
+  type EstimatorSettings,
+} from "@/lib/estimator-settings";
+import type { SalesChannelId } from "@/lib/estimator-constants";
+import { calcCostBreakdown, calcSuggestedPrice, costPerGram } from "@/lib/estimator-pricing";
+
+type EstimatorFormProps = {
+  estimate?: Estimate;
+};
+
+function emptyColorUsage(): EstimateColorUsage {
+  return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], grams: 0, rollId: null };
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
+      <path
+        d="M4.5 6h11M8 6V4.5h4V6m-6 0 .6 9.2a1 1 0 0 0 1 .8h4.8a1 1 0 0 0 1-.8L14 6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M10 3v1.6M10 15.4V17M3 10h1.6M15.4 10H17M5.1 5.1l1.1 1.1M13.8 13.8l1.1 1.1M14.9 5.1l-1.1 1.1M6.2 13.8l-1.1 1.1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+const money = (n: number) => `$${n.toFixed(2)}`;
+
+export function EstimatorForm({ estimate }: EstimatorFormProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const [name, setName] = useState(estimate?.name ?? "");
+  const [colorsUsed, setColorsUsed] = useState<EstimateColorUsage[]>(
+    estimate?.colorsUsed && estimate.colorsUsed.length > 0 ? estimate.colorsUsed : [emptyColorUsage()],
+  );
+  const [printHours, setPrintHours] = useState(estimate ? String(estimate.printHours) : "");
+  const [quantity, setQuantity] = useState(estimate?.quantity ?? 1);
+  const [channelId, setChannelId] = useState<SalesChannelId>(estimate?.channelId ?? "etsy");
+  const [linkedProjectId, setLinkedProjectId] = useState<string | null>(estimate?.projectId ?? null);
+  const [pullFromProjectId, setPullFromProjectId] = useState("");
+
+  const [rolls, setRolls] = useState<Roll[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToRolls(user.uid, setRolls);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToProjects(user.uid, setProjects);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    getEstimatorSettings(user.uid).then((next) => {
+      if (active) setSettings(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const rollsById = useMemo(() => new Map(rolls.map((r) => [r.id, r])), [rolls]);
+
+  function updateColorUsage(index: number, patch: Partial<EstimateColorUsage>) {
+    setColorsUsed((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function addColorUsageRow() {
+    setColorsUsed((rows) => [...rows, emptyColorUsage()]);
+  }
+
+  function removeColorUsageRow(index: number) {
+    setColorsUsed((rows) => rows.filter((_, i) => i !== index));
+  }
+
+  function handlePullFromProject(projectId: string) {
+    setPullFromProjectId(projectId);
+    if (!projectId) return;
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return;
+    setLinkedProjectId(project.id);
+    if (!name.trim()) setName(project.name);
+    if (project.colorsNeeded.length > 0) {
+      setColorsUsed(
+        project.colorsNeeded.map((need) => ({
+          material: need.material,
+          color: need.color,
+          grams: need.gramsNeeded ?? 0,
+          rollId: need.rollIds[0] ?? null,
+        })),
+      );
+    }
+  }
+
+  const breakdown = useMemo(
+    () => calcCostBreakdown(colorsUsed, rollsById, Number(printHours) || 0, quantity, settings),
+    [colorsUsed, rollsById, printHours, quantity, settings],
+  );
+
+  const channelPrices = useMemo(
+    () => settings.channels.map((c) => ({ channel: c, price: calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, c) })),
+    [settings, breakdown],
+  );
+
+  const selectedChannel = settings.channels.find((c) => c.id === channelId) ?? settings.channels[0];
+  const suggestedPrice = selectedChannel ? calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, selectedChannel) : 0;
+
+  async function handleSaveSettings() {
+    if (!user) return;
+    setSavingSettings(true);
+    try {
+      await saveEstimatorSettings(user.uid, settings);
+      setEditingSettings(false);
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  function updateChannel(id: SalesChannelId, patch: Partial<typeof settings.channels[number]>) {
+    setSettings((s) => ({
+      ...s,
+      channels: s.channels.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setError("");
+    setNotice("");
+    if (!name.trim()) {
+      setError("Give this estimate a name.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const input = {
+        name: name.trim(),
+        colorsUsed,
+        printHours: Number(printHours) || 0,
+        quantity: Math.max(1, quantity),
+        channelId,
+        projectId: linkedProjectId,
+      };
+      if (estimate) {
+        await updateEstimate(estimate.id, input);
+      } else {
+        const id = await addEstimate(user.uid, input);
+        router.push(`/estimator/${id}/edit`);
+        return;
+      }
+      setNotice("Estimate saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong saving this estimate. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveAsProject() {
+    if (!user) return;
+    setError("");
+    setNotice("");
+    setSavingProject(true);
+    try {
+      let estimateId = estimate?.id ?? null;
+      const input = {
+        name: name.trim() || "Untitled estimate",
+        colorsUsed,
+        printHours: Number(printHours) || 0,
+        quantity: Math.max(1, quantity),
+        channelId,
+        projectId: linkedProjectId,
+      };
+      if (!estimateId) {
+        estimateId = await addEstimate(user.uid, input);
+      } else {
+        await updateEstimate(estimateId, input);
+      }
+
+      const projectInput = {
+        name: name.trim() || "Untitled project",
+        status: "Active" as const,
+        colorsNeeded: colorsUsed.map((c) => ({
+          material: c.material,
+          color: c.color,
+          gramsNeeded: c.grams || null,
+          rollIds: c.rollId ? [c.rollId] : [],
+        })),
+        estimateId,
+      };
+
+      if (linkedProjectId) {
+        await updateProject(linkedProjectId, projectInput);
+      } else {
+        const projectId = await addProject(user.uid, projectInput);
+        setLinkedProjectId(projectId);
+        await updateEstimate(estimateId, { ...input, projectId });
+      }
+      setNotice(linkedProjectId ? "Project updated with this estimate." : "Saved as a new project.");
+      if (!estimate) router.push(`/estimator/${estimateId}/edit`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save as a project. Please try again.");
+    } finally {
+      setSavingProject(false);
+    }
+  }
+
+  const linkedProject = projects.find((p) => p.id === linkedProjectId);
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="flex justify-end">
+        <CloseLink href="/estimator" />
+      </div>
+
+      <div>
+        <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Estimate name
+        </label>
+        <input
+          id="name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Hex planter batch"
+          className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+        />
+      </div>
+
+      {linkedProject ? (
+        <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+          Linked to project &ldquo;{linkedProject.name}&rdquo;.
+        </p>
+      ) : (
+        !estimate && (
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Pull in from an existing project <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <select
+              value={pullFromProjectId}
+              onChange={(e) => handlePullFromProject(e.target.value)}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            >
+              <option value="">Start a new estimate</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )
+      )}
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Colors needed</label>
+          <button
+            type="button"
+            onClick={addColorUsageRow}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+          >
+            <PlusIcon />
+            Add color
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {colorsUsed.map((usage, index) => {
+            const matches = rolls.filter((r) => r.material === usage.material && r.color === usage.color);
+            return (
+              <div
+                key={index}
+                className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]"
+              >
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+                  <ComboSelect
+                    label="Material"
+                    value={usage.material}
+                    onChange={(v) => updateColorUsage(index, { material: v, rollId: null })}
+                    options={MATERIAL_OPTIONS}
+                    customPlaceholder="e.g. HIPS"
+                  />
+                  <ComboSelect
+                    label="Color"
+                    value={usage.color}
+                    onChange={(v) => updateColorUsage(index, { color: v, rollId: null })}
+                    options={COLOR_OPTIONS}
+                    customPlaceholder="e.g. Galaxy Purple"
+                  />
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Grams</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={usage.grams}
+                      onChange={(e) => updateColorUsage(index, { grams: Number(e.target.value) })}
+                      className="h-12 w-24 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                  </div>
+                  {colorsUsed.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeColorUsageRow(index)}
+                      aria-label="Remove color"
+                      className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                    >
+                      <TrashIcon />
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Roll to cost this from
+                  </label>
+                  {matches.length === 0 ? (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                      No matching roll in inventory — filament cost for this color will be $0 until you add one or pick
+                      another match.
+                    </p>
+                  ) : (
+                    <select
+                      value={usage.rollId ?? ""}
+                      onChange={(e) => updateColorUsage(index, { rollId: e.target.value || null })}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    >
+                      <option value="">Don&rsquo;t cost this color yet</option>
+                      {matches.map((roll) => (
+                        <option key={roll.id} value={roll.id}>
+                          {roll.brand} — {money(costPerGram(roll))}/g ({Math.round(roll.remainingGrams)}g on hand)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Print time (hours)
+          </label>
+          <input
+            id="printHours"
+            type="number"
+            min={0}
+            step="0.1"
+            value={printHours}
+            onChange={(e) => setPrintHours(e.target.value)}
+            placeholder="3.5"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          />
+        </div>
+        <div>
+          <label htmlFor="quantity" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Units per batch
+          </label>
+          <input
+            id="quantity"
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost breakdown (per unit)</p>
+          <button
+            type="button"
+            onClick={() => setEditingSettings((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <GearIcon />
+            Rates &amp; fees
+          </button>
+        </div>
+
+        {editingSettings && (
+          <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-3 dark:border-white/10 dark:bg-white/[0.03]">
+            {(
+              [
+                ["machineRatePerHour", "Machine rate ($/hr)"],
+                ["electricityRatePerHour", "Electricity ($/hr)"],
+                ["laborRatePerHour", "Labor rate ($/hr)"],
+                ["packagingCost", "Packaging ($)"],
+                ["shippingCost", "Shipping ($)"],
+                ["failureBufferPercent", "Failure buffer (%)"],
+                ["targetProfitPercent", "Target profit (%)"],
+              ] as const
+            ).map(([key, label]) => (
+              <div key={key}>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">{label}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={settings[key]}
+                  onChange={(e) => setSettings((s) => ({ ...s, [key]: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                />
+              </div>
+            ))}
+
+            <div className="sm:col-span-3">
+              <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Channel fees</p>
+              <div className="space-y-2">
+                {settings.channels.map((c) => (
+                  <div key={c.id} className="grid grid-cols-5 items-center gap-2 text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{c.label}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={c.percentFee}
+                      title="Platform fee %"
+                      onChange={(e) => updateChannel(c.id, { percentFee: Number(e.target.value) })}
+                      className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={c.fixedFee}
+                      title="Platform flat fee $"
+                      onChange={(e) => updateChannel(c.id, { fixedFee: Number(e.target.value) })}
+                      className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={c.processingPercent}
+                      title="Processing fee %"
+                      onChange={(e) => updateChannel(c.id, { processingPercent: Number(e.target.value) })}
+                      className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={c.processingFixed}
+                      title="Processing flat fee $"
+                      onChange={(e) => updateChannel(c.id, { processingFixed: Number(e.target.value) })}
+                      className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                  </div>
+                ))}
+                <div className="grid grid-cols-5 gap-2 text-[10px] text-slate-400">
+                  <span />
+                  <span>% fee</span>
+                  <span>$ fee</span>
+                  <span>% processing</span>
+                  <span>$ processing</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={savingSettings}
+                onClick={handleSaveSettings}
+                className="mt-3 h-9 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {savingSettings ? "Saving…" : "Save as default rates"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+          <div className="flex justify-between">
+            <span>Filament</span>
+            <span>{money(breakdown.filamentCost / Math.max(1, quantity))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Machine time</span>
+            <span>{money(breakdown.machineCost / Math.max(1, quantity))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Electricity</span>
+            <span>{money(breakdown.electricityCost / Math.max(1, quantity))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Labor</span>
+            <span>{money(breakdown.laborCost / Math.max(1, quantity))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Packaging + shipping</span>
+            <span>{money((breakdown.packagingCost + breakdown.shippingCost) / Math.max(1, quantity))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Failure buffer ({settings.failureBufferPercent}%)</span>
+            <span>{money(breakdown.failureBuffer / Math.max(1, quantity))}</span>
+          </div>
+          <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-sm font-semibold text-slate-900 dark:border-white/10 dark:text-white">
+            <span>Cost per unit</span>
+            <span>{money(breakdown.costPerUnit)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Sales channel</label>
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+          {channelPrices.map(({ channel, price }) => (
+            <button
+              key={channel.id}
+              type="button"
+              onClick={() => setChannelId(channel.id)}
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                channelId === channel.id
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-slate-700 hover:bg-slate-50 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:bg-white/[0.06]"
+              } ${channel.id !== channelPrices[channelPrices.length - 1].channel.id ? "border-b border-slate-100 dark:border-white/10" : ""}`}
+            >
+              <span>{channel.label}</span>
+              <span className="font-semibold">{Number.isFinite(price) ? money(price) : "—"}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          Suggested price via {selectedChannel?.label}: {Number.isFinite(suggestedPrice) ? money(suggestedPrice) : "—"} / unit
+        </p>
+      </div>
+
+      {error && (
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {notice}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {saving ? "Saving…" : estimate ? "Save changes" : "Save estimate"}
+        </button>
+        <button
+          type="button"
+          disabled={savingProject}
+          onClick={handleSaveAsProject}
+          className="flex h-12 flex-1 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]"
+        >
+          {savingProject ? "Saving…" : linkedProjectId ? "Update linked project" : "Save as new project"}
+        </button>
+      </div>
+    </form>
+  );
+}

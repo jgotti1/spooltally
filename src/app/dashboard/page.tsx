@@ -48,7 +48,7 @@ function PlusIcon() {
 }
 
 const sections = [
-  { label: "Estimator", href: null, description: "Price a job from grams or an uploaded file.", icon: CalculatorIcon },
+  { label: "Estimator", href: "/estimator", description: "Price a job from grams or an uploaded file.", icon: CalculatorIcon },
   { label: "Inventory", href: "/inventory", description: "Track rolls, levels, and what to reorder.", icon: SpoolIcon },
   { label: "Projects", href: "/projects", description: "Turn saved estimates into tracked jobs.", icon: ClipboardIcon },
 ];

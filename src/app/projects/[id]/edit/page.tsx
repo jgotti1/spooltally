@@ -8,6 +8,9 @@ import { BackLink } from "@/components/BackLink";
 import { CloseLink } from "@/components/CloseLink";
 import { ProjectForm } from "@/components/ProjectForm";
 import { getProject, type Project } from "@/lib/projects";
+import { getEstimate, type Estimate } from "@/lib/estimates";
+import { DEFAULT_CHANNELS } from "@/lib/estimator-constants";
+import Link from "next/link";
 
 function LoadingScreen() {
   return (
@@ -23,6 +26,7 @@ function EditProjectPageInner() {
   const params = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null | undefined>(undefined);
   const [notFound, setNotFound] = useState(false);
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,6 +51,17 @@ function EditProjectPageInner() {
       active = false;
     };
   }, [params.id, user]);
+
+  useEffect(() => {
+    if (!project?.estimateId) return;
+    let active = true;
+    getEstimate(project.estimateId).then((found) => {
+      if (active) setEstimate(found);
+    });
+    return () => {
+      active = false;
+    };
+  }, [project?.estimateId]);
 
   if (loading || !user || (project === undefined && !notFound)) {
     return <LoadingScreen />;
@@ -73,7 +88,27 @@ function EditProjectPageInner() {
               </p>
             </>
           ) : (
-            <ProjectForm project={project} />
+            <>
+              {estimate && (
+                <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/30 dark:bg-blue-500/10">
+                  <p className="text-xs font-bold tracking-[0.1em] text-blue-700 uppercase dark:text-blue-300">
+                    From estimate
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-200">{estimate.name}</p>
+                  <p className="mt-1 text-xs text-blue-800/80 dark:text-blue-300/80">
+                    {estimate.printHours}h print &middot; {estimate.quantity} unit{estimate.quantity === 1 ? "" : "s"}{" "}
+                    &middot; via {DEFAULT_CHANNELS.find((c) => c.id === estimate.channelId)?.label ?? estimate.channelId}
+                  </p>
+                  <Link
+                    href={`/estimator/${estimate.id}/edit`}
+                    className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                  >
+                    View / edit estimate →
+                  </Link>
+                </div>
+              )}
+              <ProjectForm project={project} />
+            </>
           )}
         </div>
       </div>

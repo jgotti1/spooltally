@@ -45,6 +45,7 @@ export type Project = {
   status: ProjectStatus;
   colorsNeeded: ProjectColorNeed[];
   files: ProjectFile[];
+  estimateId: string | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -53,6 +54,7 @@ export type ProjectInput = {
   name: string;
   status: ProjectStatus;
   colorsNeeded: ProjectColorNeed[];
+  estimateId?: string | null;
 };
 
 function projectsCollection() {
@@ -68,6 +70,7 @@ function mapProject(id: string, data: Record<string, unknown>): Project {
     status: data.status as ProjectStatus,
     colorsNeeded: (data.colorsNeeded as ProjectColorNeed[]) ?? [],
     files: (data.files as ProjectFile[]) ?? [],
+    estimateId: (data.estimateId as string | null) ?? null,
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
   };
@@ -109,6 +112,7 @@ export async function addProject(ownerId: string, input: ProjectInput): Promise<
     status: input.status,
     colorsNeeded: input.colorsNeeded,
     files: [],
+    estimateId: input.estimateId ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -121,6 +125,7 @@ export async function updateProject(projectId: string, input: ProjectInput) {
     name: input.name,
     status: input.status,
     colorsNeeded: input.colorsNeeded,
+    ...(input.estimateId !== undefined ? { estimateId: input.estimateId } : {}),
     updatedAt: serverTimestamp(),
   });
 }
