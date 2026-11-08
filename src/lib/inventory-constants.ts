@@ -72,5 +72,5 @@ export function gramsForLevel(level: RollLevel, sizeGrams: number, quantity: num
   return ROLL_LEVEL_FRACTIONS[level] * sizeGrams * (level === "full" ? quantity : 1);
 }
 
-export const PROJECT_STATUSES = ["Active", "Queued", "Done"] as const;
+export const PROJECT_STATUSES = ["Active", "Queued", "Archived"] as const;
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];

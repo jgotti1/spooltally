@@ -5,12 +5,12 @@ export const PROJECT_SORT_OPTIONS = [
   { value: "oldest", label: "Oldest first" },
   { value: "name-asc", label: "Name (A–Z)" },
   { value: "name-desc", label: "Name (Z–A)" },
-  { value: "status", label: "Status (Active → Done)" },
+  { value: "status", label: "Status (Active → Archived)" },
 ] as const;
 
 export type ProjectSortOption = (typeof PROJECT_SORT_OPTIONS)[number]["value"];
 
-const STATUS_ORDER = { Active: 0, Queued: 1, Done: 2 };
+const STATUS_ORDER = { Active: 0, Queued: 1, Archived: 2 };
 
 export function sortProjects(projects: Project[], sortBy: ProjectSortOption): Project[] {
   const sorted = [...projects];

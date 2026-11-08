@@ -52,10 +52,36 @@ function ListIcon() {
   );
 }
 
+function ImageIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5">
+      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="7.25" cy="8" r="1.25" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3.5 13.5 7.5 10l2.5 2.3 2.5-2.8 4 3.8" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ProjectThumb({ project, className }: { project: Project; className: string }) {
+  const image = project.files.find((f) => f.type === "image");
+  if (image) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={image.url} alt={project.name} className={`${className} object-cover`} />;
+  }
+  return (
+    <div
+      className={`${className} flex flex-col items-center justify-center gap-1 bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500`}
+    >
+      <ImageIcon />
+      <span className="text-[10px] font-semibold uppercase tracking-wide">No image</span>
+    </div>
+  );
+}
+
 const STATUS_BADGE_CLASSES: Record<ProjectStatus, string> = {
   Active: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
   Queued: "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300",
-  Done: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  Archived: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
 };
 
 export default function ProjectsPage() {
@@ -67,8 +93,7 @@ export default function ProjectsPage() {
   const [projectsError, setProjectsError] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "All">("All");
   const [search, setSearch] = useState("");
-  const [materialFilter, setMaterialFilter] = useState("All");
-  const [colorFilter, setColorFilter] = useState("All");
+  const [reorderOnly, setReorderOnly] = useState(false);
   const [sortBy, setSortBy] = useState<ProjectSortOption>("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -101,33 +126,25 @@ export default function ProjectsPage() {
 
   const rollsById = useMemo(() => new Map(rolls.map((r) => [r.id, r])), [rolls]);
 
-  const materials = useMemo(
-    () => ["All", ...Array.from(new Set(projects.flatMap((p) => p.colorsNeeded.map((n) => n.material))))],
-    [projects],
-  );
-  const colors = useMemo(
-    () => ["All", ...Array.from(new Set(projects.flatMap((p) => p.colorsNeeded.map((n) => n.color))))],
-    [projects],
+  const needsReorder = useMemo(
+    () => (project: Project) =>
+      project.colorsNeeded.some((need) => need.rollIds.some((id) => (rollsById.get(id)?.remainingGrams ?? 0) === 0)),
+    [rollsById],
   );
 
   const filtered = useMemo(() => {
     return projects.filter((p) => {
       if (statusFilter !== "All" && p.status !== statusFilter) return false;
-      if (materialFilter !== "All" && !p.colorsNeeded.some((n) => n.material === materialFilter)) return false;
-      if (colorFilter !== "All" && !p.colorsNeeded.some((n) => n.color === colorFilter)) return false;
+      if (reorderOnly && !needsReorder(p)) return false;
       if (search.trim()) {
         const haystack = `${p.name} ${p.colorsNeeded.map((n) => `${n.material} ${n.color}`).join(" ")}`.toLowerCase();
         if (!haystack.includes(search.trim().toLowerCase())) return false;
       }
       return true;
     });
-  }, [projects, statusFilter, materialFilter, colorFilter, search]);
+  }, [projects, statusFilter, reorderOnly, search, needsReorder]);
 
   const sorted = useMemo(() => sortProjects(filtered, sortBy), [filtered, sortBy]);
-
-  function needsReorder(project: Project) {
-    return project.colorsNeeded.some((need) => need.rollIds.some((id) => (rollsById.get(id)?.remainingGrams ?? 0) === 0));
-  }
 
   async function handleDelete(project: Project) {
     if (!window.confirm(`Delete project "${project.name}"? This won't delete any linked rolls.`)) return;
@@ -191,28 +208,18 @@ export default function ProjectsPage() {
             placeholder="Search name, material, color…"
             className="h-11 flex-1 min-w-[200px] rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
           />
-          <select
-            value={materialFilter}
-            onChange={(e) => setMaterialFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          <button
+            type="button"
+            onClick={() => setReorderOnly((v) => !v)}
+            aria-pressed={reorderOnly}
+            className={`h-11 shrink-0 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+              reorderOnly
+                ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300"
+                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+            }`}
           >
-            {materials.map((m) => (
-              <option key={m} value={m}>
-                {m === "All" ? "All materials" : m}
-              </option>
-            ))}
-          </select>
-          <select
-            value={colorFilter}
-            onChange={(e) => setColorFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
-          >
-            {colors.map((c) => (
-              <option key={c} value={c}>
-                {c === "All" ? "All colors" : c}
-              </option>
-            ))}
-          </select>
+            Needs reorder only
+          </button>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as ProjectSortOption)}
@@ -289,6 +296,7 @@ export default function ProjectsPage() {
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
                   >
+                    <ProjectThumb project={project} className="h-11 w-11 shrink-0 rounded-lg" />
                     <div className="min-w-[160px] flex-1">
                       <p className="font-semibold text-slate-900 dark:text-white">{project.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -341,7 +349,9 @@ export default function ProjectsPage() {
                       flagged ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-white/10"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <ProjectThumb project={project} className="h-32 w-full rounded-xl" />
+
+                    <div className="mt-3 flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{project.name}</p>
                       <span
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE_CLASSES[project.status]}`}
