@@ -66,6 +66,20 @@ function CameraIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
+      <path
+        d="M10 3v9m0 0 3.5-3.5M10 12l-3.5-3.5M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function FileIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -455,9 +469,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     href={file.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex-1 truncate font-medium text-slate-700 hover:underline dark:text-slate-300"
+                    className="flex flex-1 items-center gap-1.5 truncate font-medium text-slate-700 hover:underline dark:text-slate-300"
                   >
-                    {file.name}
+                    {file.type === "model" && <DownloadIcon />}
+                    <span className="truncate">{file.name}</span>
                   </a>
                   <button
                     type="button"

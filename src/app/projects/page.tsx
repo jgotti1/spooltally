@@ -62,6 +62,20 @@ function ImageIcon() {
   );
 }
 
+function CubeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5">
+      <path
+        d="M10 2.5 17 6.5v7L10 17.5 3 13.5v-7L10 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M3 6.5 10 10.5l7-4M10 10.5v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ProjectThumb({ project, className }: { project: Project; className: string }) {
   const image = project.files.find((f) => f.type === "image");
   if (image) {
@@ -72,6 +86,24 @@ function ProjectThumb({ project, className }: { project: Project; className: str
       </a>
     );
   }
+
+  const model = project.files.find((f) => f.type === "model");
+  if (model) {
+    const ext = model.name.split(".").pop()?.toUpperCase() ?? "FILE";
+    return (
+      <a
+        href={model.url}
+        target="_blank"
+        rel="noreferrer"
+        title={`Download ${model.name}`}
+        className={`${className} flex shrink-0 flex-col items-center justify-center gap-1 bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/15`}
+      >
+        <CubeIcon />
+        <span className="text-[10px] font-semibold uppercase tracking-wide">{ext} file</span>
+      </a>
+    );
+  }
+
   return (
     <div
       className={`${className} flex flex-col items-center justify-center gap-1 bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500`}

@@ -139,7 +139,11 @@ export async function uploadProjectFile(
   if (!storage || !db) throw configError;
   const path = `projects/${ownerId}/${projectId}/${Date.now()}-${file.name}`;
   const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, file);
+  await uploadBytes(
+    storageRef,
+    file,
+    type === "model" ? { contentDisposition: `attachment; filename="${file.name}"` } : undefined,
+  );
   const url = await getDownloadURL(storageRef);
   const fileMeta: ProjectFile = { name: file.name, path, url, type, uploadedAt: Date.now() };
   await updateDoc(doc(projectsCollection(), projectId), {
