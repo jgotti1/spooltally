@@ -30,9 +30,87 @@ const rollCardPreviews = [
   { color: "Yellow", meta: "Bambu Lab · PLA", stock: "250 g on hand", price: "$12.99 paid", status: "reorder" as const },
 ];
 
+const projectPreviewCards = [
+  {
+    name: "Hex planter batch",
+    status: "Active",
+    statusClass: "bg-blue-100 text-blue-700",
+    colors: ["Sky Blue PETG", "Yellow PLA — order now"],
+    flagged: true,
+    thumb: "image" as const,
+  },
+  {
+    name: "Keychain samples",
+    status: "Queued",
+    statusClass: "bg-slate-100 text-slate-700",
+    colors: ["Red PLA — 40g"],
+    flagged: false,
+    thumb: "model" as const,
+  },
+];
+
+function CubeIconPreview() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M10 2.5 17 6.5v7L10 17.5 3 13.5v-7L10 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M3 6.5 10 10.5l7-4M10 10.5v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ImageIconPreview() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="7.25" cy="8" r="1.25" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3.5 13.5 7.5 10l2.5 2.3 2.5-2.8 4 3.8" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MiniProjects() {
+  return (
+    <div className={`${styles.dashboard} relative w-full`}>
+      <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Projects</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">Active &amp; queued</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />1 needs reorder
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 p-4">
+        {projectPreviewCards.map((project) => (
+          <div
+            key={project.name}
+            className={`rounded-2xl border bg-white p-3 ${project.flagged ? "border-rose-300" : "border-slate-200"}`}
+          >
+            <div className="flex h-14 w-full items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+              {project.thumb === "image" ? <ImageIconPreview /> : <CubeIconPreview />}
+            </div>
+            <div className="mt-2 flex items-start justify-between gap-1">
+              <p className="text-xs font-semibold text-slate-900">{project.name}</p>
+              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${project.statusClass}`}>
+                {project.status}
+              </span>
+            </div>
+            <ul className="mt-1.5 space-y-0.5 text-[9px] text-slate-500">
+              {project.colors.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MiniDashboard() {
   return (
-    <div className={`${styles.dashboard} relative mx-auto w-full max-w-[520px]`}>
+    <div className={`${styles.dashboard} relative w-full`}>
       <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
         <div>
           <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Filament rolls</p>
@@ -138,7 +216,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-10 hidden lg:block"><MiniDashboard /></div>
+        <div className="relative z-10 mt-10 hidden gap-4 lg:grid lg:grid-cols-1 xl:grid-cols-2">
+          <MiniDashboard />
+          <MiniProjects />
+        </div>
       </section>
 
       <section className={`${styles.authPanel} relative flex items-center justify-center px-5 py-10 sm:px-10 lg:min-h-svh lg:px-12`}>
