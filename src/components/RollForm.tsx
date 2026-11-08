@@ -58,6 +58,17 @@ export function RollForm({ roll }: RollFormProps) {
       } else {
         await addRoll(user.uid, input);
       }
+      setSaving(false);
+      if (!roll) {
+        setBrand(BRAND_OPTIONS[0]);
+        setMaterial(MATERIAL_OPTIONS[0]);
+        setColor(COLOR_OPTIONS[0]);
+        setSizeIsCustom(false);
+        setSizeGrams(1000);
+        setPrice("");
+        setLevel("full");
+        setQuantity(1);
+      }
       router.push("/inventory");
     } catch {
       setError("Something went wrong saving this roll. Please try again.");
