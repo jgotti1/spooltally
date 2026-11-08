@@ -442,8 +442,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
                   className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-white/10 dark:bg-white/[0.03]"
                 >
                   {file.type === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={file.url} alt={file.name} className="h-9 w-9 rounded object-cover" />
+                    <a href={file.url} target="_blank" rel="noreferrer" className="block h-9 w-9 shrink-0 overflow-hidden rounded">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                    </a>
                   ) : (
                     <span className="flex h-9 w-9 items-center justify-center rounded bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400">
                       <FileIcon />

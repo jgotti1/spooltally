@@ -65,8 +65,12 @@ function ImageIcon() {
 function ProjectThumb({ project, className }: { project: Project; className: string }) {
   const image = project.files.find((f) => f.type === "image");
   if (image) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={image.url} alt={project.name} className={`${className} object-cover`} />;
+    return (
+      <a href={image.url} target="_blank" rel="noreferrer" className={`${className} block shrink-0 overflow-hidden`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image.url} alt={project.name} className="h-full w-full object-cover" />
+      </a>
+    );
   }
   return (
     <div
