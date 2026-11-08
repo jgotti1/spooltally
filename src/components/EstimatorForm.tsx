@@ -7,7 +7,7 @@ import { ComboSelect } from "@/components/ComboSelect";
 import { CloseLink } from "@/components/CloseLink";
 import { BRAND_OPTIONS, COLOR_OPTIONS, MATERIAL_OPTIONS, SIZE_OPTIONS_GRAMS } from "@/lib/inventory-constants";
 import { subscribeToRolls, addRoll, type Roll } from "@/lib/rolls";
-import { subscribeToProjects, addProject, updateProject, type Project } from "@/lib/projects";
+import { subscribeToProjects, addProject, updateProject, uploadProjectFile, type Project } from "@/lib/projects";
 import { addEstimate, updateEstimate, type Estimate, type EstimateColorUsage } from "@/lib/estimates";
 import {
   getEstimatorSettings,
@@ -25,6 +25,12 @@ type EstimatorFormProps = {
 
 function emptyColorUsage(): EstimateColorUsage {
   return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], grams: 0, rollId: null };
+}
+
+async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], name, { type: blob.type });
 }
 
 function PlusIcon() {
@@ -105,6 +111,8 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
   const [notice, setNotice] = useState("");
 
   const [parsingIndex, setParsingIndex] = useState<number | null>(null);
+  const [rowStatus, setRowStatus] = useState<Record<number, { kind: "ok" | "error"; message: string }>>({});
+  const [modelPreviews, setModelPreviews] = useState<Record<number, { dataUrl: string; fileName: string }>>({});
   const [addingRollIndex, setAddingRollIndex] = useState<number | null>(null);
   const [newRoll, setNewRoll] = useState({ brand: BRAND_OPTIONS[0] as string, sizeGrams: SIZE_OPTIONS_GRAMS[1] as number, price: 0 });
   const [savingRoll, setSavingRoll] = useState(false);
@@ -156,6 +164,7 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
   async function handleFileUpload(index: number, file: File | undefined) {
     if (!file) return;
     setError("");
+    setRowStatus((s) => ({ ...s, [index]: { kind: "ok", message: "Reading file…" } }));
     setParsingIndex(index);
     try {
       const usage = colorsUsed[index];
@@ -169,9 +178,23 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
         }),
       );
       if (result.printHours !== null) setPrintHours(String(Math.round(result.printHours * 100) / 100));
-      if (result.note) setNotice(result.note);
+      if (result.thumbnailDataUrl) {
+        setModelPreviews((p) => ({ ...p, [index]: { dataUrl: result.thumbnailDataUrl!, fileName: file.name } }));
+      }
+      setRowStatus((s) => ({
+        ...s,
+        [index]: {
+          kind: result.grams !== null ? "ok" : "error",
+          message:
+            result.grams !== null
+              ? `Read ${Math.round(result.grams * 100) / 100}g from ${file.name}.`
+              : (result.note ?? "Couldn't read grams from that file — enter manually."),
+        },
+      }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read that file. Please enter grams manually.");
+      const message = err instanceof Error ? err.message : "Couldn't read that file. Please enter grams manually.";
+      console.error("Model file parse failed:", err);
+      setRowStatus((s) => ({ ...s, [index]: { kind: "error", message } }));
     } finally {
       setParsingIndex(null);
     }
@@ -319,13 +342,23 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
         estimateId,
       };
 
+      let finalProjectId = linkedProjectId;
       if (linkedProjectId) {
         await updateProject(linkedProjectId, projectInput);
       } else {
-        const projectId = await addProject(user.uid, projectInput);
-        setLinkedProjectId(projectId);
-        await updateEstimate(estimateId, { ...input, projectId });
+        finalProjectId = await addProject(user.uid, projectInput);
+        setLinkedProjectId(finalProjectId);
+        await updateEstimate(estimateId, { ...input, projectId: finalProjectId });
       }
+
+      if (finalProjectId) {
+        for (const preview of Object.values(modelPreviews)) {
+          const imageFile = await dataUrlToFile(preview.dataUrl, `${preview.fileName}-preview.png`);
+          await uploadProjectFile(user.uid, finalProjectId, imageFile, "image");
+        }
+        setModelPreviews({});
+      }
+
       setNotice(linkedProjectId ? "Project updated with this estimate." : "Saved as a new project.");
       if (!estimate) router.push(`/estimator/${estimateId}/edit`);
     } catch (err) {
@@ -472,6 +505,32 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
                     </span>
                   )}
                 </div>
+
+                {rowStatus[index] && (
+                  <p
+                    className={`mt-1.5 text-xs ${
+                      rowStatus[index].kind === "error"
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {rowStatus[index].message}
+                  </p>
+                )}
+
+                {modelPreviews[index] && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img
+                      src={modelPreviews[index].dataUrl}
+                      alt={modelPreviews[index].fileName}
+                      className="h-16 w-20 rounded-lg border border-slate-200 object-cover dark:border-white/10"
+                    />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Preview from {modelPreviews[index].fileName} — will be added as a project photo when you save as a
+                      project.
+                    </span>
+                  </div>
+                )}
 
                 <div className="mt-3">
                   <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
