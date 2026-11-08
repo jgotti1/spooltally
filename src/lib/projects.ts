@@ -139,11 +139,8 @@ export async function uploadProjectFile(
   if (!storage || !db) throw configError;
   const path = `projects/${ownerId}/${projectId}/${Date.now()}-${file.name}`;
   const storageRef = ref(storage, path);
-  await uploadBytes(
-    storageRef,
-    file,
-    type === "model" ? { contentDisposition: `attachment; filename="${file.name}"` } : undefined,
-  );
+  const disposition = type === "model" ? "attachment" : "inline";
+  await uploadBytes(storageRef, file, { contentDisposition: `${disposition}; filename="${file.name}"` });
   const url = await getDownloadURL(storageRef);
   const fileMeta: ProjectFile = { name: file.name, path, url, type, uploadedAt: Date.now() };
   await updateDoc(doc(projectsCollection(), projectId), {
