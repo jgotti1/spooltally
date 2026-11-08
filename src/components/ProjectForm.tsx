@@ -12,7 +12,7 @@ import {
   SIZE_OPTIONS_GRAMS,
   type ProjectStatus,
 } from "@/lib/inventory-constants";
-import { addPlaceholderRoll, listRolls, type Roll } from "@/lib/rolls";
+import { addPlaceholderRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import {
   addProject,
   deleteProjectFile,
@@ -101,13 +101,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   useEffect(() => {
     if (!user) return;
-    let active = true;
-    listRolls(user.uid).then((rolls) => {
-      if (active) setExistingRolls(rolls);
-    });
-    return () => {
-      active = false;
-    };
+    return subscribeToRolls(user.uid, setExistingRolls);
   }, [user]);
 
   function updateColorNeed(index: number, patch: Partial<ProjectColorNeed>) {
