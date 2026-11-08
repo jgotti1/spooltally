@@ -21,6 +21,7 @@ function groupKey(roll: Pick<Roll, "brand" | "material" | "color">) {
 export function groupLowRolls(rolls: Roll[], settings: InventorySettings): StockGroup[] {
   const map = new Map<string, { brand: string; material: string; color: string; totalGrams: number; sizes: number[] }>();
   for (const roll of rolls) {
+    if (roll.excludeFromReorder) continue;
     const key = groupKey(roll);
     const entry = map.get(key) ?? { brand: roll.brand, material: roll.material, color: roll.color, totalGrams: 0, sizes: [] };
     entry.totalGrams += roll.remainingGrams;

@@ -35,6 +35,7 @@ export function RollForm({ roll }: RollFormProps) {
   const [price, setPrice] = useState(roll ? String(roll.price) : "");
   const [level, setLevel] = useState<RollLevel>(roll?.level ?? "full");
   const [quantity, setQuantity] = useState(roll?.quantity ?? 1);
+  const [excludeFromReorder, setExcludeFromReorder] = useState(roll?.excludeFromReorder ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
@@ -60,6 +61,7 @@ export function RollForm({ roll }: RollFormProps) {
     setPrice("");
     setLevel("full");
     setQuantity(1);
+    setExcludeFromReorder(false);
   }
 
   async function performSave() {
@@ -74,6 +76,7 @@ export function RollForm({ roll }: RollFormProps) {
         price: Number(price) || 0,
         level,
         quantity: level === "full" ? Math.max(1, quantity) : 1,
+        excludeFromReorder,
       };
       if (roll) {
         await updateRoll(roll.id, input);
@@ -234,6 +237,16 @@ export function RollForm({ roll }: RollFormProps) {
           />
         </div>
       )}
+
+      <label className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+        <input
+          type="checkbox"
+          checked={excludeFromReorder}
+          onChange={(e) => setExcludeFromReorder(e.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
+        />
+        Hide this roll from the reorder report
+      </label>
 
       {error && (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">

@@ -31,6 +31,7 @@ export type Roll = {
   level: RollLevel;
   quantity: number;
   remainingGrams: number;
+  excludeFromReorder: boolean;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -43,6 +44,7 @@ export type RollInput = {
   price: number;
   level: RollLevel;
   quantity: number;
+  excludeFromReorder: boolean;
 };
 
 function rollsCollection() {
@@ -76,6 +78,7 @@ export function subscribeToRolls(
           level: data.level,
           quantity: data.quantity,
           remainingGrams: data.remainingGrams,
+          excludeFromReorder: data.excludeFromReorder ?? false,
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
         } satisfies Roll;
@@ -103,6 +106,7 @@ export async function listRolls(ownerId: string): Promise<Roll[]> {
       level: data.level,
       quantity: data.quantity,
       remainingGrams: data.remainingGrams,
+      excludeFromReorder: data.excludeFromReorder ?? false,
       createdAt: data.createdAt ?? null,
       updatedAt: data.updatedAt ?? null,
     } satisfies Roll;
@@ -125,6 +129,7 @@ export async function getRoll(rollId: string): Promise<Roll | null> {
     level: data.level,
     quantity: data.quantity,
     remainingGrams: data.remainingGrams,
+    excludeFromReorder: data.excludeFromReorder ?? false,
     createdAt: data.createdAt ?? null,
     updatedAt: data.updatedAt ?? null,
   };
@@ -143,6 +148,7 @@ export async function addRoll(ownerId: string, input: RollInput) {
     level: input.level,
     quantity: input.level === "full" ? input.quantity : 1,
     remainingGrams,
+    excludeFromReorder: input.excludeFromReorder,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -160,6 +166,15 @@ export async function updateRoll(rollId: string, input: RollInput) {
     level: input.level,
     quantity: input.level === "full" ? input.quantity : 1,
     remainingGrams,
+    excludeFromReorder: input.excludeFromReorder,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function setRollReorderExclusion(rollId: string, excludeFromReorder: boolean) {
+  if (!db) throw configError;
+  await updateDoc(doc(rollsCollection(), rollId), {
+    excludeFromReorder,
     updatedAt: serverTimestamp(),
   });
 }

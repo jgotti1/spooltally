@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Roll } from "@/lib/rolls";
 import { saveInventorySettings, type InventorySettings } from "@/lib/inventory-settings";
 import { groupLowRolls, type StockStatus } from "@/lib/inventory-status";
+import { exportReorderReportToExcel } from "@/lib/inventory-export";
 
 type ReportFilter = "all" | StockStatus;
 
@@ -17,6 +18,20 @@ function FilterIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
       <path d="M3 5h14M6 10h8M8.5 15h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M10 3v9m0 0 3.5-3.5M10 12l-3.5-3.5M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -112,6 +127,15 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => exportReorderReportToExcel(visibleGroups)}
+            disabled={visibleGroups.length === 0}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:text-white"
+          >
+            <DownloadIcon />
+            Export to Excel
+          </button>
           <button
             type="button"
             onClick={() => setEditingSettings((v) => !v)}

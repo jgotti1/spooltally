@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
-import { deleteRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { deleteRoll, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
@@ -149,6 +149,14 @@ export default function InventoryPage() {
       await deleteRoll(roll.id);
     } catch (error) {
       setRollsError(error instanceof Error ? error.message : "Couldn't delete that roll. Please try again.");
+    }
+  }
+
+  async function handleToggleReorderExclusion(roll: Roll) {
+    try {
+      await setRollReorderExclusion(roll.id, !roll.excludeFromReorder);
+    } catch (error) {
+      setRollsError(error instanceof Error ? error.message : "Couldn't update that roll. Please try again.");
     }
   }
 
@@ -321,6 +329,15 @@ export default function InventoryPage() {
                     <span className="w-16 shrink-0 text-xs text-slate-500 dark:text-slate-400">
                       ${roll.price.toFixed(2)}
                     </span>
+                    <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={roll.excludeFromReorder}
+                        onChange={() => handleToggleReorderExclusion(roll)}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
+                      />
+                      Hide from reorder
+                    </label>
                     {status && (
                       <span
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -397,6 +414,16 @@ export default function InventoryPage() {
                     <span>{Math.round(roll.remainingGrams)} g on hand</span>
                     <span>${roll.price.toFixed(2)} paid</span>
                   </div>
+
+                  <label className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={roll.excludeFromReorder}
+                      onChange={() => handleToggleReorderExclusion(roll)}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
+                    />
+                    Hide from reorder report
+                  </label>
 
                   <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3 dark:border-white/10">
                     <Link
