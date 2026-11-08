@@ -23,6 +23,8 @@ export type EstimateColorUsage = {
   color: string;
   grams: number;
   rollId: string | null;
+  /** How `grams` was determined: "estimated" from an STL's volume, "exact" from a sliced 3MF/G-code file, or unset for manual entry. */
+  gramsSource?: "estimated" | "exact";
 };
 
 export type Estimate = {

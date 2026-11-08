@@ -135,10 +135,10 @@ export async function getRoll(rollId: string): Promise<Roll | null> {
   };
 }
 
-export async function addRoll(ownerId: string, input: RollInput) {
+export async function addRoll(ownerId: string, input: RollInput): Promise<string> {
   if (!db) throw configError;
   const remainingGrams = gramsForLevel(input.level, input.sizeGrams, input.quantity);
-  await addDoc(rollsCollection(), {
+  const ref = await addDoc(rollsCollection(), {
     ownerId,
     brand: input.brand,
     material: input.material,
@@ -152,6 +152,7 @@ export async function addRoll(ownerId: string, input: RollInput) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  return ref.id;
 }
 
 export async function updateRoll(rollId: string, input: RollInput) {

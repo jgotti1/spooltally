@@ -23,6 +23,8 @@ export function CloseLink({ href, dirty }: CloseLinkProps) {
   function handleClick() {
     if (dirty && !window.confirm("Close without saving changes?")) return;
     router.push(href);
+    // Bust the router cache for the page we're leaving so a later visit gets a fresh form instead of stale state.
+    router.refresh();
   }
 
   return (

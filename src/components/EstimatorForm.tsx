@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
 import { CloseLink } from "@/components/CloseLink";
-import { COLOR_OPTIONS, MATERIAL_OPTIONS } from "@/lib/inventory-constants";
-import { subscribeToRolls, type Roll } from "@/lib/rolls";
+import { BRAND_OPTIONS, COLOR_OPTIONS, MATERIAL_OPTIONS, SIZE_OPTIONS_GRAMS } from "@/lib/inventory-constants";
+import { subscribeToRolls, addRoll, type Roll } from "@/lib/rolls";
 import { subscribeToProjects, addProject, updateProject, type Project } from "@/lib/projects";
 import { addEstimate, updateEstimate, type Estimate, type EstimateColorUsage } from "@/lib/estimates";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/estimator-settings";
 import type { SalesChannelId } from "@/lib/estimator-constants";
 import { calcCostBreakdown, calcSuggestedPrice, costPerGram } from "@/lib/estimator-pricing";
+import { parseModelFile } from "@/lib/model-parsing";
 
 type EstimatorFormProps = {
   estimate?: Estimate;
@@ -41,6 +42,20 @@ function TrashIcon() {
         d="M4.5 6h11M8 6V4.5h4V6m-6 0 .6 9.2a1 1 0 0 0 1 .8h4.8a1 1 0 0 0 1-.8L14 6"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
+      <path
+        d="M10 3v9m0-9 3 3m-3-3-3 3M4 13.5v1.8a1.2 1.2 0 0 0 1.2 1.2h9.6a1.2 1.2 0 0 0 1.2-1.2v-1.8"
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -89,6 +104,20 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const [parsingIndex, setParsingIndex] = useState<number | null>(null);
+  const [addingRollIndex, setAddingRollIndex] = useState<number | null>(null);
+  const [newRoll, setNewRoll] = useState({ brand: BRAND_OPTIONS[0] as string, sizeGrams: SIZE_OPTIONS_GRAMS[1] as number, price: 0 });
+  const [savingRoll, setSavingRoll] = useState(false);
+
+  const [initial] = useState(() => ({
+    name: estimate?.name ?? "",
+    colorsUsedJson: JSON.stringify(
+      estimate?.colorsUsed && estimate.colorsUsed.length > 0 ? estimate.colorsUsed : [emptyColorUsage()],
+    ),
+    printHours: estimate ? String(estimate.printHours) : "",
+    quantity: estimate?.quantity ?? 1,
+  }));
+
   useEffect(() => {
     if (!user) return;
     return subscribeToRolls(user.uid, setRolls);
@@ -122,6 +151,55 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
 
   function removeColorUsageRow(index: number) {
     setColorsUsed((rows) => rows.filter((_, i) => i !== index));
+  }
+
+  async function handleFileUpload(index: number, file: File | undefined) {
+    if (!file) return;
+    setError("");
+    setParsingIndex(index);
+    try {
+      const usage = colorsUsed[index];
+      const result = await parseModelFile(file, usage.material);
+      setColorsUsed((rows) =>
+        rows.map((row, i) => {
+          if (i !== index) return row;
+          const next = { ...row, gramsSource: result.accuracy };
+          if (result.grams !== null) next.grams = Math.round(result.grams * 100) / 100;
+          return next;
+        }),
+      );
+      if (result.printHours !== null) setPrintHours(String(Math.round(result.printHours * 100) / 100));
+      if (result.note) setNotice(result.note);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that file. Please enter grams manually.");
+    } finally {
+      setParsingIndex(null);
+    }
+  }
+
+  async function handleAddRoll(index: number) {
+    if (!user) return;
+    const usage = colorsUsed[index];
+    setSavingRoll(true);
+    setError("");
+    try {
+      const rollId = await addRoll(user.uid, {
+        brand: newRoll.brand,
+        material: usage.material,
+        color: usage.color,
+        sizeGrams: newRoll.sizeGrams,
+        price: newRoll.price,
+        level: "full",
+        quantity: 1,
+        excludeFromReorder: false,
+      });
+      updateColorUsage(index, { rollId });
+      setAddingRollIndex(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't add that roll. Please try again.");
+    } finally {
+      setSavingRoll(false);
+    }
   }
 
   function handlePullFromProject(projectId: string) {
@@ -258,11 +336,16 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
   }
 
   const linkedProject = projects.find((p) => p.id === linkedProjectId);
+  const isDirty =
+    name !== initial.name ||
+    JSON.stringify(colorsUsed) !== initial.colorsUsedJson ||
+    printHours !== initial.printHours ||
+    quantity !== initial.quantity;
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="flex justify-end">
-        <CloseLink href="/estimator" />
+        <CloseLink href="/estimator" dirty={isDirty} />
       </div>
 
       <div>
@@ -347,7 +430,7 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
                       type="number"
                       min={0}
                       value={usage.grams}
-                      onChange={(e) => updateColorUsage(index, { grams: Number(e.target.value) })}
+                      onChange={(e) => updateColorUsage(index, { grams: Number(e.target.value), gramsSource: undefined })}
                       className="h-12 w-24 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                     />
                   </div>
@@ -360,6 +443,33 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
                     >
                       <TrashIcon />
                     </button>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+                    <UploadIcon />
+                    {parsingIndex === index ? "Reading file…" : "Upload STL / 3MF / G-code"}
+                    <input
+                      type="file"
+                      accept=".stl,.3mf,.gcode,.gco"
+                      className="hidden"
+                      disabled={parsingIndex !== null}
+                      onChange={(e) => {
+                        void handleFileUpload(index, e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {usage.gramsSource === "estimated" && (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                      Estimated from model
+                    </span>
+                  )}
+                  {usage.gramsSource === "exact" && (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      Exact from slicer
+                    </span>
                   )}
                 </div>
 
@@ -385,6 +495,78 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
                         </option>
                       ))}
                     </select>
+                  )}
+
+                  {addingRollIndex === index ? (
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                      <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        New {usage.material} / {usage.color} roll
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <ComboSelect
+                          label="Brand"
+                          value={newRoll.brand}
+                          onChange={(v) => setNewRoll((r) => ({ ...r, brand: v }))}
+                          options={BRAND_OPTIONS}
+                          customPlaceholder="e.g. Polymaker"
+                        />
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            Size (g)
+                          </label>
+                          <select
+                            value={newRoll.sizeGrams}
+                            onChange={(e) => setNewRoll((r) => ({ ...r, sizeGrams: Number(e.target.value) }))}
+                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                          >
+                            {SIZE_OPTIONS_GRAMS.map((g) => (
+                              <option key={g} value={g}>
+                                {g}g
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            Price ($)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={newRoll.price}
+                            onChange={(e) => setNewRoll((r) => ({ ...r, price: Number(e.target.value) }))}
+                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={savingRoll}
+                          onClick={() => handleAddRoll(index)}
+                          className="h-9 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {savingRoll ? "Adding…" : "Add roll to inventory"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddingRollIndex(null)}
+                          className="h-9 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAddingRollIndex(index)}
+                      className="mt-2 flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      <PlusIcon />
+                      Add a new roll for this color
+                    </button>
                   )}
                 </div>
               </div>
