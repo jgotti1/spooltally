@@ -300,6 +300,18 @@ export default function InventoryPage() {
             </h1>
           </div>
           <div className="flex gap-3">
+            {selectedRollId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRollId(null);
+                  setQuickAddWarning("");
+                }}
+                className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:bg-white/[0.06]"
+              >
+                Clear selection
+              </button>
+            )}
             <button
               type="button"
               onClick={handleQuickAdd}
@@ -457,8 +469,14 @@ export default function InventoryPage() {
                       name="quickAddSelect"
                       checked={selectedRollId === roll.id}
                       onChange={() => handleSelectRoll(roll.id)}
+                      onClick={() => {
+                        if (selectedRollId === roll.id) {
+                          setSelectedRollId(null);
+                          setQuickAddWarning("");
+                        }
+                      }}
                       aria-label="Select this roll for quick add"
-                      title="Select for quick add"
+                      title="Select for quick add, or click again to deselect"
                       className="h-4 w-4 shrink-0 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
                     />
                     <div className="min-w-[160px] flex-1">
@@ -565,8 +583,14 @@ export default function InventoryPage() {
                         name="quickAddSelect"
                         checked={selectedRollId === roll.id}
                         onChange={() => handleSelectRoll(roll.id)}
+                        onClick={() => {
+                          if (selectedRollId === roll.id) {
+                            setSelectedRollId(null);
+                            setQuickAddWarning("");
+                          }
+                        }}
                         aria-label="Select this roll for quick add"
-                        title="Select for quick add"
+                        title="Select for quick add, or click again to deselect"
                         className="mt-1 h-4 w-4 shrink-0 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
                       />
                       <div>
