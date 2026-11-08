@@ -51,6 +51,7 @@ export default function InventoryPage() {
   const router = useRouter();
   const [rolls, setRolls] = useState<Roll[]>([]);
   const [rollsLoading, setRollsLoading] = useState(true);
+  const [rollsError, setRollsError] = useState("");
   const [search, setSearch] = useState("");
   const [materialFilter, setMaterialFilter] = useState("All");
   const [colorFilter, setColorFilter] = useState("All");
@@ -80,8 +81,12 @@ export default function InventoryPage() {
       (next) => {
         setRolls(next);
         setRollsLoading(false);
+        setRollsError("");
       },
-      () => setRollsLoading(false),
+      (error) => {
+        setRollsLoading(false);
+        setRollsError(error.message || "Couldn't load your inventory. Please refresh and try again.");
+      },
     );
   }, [user]);
 
@@ -100,7 +105,11 @@ export default function InventoryPage() {
 
   async function handleDelete(roll: Roll) {
     if (!window.confirm(`Delete this ${roll.brand} ${roll.color} ${roll.material} roll?`)) return;
-    await deleteRoll(roll.id);
+    try {
+      await deleteRoll(roll.id);
+    } catch (error) {
+      setRollsError(error instanceof Error ? error.message : "Couldn't delete that roll. Please try again.");
+    }
   }
 
   if (loading || !user) {
@@ -166,6 +175,12 @@ export default function InventoryPage() {
             ))}
           </select>
         </div>
+
+        {rollsError && (
+          <p className="mt-6 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+            {rollsError}
+          </p>
+        )}
 
         <div className="mt-6">
           {rollsLoading ? (

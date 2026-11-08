@@ -5,7 +5,6 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -58,29 +57,29 @@ export function subscribeToRolls(
     onError?.(configError);
     return () => {};
   }
-  const q = query(rollsCollection(), where("ownerId", "==", ownerId), orderBy("createdAt", "desc"));
+  const q = query(rollsCollection(), where("ownerId", "==", ownerId));
   return onSnapshot(
     q,
     (snapshot) => {
-      onChange(
-        snapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ownerId: data.ownerId,
-            brand: data.brand,
-            material: data.material,
-            color: data.color,
-            sizeGrams: data.sizeGrams,
-            price: data.price,
-            level: data.level,
-            quantity: data.quantity,
-            remainingGrams: data.remainingGrams,
-            createdAt: data.createdAt ?? null,
-            updatedAt: data.updatedAt ?? null,
-          } satisfies Roll;
-        }),
-      );
+      const rolls = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ownerId: data.ownerId,
+          brand: data.brand,
+          material: data.material,
+          color: data.color,
+          sizeGrams: data.sizeGrams,
+          price: data.price,
+          level: data.level,
+          quantity: data.quantity,
+          remainingGrams: data.remainingGrams,
+          createdAt: data.createdAt ?? null,
+          updatedAt: data.updatedAt ?? null,
+        } satisfies Roll;
+      });
+      rolls.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
+      onChange(rolls);
     },
     (error) => onError?.(error),
   );
