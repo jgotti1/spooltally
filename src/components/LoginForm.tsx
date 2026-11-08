@@ -119,7 +119,7 @@ export function LoginForm() {
           {mode === "signin" ? "Sign in to your workshop" : "Start your free trial"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-          {mode === "signin" ? "Your inventory, estimates, and projects are ready." : "7 days free. No credit card required."}
+          {mode === "signin" ? "Your inventory, estimates, and projects are ready." : "14 days free. No credit card required."}
         </p>
       </div>
 

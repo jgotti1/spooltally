@@ -148,7 +148,7 @@ export default function LoginPage() {
           <div className="mb-8 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><CheckIcon /></span>
-              7-day free trial
+              14-day free trial
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">No credit card required</p>
           </div>

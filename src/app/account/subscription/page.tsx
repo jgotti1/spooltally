@@ -43,7 +43,7 @@ export default function SubscriptionInfoPage() {
             </span>
           </div>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            You&rsquo;re on the 7-day free trial. No credit card on file — nothing will be charged automatically.
+            You&rsquo;re on the 14-day free trial. No credit card on file — nothing will be charged automatically.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">

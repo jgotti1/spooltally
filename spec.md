@@ -69,7 +69,7 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 ## Accounts and billing
 - Firebase Auth: email/password + Google. Register via either method.
 - Password reset: "Forgot password" flow (Firebase Auth `sendPasswordResetEmail`) for email/password accounts. Google-authenticated accounts have no password to reset — show a message pointing them to Google account recovery instead.
-- Free trial: 7 days, no card upfront. After 7 days: must add a credit card (Stripe) to continue; data locked (not deleted) until they do.
+- Free trial: 14 days, no card upfront. After 14 days: must add a credit card (Stripe) to continue; data locked (not deleted) until they do.
 - Reminder emails before trial ends.
 - Membership types (`plan` field): `trial`, `weekly`, `quarterly`, `yearly`.
   - Stripe Checkout tiers: weekly (~$2-3/wk, for short-term/seasonal sellers), quarterly ($20 per 3 months), yearly (~$60-79, consider a locked-in early-tester price). Exact weekly price TBD before launch.
