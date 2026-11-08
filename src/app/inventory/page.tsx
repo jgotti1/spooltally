@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
-import { deleteRoll, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { addRoll, deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
@@ -68,6 +68,15 @@ function ListIcon() {
   );
 }
 
+function DuplicateIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <rect x="3.5" y="5.5" width="10" height="10" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 5V4.3A1.8 1.8 0 0 1 8.8 2.5h6.4A1.8 1.8 0 0 1 17 4.3v6.4a1.8 1.8 0 0 1-1.8 1.8H14.5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 function DownloadIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -94,6 +103,7 @@ export default function InventoryPage() {
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [quickAdding, setQuickAdding] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -160,6 +170,48 @@ export default function InventoryPage() {
     }
   }
 
+  async function handleQuickAddOne(roll: Roll) {
+    try {
+      await incrementRollQuantity(roll.id, 1, roll.sizeGrams);
+    } catch (error) {
+      setRollsError(error instanceof Error ? error.message : "Couldn't add to that roll. Please try again.");
+    }
+  }
+
+  async function handleQuickAddLastRoll() {
+    if (!user || rolls.length === 0) return;
+    const last = rolls[0];
+    setQuickAdding(true);
+    try {
+      const match = rolls.find(
+        (r) =>
+          r.level === "full" &&
+          r.brand === last.brand &&
+          r.material === last.material &&
+          r.color === last.color &&
+          r.sizeGrams === last.sizeGrams,
+      );
+      if (match) {
+        await incrementRollQuantity(match.id, 1, match.sizeGrams);
+      } else {
+        await addRoll(user.uid, {
+          brand: last.brand,
+          material: last.material,
+          color: last.color,
+          sizeGrams: last.sizeGrams,
+          price: last.price,
+          level: "full",
+          quantity: 1,
+          excludeFromReorder: false,
+        });
+      }
+    } catch (error) {
+      setRollsError(error instanceof Error ? error.message : "Couldn't quick-add a roll. Please try again.");
+    } finally {
+      setQuickAdding(false);
+    }
+  }
+
   if (loading || !user) {
     return (
       <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
@@ -180,13 +232,25 @@ export default function InventoryPage() {
               Filament rolls
             </h1>
           </div>
-          <Link
-            href="/inventory/new"
-            className="flex h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-          >
-            <PlusIcon />
-            Add roll
-          </Link>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleQuickAddLastRoll}
+              disabled={rolls.length === 0 || quickAdding}
+              title="Duplicate your most recently added roll, or add +1 if a matching full roll already exists"
+              className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+            >
+              <DuplicateIcon />
+              {quickAdding ? "Adding…" : "Quick add"}
+            </button>
+            <Link
+              href="/inventory/new"
+              className="flex h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+            >
+              <PlusIcon />
+              Add roll
+            </Link>
+          </div>
         </div>
 
         <div className="mt-6">
@@ -350,6 +414,16 @@ export default function InventoryPage() {
                       </span>
                     )}
                     <div className="ml-auto flex shrink-0 gap-2">
+                      {roll.level === "full" && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAddOne(roll)}
+                          title="Add +1 to this roll's quantity"
+                          className="flex h-8 items-center rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        >
+                          +1
+                        </button>
+                      )}
                       <Link
                         href={`/inventory/${roll.id}/edit`}
                         aria-label="Edit roll"
@@ -426,6 +500,16 @@ export default function InventoryPage() {
                   </label>
 
                   <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3 dark:border-white/10">
+                    {roll.level === "full" && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAddOne(roll)}
+                        title="Add +1 to this roll's quantity"
+                        className="flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                      >
+                        +1
+                      </button>
+                    )}
                     <Link
                       href={`/inventory/${roll.id}/edit`}
                       className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
