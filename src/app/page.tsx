@@ -19,13 +19,24 @@ function CheckIcon() {
   return <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4.5 10.5 3.2 3.2 7.8-8" /></svg>;
 }
 
+const reorderPreviewRows = [
+  { label: "Bambu Lab Yellow PLA", detail: "~0.25 rolls (250 g)", status: "reorder" as const },
+  { label: "eSun Sky Blue PETG", detail: "~1.00 rolls (1000 g)", status: "warn" as const },
+  { label: "Bambu Lab Red PLA", detail: "~1.00 rolls (1000 g)", status: "warn" as const },
+];
+
+const rollCardPreviews = [
+  { color: "Sky Blue", meta: "eSun · PETG", stock: "1000 g on hand", price: "$12.99 paid", status: "warn" as const },
+  { color: "Yellow", meta: "Bambu Lab · PLA", stock: "250 g on hand", price: "$12.99 paid", status: "reorder" as const },
+];
+
 function MiniDashboard() {
   return (
     <div className={`${styles.dashboard} relative mx-auto w-full max-w-[520px]`}>
       <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
         <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Production overview</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">Friday, Nov 7</p>
+          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Filament rolls</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">Reorder report</p>
         </div>
         <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700">
           <span className={`${styles.liveDot} h-1.5 w-1.5 rounded-full bg-emerald-500`} />
@@ -33,56 +44,50 @@ function MiniDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 sm:grid-cols-[1.35fr_.9fr]">
-        <div className="rounded-2xl bg-slate-950 p-4 text-white">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Hex planter · 6 units</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">$18.40</p>
-              <p className="mt-1 text-[11px] text-slate-400">suggested price / unit</p>
-            </div>
-            <span className="rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">+64% margin</span>
+      <div className="space-y-1.5 p-4">
+        {reorderPreviewRows.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-xs"
+          >
+            <span className="text-slate-700">
+              {row.label}
+              <span className="ml-2 text-[10px] text-slate-400">{row.detail}</span>
+            </span>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                row.status === "reorder" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {row.status === "reorder" ? "Reorder now" : "Low — order soon"}
+            </span>
           </div>
-          <div className="mt-5">
-            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <span className="h-full bg-slate-500" style={{ width: "36%" }} />
-              <span className="h-full bg-blue-400" style={{ width: "64%" }} />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-              <span>Est. cost $6.60</span>
-              <span>Suggested $18.40</span>
-            </div>
-          </div>
-        </div>
+        ))}
+      </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Filament inventory</p>
-            <p className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              1 low
-            </p>
+      <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+        {rollCardPreviews.map((roll) => (
+          <div
+            key={roll.color}
+            className={`rounded-2xl border bg-white p-3 ${
+              roll.status === "reorder" ? "border-rose-300" : "border-amber-300"
+            }`}
+          >
+            <p className="text-xs font-semibold text-slate-900">{roll.color}</p>
+            <p className="text-[10px] text-slate-500">{roll.meta}</p>
+            <span
+              className={`mt-2 inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                roll.status === "reorder" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {roll.status === "reorder" ? "Order soon" : "Last roll"}
+            </span>
+            <div className="mt-2 flex items-center justify-between text-[9px] text-slate-500">
+              <span>{roll.stock}</span>
+              <span>{roll.price}</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-end justify-between gap-2">
-            {[
-              { color: "#1688ff", label: "1/4 left", fill: "25%", flag: "Reorder" },
-              { color: "#17a563", label: "6 rolls", fill: "100%" },
-              { color: "#0f2940", label: "2 rolls", fill: "100%" },
-            ].map((roll) => (
-              <div key={roll.color} className="flex flex-1 flex-col items-center gap-1.5">
-                {roll.flag ? (
-                  <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-amber-700 uppercase">{roll.flag}</span>
-                ) : (
-                  <span className="h-[15px]" aria-hidden="true" />
-                )}
-                <div className="relative h-16 w-5 overflow-hidden rounded-full bg-slate-100">
-                  <span className="absolute inset-x-0 bottom-0 rounded-full" style={{ height: roll.fill, background: roll.color }} />
-                </div>
-                <span className="text-[9px] font-semibold text-slate-500">{roll.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
