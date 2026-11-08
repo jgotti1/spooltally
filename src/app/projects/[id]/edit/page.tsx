@@ -57,15 +57,15 @@ function EditProjectPageInner() {
       <Header />
       <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-14 sm:px-10">
         <BackLink href="/projects" label="Back to projects" />
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Projects</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Edit project</h1>
-          </div>
-          <CloseLink href="/projects" />
-        </div>
+        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Projects</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">
+          {project?.name ?? "Edit project"}
+        </h1>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mb-4 flex justify-end">
+            <CloseLink href="/projects" />
+          </div>
           {notFound || !project ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               That project couldn&rsquo;t be found. It may have been deleted already.

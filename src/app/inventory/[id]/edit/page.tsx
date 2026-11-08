@@ -57,15 +57,15 @@ function EditRollPageInner() {
       <Header />
       <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
         <BackLink href="/inventory" label="Back to inventory" />
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Inventory</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Edit roll</h1>
-          </div>
-          <CloseLink href="/inventory" />
-        </div>
+        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Inventory</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">
+          {roll ? `${roll.brand} ${roll.color} ${roll.material}` : "Edit roll"}
+        </h1>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mb-4 flex justify-end">
+            <CloseLink href="/inventory" />
+          </div>
           {notFound || !roll ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               That roll couldn&rsquo;t be found. It may have been deleted already.
