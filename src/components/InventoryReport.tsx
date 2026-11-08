@@ -13,6 +13,14 @@ const FILTER_OPTIONS: { value: ReportFilter; label: string }[] = [
   { value: "warn", label: "Low" },
 ];
 
+function FilterIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M3 5h14M6 10h8M8.5 15h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function GearIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -45,6 +53,7 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
   const [warnAtRolls, setWarnAtRolls] = useState(settings.warnAtRolls);
   const [savingSettings, setSavingSettings] = useState(false);
   const [filter, setFilter] = useState<ReportFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const groups = useMemo(() => groupLowRolls(rolls, settings), [rolls, settings]);
   const visibleGroups = useMemo(
@@ -71,14 +80,47 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Reorder report</p>
-        <button
-          type="button"
-          onClick={() => setEditingSettings((v) => !v)}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-        >
-          <GearIcon />
-          Thresholds
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setFilterOpen((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              <FilterIcon />
+              {filter === "all" ? "Filter" : FILTER_OPTIONS.find((o) => o.value === filter)?.label}
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#0b1018]">
+                {FILTER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setFilter(opt.value);
+                      setFilterOpen(false);
+                    }}
+                    className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                      filter === opt.value
+                        ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                        : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditingSettings((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <GearIcon />
+            Thresholds
+          </button>
+        </div>
       </div>
 
       {editingSettings && (
@@ -119,25 +161,6 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
               {savingSettings ? "Saving…" : "Save thresholds"}
             </button>
           </div>
-        </div>
-      )}
-
-      {groups.length > 0 && (
-        <div className="mt-4 flex gap-1.5">
-          {FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setFilter(opt.value)}
-              className={`h-8 rounded-full px-3 text-xs font-semibold transition-colors ${
-                filter === opt.value
-                  ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
         </div>
       )}
 
