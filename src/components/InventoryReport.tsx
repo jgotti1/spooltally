@@ -3,7 +3,15 @@
 import { useMemo, useState } from "react";
 import type { Roll } from "@/lib/rolls";
 import { saveInventorySettings, type InventorySettings } from "@/lib/inventory-settings";
-import { groupLowRolls } from "@/lib/inventory-status";
+import { groupLowRolls, type StockStatus } from "@/lib/inventory-status";
+
+type ReportFilter = "all" | StockStatus;
+
+const FILTER_OPTIONS: { value: ReportFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "reorder", label: "Reorder now" },
+  { value: "warn", label: "Low" },
+];
 
 function GearIcon() {
   return (
@@ -36,8 +44,13 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
   const [reorderBelowRolls, setReorderBelowRolls] = useState(settings.reorderBelowRolls);
   const [warnAtRolls, setWarnAtRolls] = useState(settings.warnAtRolls);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [filter, setFilter] = useState<ReportFilter>("all");
 
   const groups = useMemo(() => groupLowRolls(rolls, settings), [rolls, settings]);
+  const visibleGroups = useMemo(
+    () => (filter === "all" ? groups : groups.filter((g) => g.status === filter)),
+    [groups, filter],
+  );
 
   async function handleSaveSettings() {
     setSavingSettings(true);
@@ -109,14 +122,35 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
         </div>
       )}
 
+      {groups.length > 0 && (
+        <div className="mt-4 flex gap-1.5">
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFilter(opt.value)}
+              className={`h-8 rounded-full px-3 text-xs font-semibold transition-colors ${
+                filter === opt.value
+                  ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mt-4">
         {groups.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Everything&rsquo;s stocked above your thresholds. Nothing to reorder.
           </p>
+        ) : visibleGroups.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nothing matches this filter.</p>
         ) : (
           <ul className="space-y-2">
-            {groups.map((g) => (
+            {visibleGroups.map((g) => (
               <li
                 key={g.key}
                 className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-sm dark:border-white/10"
