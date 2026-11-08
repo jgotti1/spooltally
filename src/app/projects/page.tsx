@@ -191,7 +191,8 @@ export default function ProjectsPage() {
                     <ul className="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                       {project.colorsNeeded.map((need, i) => (
                         <li key={i}>
-                          {need.color} {need.material} — {need.gramsNeeded}g
+                          {need.color} {need.material}
+                          {need.gramsNeeded != null ? ` — ${need.gramsNeeded}g` : ""}
                         </li>
                       ))}
                     </ul>

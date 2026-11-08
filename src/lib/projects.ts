@@ -24,7 +24,7 @@ const configError = new Error(
 export type ProjectColorNeed = {
   material: string;
   color: string;
-  gramsNeeded: number;
+  gramsNeeded: number | null;
   rollIds: string[];
 };
 

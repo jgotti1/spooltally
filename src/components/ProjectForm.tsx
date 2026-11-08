@@ -28,7 +28,7 @@ type ProjectFormProps = {
 };
 
 function emptyColorNeed(): ProjectColorNeed {
-  return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], gramsNeeded: 0, rollIds: [] };
+  return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], gramsNeeded: null, rollIds: [] };
 }
 
 function PlusIcon() {
@@ -296,14 +296,17 @@ export function ProjectForm({ project }: ProjectFormProps) {
                   />
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Grams needed
+                      Grams needed <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
                     </label>
                     <input
                       type="number"
                       min={0}
-                      value={need.gramsNeeded}
-                      onChange={(e) => updateColorNeed(index, { gramsNeeded: Number(e.target.value) })}
-                      className="h-12 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      value={need.gramsNeeded ?? ""}
+                      onChange={(e) =>
+                        updateColorNeed(index, { gramsNeeded: e.target.value === "" ? null : Number(e.target.value) })
+                      }
+                      placeholder="Not sure yet"
+                      className="h-12 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
                     />
                   </div>
                   {colorsNeeded.length > 1 && (
