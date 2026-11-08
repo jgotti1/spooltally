@@ -8,6 +8,8 @@ import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
 import { deleteRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
+import { InventoryReport } from "@/components/InventoryReport";
 
 function PlusIcon() {
   return (
@@ -52,12 +54,24 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [materialFilter, setMaterialFilter] = useState("All");
   const [colorFilter, setColorFilter] = useState("All");
+  const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    getInventorySettings(user.uid).then((next) => {
+      if (active) setSettings(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -116,6 +130,10 @@ export default function InventoryPage() {
             <PlusIcon />
             Add roll
           </Link>
+        </div>
+
+        <div className="mt-6">
+          <InventoryReport ownerId={user.uid} rolls={rolls} settings={settings} onSettingsChange={setSettings} />
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
