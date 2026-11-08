@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
+import { CloseLink } from "@/components/CloseLink";
 import {
   BRAND_OPTIONS,
   COLOR_OPTIONS,
@@ -40,6 +41,27 @@ export function RollForm({ roll }: RollFormProps) {
   const [error, setError] = useState("");
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
   const [duplicateMatch, setDuplicateMatch] = useState<Roll | null>(null);
+
+  const [initial] = useState(() => ({
+    brand: roll?.brand ?? BRAND_OPTIONS[0],
+    material: roll?.material ?? MATERIAL_OPTIONS[0],
+    color: roll?.color ?? COLOR_OPTIONS[0],
+    sizeGrams: roll?.sizeGrams ?? 1000,
+    price: roll ? String(roll.price) : "",
+    level: roll?.level ?? "full",
+    quantity: roll?.quantity ?? 1,
+    excludeFromReorder: roll?.excludeFromReorder ?? false,
+  }));
+
+  const isDirty =
+    brand !== initial.brand ||
+    material !== initial.material ||
+    color !== initial.color ||
+    sizeGrams !== initial.sizeGrams ||
+    price !== initial.price ||
+    level !== initial.level ||
+    quantity !== initial.quantity ||
+    excludeFromReorder !== initial.excludeFromReorder;
 
   useEffect(() => {
     if (roll || !user) return;
@@ -163,6 +185,9 @@ export function RollForm({ roll }: RollFormProps) {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
+      <div className="flex justify-end">
+        <CloseLink href="/inventory" dirty={isDirty} />
+      </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <ComboSelect label="Brand" value={brand} onChange={setBrand} options={BRAND_OPTIONS} customPlaceholder="e.g. Local Shop Filament" />
         <ComboSelect label="Material" value={material} onChange={setMaterial} options={MATERIAL_OPTIONS} customPlaceholder="e.g. HIPS" />

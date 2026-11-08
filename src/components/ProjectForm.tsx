@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
+import { CloseLink } from "@/components/CloseLink";
 import {
   BRAND_OPTIONS,
   COLOR_OPTIONS,
@@ -106,6 +107,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
   );
   const [files, setFiles] = useState<ProjectFile[]>(project?.files ?? []);
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
+
+  const [initial] = useState(() => ({
+    name: project?.name ?? "",
+    status: project?.status ?? "Active",
+    colorsNeededJson: JSON.stringify(
+      project?.colorsNeeded && project.colorsNeeded.length > 0 ? project.colorsNeeded : [emptyColorNeed()],
+    ),
+  }));
+
+  const isDirty = name !== initial.name || status !== initial.status || JSON.stringify(colorsNeeded) !== initial.colorsNeededJson;
   const [placeholderDraft, setPlaceholderDraft] = useState<Record<number, { brand: string; sizeGrams: number }>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
@@ -231,6 +242,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="flex justify-end">
+        <CloseLink href="/projects" dirty={isDirty} />
+      </div>
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Project name

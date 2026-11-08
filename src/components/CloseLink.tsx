@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 
 function XIcon() {
   return (
@@ -10,18 +12,28 @@ function XIcon() {
 
 type CloseLinkProps = {
   href: string;
+  /** When true, confirms before leaving instead of navigating straight away. */
+  dirty?: boolean;
 };
 
-/** Top-right close button for forms, for leaving without saving. */
-export function CloseLink({ href }: CloseLinkProps) {
+/** Top-right close button for forms, for leaving without saving. Confirms first if there are unsaved changes. */
+export function CloseLink({ href, dirty }: CloseLinkProps) {
+  const router = useRouter();
+
+  function handleClick() {
+    if (dirty && !window.confirm("Close without saving changes?")) return;
+    router.push(href);
+  }
+
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={handleClick}
       aria-label="Close"
       className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
     >
       <XIcon />
       Close
-    </Link>
+    </button>
   );
 }

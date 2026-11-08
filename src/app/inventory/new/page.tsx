@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
-import { CloseLink } from "@/components/CloseLink";
 import { RollForm } from "@/components/RollForm";
 
 export default function NewRollPage() {
@@ -38,9 +37,6 @@ export default function NewRollPage() {
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="mb-4 flex justify-end">
-            <CloseLink href="/inventory" />
-          </div>
           <RollForm />
         </div>
       </div>

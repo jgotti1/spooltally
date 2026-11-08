@@ -63,13 +63,15 @@ function EditRollPageInner() {
         </h1>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="mb-4 flex justify-end">
-            <CloseLink href="/inventory" />
-          </div>
           {notFound || !roll ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              That roll couldn&rsquo;t be found. It may have been deleted already.
-            </p>
+            <>
+              <div className="mb-4 flex justify-end">
+                <CloseLink href="/inventory" />
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                That roll couldn&rsquo;t be found. It may have been deleted already.
+              </p>
+            </>
           ) : (
             <RollForm roll={roll} />
           )}

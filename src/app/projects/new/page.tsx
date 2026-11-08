@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
-import { CloseLink } from "@/components/CloseLink";
 import { ProjectForm } from "@/components/ProjectForm";
 
 export default function NewProjectPage() {
@@ -35,9 +34,6 @@ export default function NewProjectPage() {
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">New project</h1>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="mb-4 flex justify-end">
-            <CloseLink href="/projects" />
-          </div>
           <ProjectForm />
         </div>
       </div>
