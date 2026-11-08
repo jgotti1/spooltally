@@ -5,7 +5,11 @@ import { LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 
-const navItems = ["Estimator", "Inventory", "Projects"];
+const navItems = [
+  { label: "Estimator", href: null },
+  { label: "Inventory", href: "/inventory" },
+  { label: "Projects", href: null },
+];
 
 /** Shared top nav for authenticated app pages. */
 export function Header() {
@@ -23,11 +27,17 @@ export function Header() {
         </span>
       </Link>
       <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex dark:text-slate-400">
-        {navItems.map((item) => (
-          <span key={item} className="cursor-default hover:text-slate-900 dark:hover:text-white">
-            {item}
-          </span>
-        ))}
+        {navItems.map((item) =>
+          item.href ? (
+            <Link key={item.label} href={item.href} className="hover:text-slate-900 dark:hover:text-white">
+              {item.label}
+            </Link>
+          ) : (
+            <span key={item.label} className="cursor-default hover:text-slate-900 dark:hover:text-white">
+              {item.label}
+            </span>
+          ),
+        )}
       </nav>
       <div className="flex items-center gap-3">
         <ThemeToggle />

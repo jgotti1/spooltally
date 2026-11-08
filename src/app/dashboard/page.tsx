@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
@@ -38,15 +39,30 @@ export default function DashboardPage() {
         </p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {["Estimator", "Inventory", "Projects"].map((item) => (
-            <div
-              key={item}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]"
-            >
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item}</p>
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Coming soon</p>
-            </div>
-          ))}
+          {[
+            { label: "Estimator", href: null },
+            { label: "Inventory", href: "/inventory" },
+            { label: "Projects", href: null },
+          ].map((item) =>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-blue-400/40"
+              >
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</p>
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Open →</p>
+              </Link>
+            ) : (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Coming soon</p>
+              </div>
+            ),
+          )}
         </div>
 
         <button
