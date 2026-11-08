@@ -128,9 +128,11 @@ export function LoginForm() {
         type="button"
         onClick={handleGoogle}
         disabled={busy !== null}
-        className={`${styles.googleButton} flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:shadow-none`}
+        className={`${styles.googleButton} flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-[13px] font-semibold whitespace-nowrap text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 sm:gap-3 sm:text-sm dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:shadow-none`}
       >
-        <GoogleIcon className="h-[18px] w-[18px]" />
+        <span className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]">
+          <GoogleIcon className="h-full w-full" />
+        </span>
         {busy === "google" ? "Connecting…" : "Continue with Google"}
       </button>
 

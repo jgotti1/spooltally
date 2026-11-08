@@ -17,7 +17,7 @@ Web app for 3D print sellers: price estimation, filament inventory, and project 
 - Access = `isComped` OR active trial OR active/trialing Stripe subscription.
 - Trial ends → data locked, not deleted.
 - Admin routes gated by a Firebase custom claim (`admin`) plus matching Firestore security rules — never by hiding the route client-side.
-- Owner's support inbox address (johnmargotti@gmail.com) stays server-side only, never rendered to users.
+- Owner's support inbox address (jgotti711@gmail.com) stays server-side only, never rendered to users.
 
 ## Build order (follow this sequence; don't jump ahead)
 

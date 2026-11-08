@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 /** Account dropdown: profile info pulled from the signed-in provider, plus billing placeholders. */
@@ -73,17 +74,23 @@ export function UserMenu() {
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Billing</span>
               <span className="text-xs text-slate-400 dark:text-slate-500">Cancel anytime</span>
             </div>
-            <button
-              type="button"
-              disabled
-              title="Billing isn't set up yet"
-              className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-500"
+            <Link
+              href="/account/subscription"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:bg-white/[0.06]"
             >
-              Manage billing — coming soon
-            </button>
+              Subscription information
+            </Link>
           </div>
 
           <div className="border-t border-slate-100 px-4 py-3 dark:border-white/10">
+            <Link
+              href="/contact"
+              onClick={() => setOpen(false)}
+              className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+            >
+              Contact support
+            </Link>
             <button
               type="button"
               onClick={() => {
