@@ -71,3 +71,6 @@ export const CUSTOM_OPTION = "Other (custom)";
 export function gramsForLevel(level: RollLevel, sizeGrams: number, quantity: number): number {
   return ROLL_LEVEL_FRACTIONS[level] * sizeGrams * (level === "full" ? quantity : 1);
 }
+
+export const PROJECT_STATUSES = ["Active", "Queued", "Done"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];

@@ -171,6 +171,29 @@ export async function updateRoll(rollId: string, input: RollInput) {
   });
 }
 
+/** Creates a zero-stock roll entry for a needed color that isn't in inventory yet — it will immediately show as "reorder now" in the low-stock report. */
+export async function addPlaceholderRoll(
+  ownerId: string,
+  input: { brand: string; material: string; color: string; sizeGrams: number },
+): Promise<string> {
+  if (!db) throw configError;
+  const ref = await addDoc(rollsCollection(), {
+    ownerId,
+    brand: input.brand,
+    material: input.material,
+    color: input.color,
+    sizeGrams: input.sizeGrams,
+    price: 0,
+    level: "empty",
+    quantity: 1,
+    remainingGrams: 0,
+    excludeFromReorder: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
 export async function setRollReorderExclusion(rollId: string, excludeFromReorder: boolean) {
   if (!db) throw configError;
   await updateDoc(doc(rollsCollection(), rollId), {
