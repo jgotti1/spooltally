@@ -9,6 +9,7 @@ import { BackLink } from "@/components/BackLink";
 import { PROJECT_STATUSES, type ProjectStatus } from "@/lib/inventory-constants";
 import { deleteProject, subscribeToProjects, type Project } from "@/lib/projects";
 import { subscribeToRolls, type Roll } from "@/lib/rolls";
+import { PROJECT_SORT_OPTIONS, sortProjects, type ProjectSortOption } from "@/lib/project-sort";
 
 function PlusIcon() {
   return (
@@ -32,6 +33,25 @@ function TrashIcon() {
   );
 }
 
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <rect x="3" y="3" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="3" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="3" y="11" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="11" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M4 5.5h12M4 10h12M4 14.5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const STATUS_BADGE_CLASSES: Record<ProjectStatus, string> = {
   Active: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
   Queued: "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300",
@@ -46,6 +66,11 @@ export default function ProjectsPage() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "All">("All");
+  const [search, setSearch] = useState("");
+  const [materialFilter, setMaterialFilter] = useState("All");
+  const [colorFilter, setColorFilter] = useState("All");
+  const [sortBy, setSortBy] = useState<ProjectSortOption>("newest");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -76,10 +101,33 @@ export default function ProjectsPage() {
 
   const rollsById = useMemo(() => new Map(rolls.map((r) => [r.id, r])), [rolls]);
 
-  const filtered = useMemo(
-    () => (statusFilter === "All" ? projects : projects.filter((p) => p.status === statusFilter)),
-    [projects, statusFilter],
+  const materials = useMemo(
+    () => ["All", ...Array.from(new Set(projects.flatMap((p) => p.colorsNeeded.map((n) => n.material))))],
+    [projects],
   );
+  const colors = useMemo(
+    () => ["All", ...Array.from(new Set(projects.flatMap((p) => p.colorsNeeded.map((n) => n.color))))],
+    [projects],
+  );
+
+  const filtered = useMemo(() => {
+    return projects.filter((p) => {
+      if (statusFilter !== "All" && p.status !== statusFilter) return false;
+      if (materialFilter !== "All" && !p.colorsNeeded.some((n) => n.material === materialFilter)) return false;
+      if (colorFilter !== "All" && !p.colorsNeeded.some((n) => n.color === colorFilter)) return false;
+      if (search.trim()) {
+        const haystack = `${p.name} ${p.colorsNeeded.map((n) => `${n.material} ${n.color}`).join(" ")}`.toLowerCase();
+        if (!haystack.includes(search.trim().toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [projects, statusFilter, materialFilter, colorFilter, search]);
+
+  const sorted = useMemo(() => sortProjects(filtered, sortBy), [filtered, sortBy]);
+
+  function needsReorder(project: Project) {
+    return project.colorsNeeded.some((need) => need.rollIds.some((id) => (rollsById.get(id)?.remainingGrams ?? 0) === 0));
+  }
 
   async function handleDelete(project: Project) {
     if (!window.confirm(`Delete project "${project.name}"? This won't delete any linked rolls.`)) return;
@@ -136,6 +184,76 @@ export default function ProjectsPage() {
           ))}
         </div>
 
+        <div className="mt-4 flex flex-wrap gap-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, material, color…"
+            className="h-11 flex-1 min-w-[200px] rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          />
+          <select
+            value={materialFilter}
+            onChange={(e) => setMaterialFilter(e.target.value)}
+            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          >
+            {materials.map((m) => (
+              <option key={m} value={m}>
+                {m === "All" ? "All materials" : m}
+              </option>
+            ))}
+          </select>
+          <select
+            value={colorFilter}
+            onChange={(e) => setColorFilter(e.target.value)}
+            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          >
+            {colors.map((c) => (
+              <option key={c} value={c}>
+                {c === "All" ? "All colors" : c}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as ProjectSortOption)}
+            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          >
+            {PROJECT_SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                Sort: {opt.label}
+              </option>
+            ))}
+          </select>
+          <div className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.03]">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+              aria-pressed={viewMode === "grid"}
+              className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
+                viewMode === "grid"
+                  ? "bg-slate-950 text-white dark:bg-white/15"
+                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+              }`}
+            >
+              <GridIcon />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              aria-pressed={viewMode === "list"}
+              className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
+                viewMode === "list"
+                  ? "bg-slate-950 text-white dark:bg-white/15"
+                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+              }`}
+            >
+              <ListIcon />
+            </button>
+          </div>
+        </div>
+
         {projectsError && (
           <p className="mt-6 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
             {projectsError}
@@ -145,10 +263,10 @@ export default function ProjectsPage() {
         <div className="mt-6">
           {projectsLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading projects…</p>
-          ) : filtered.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.02]">
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {projects.length === 0 ? "No projects yet." : "No projects match this filter."}
+                {projects.length === 0 ? "No projects yet." : "No projects match your filters."}
               </p>
               {projects.length === 0 && (
                 <Link
@@ -160,17 +278,67 @@ export default function ProjectsPage() {
                 </Link>
               )}
             </div>
+          ) : viewMode === "list" ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+              {sorted.map((project, i) => {
+                const flagged = needsReorder(project);
+                return (
+                  <div
+                    key={project.id}
+                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
+                      i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
+                    } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
+                  >
+                    <div className="min-w-[160px] flex-1">
+                      <p className="font-semibold text-slate-900 dark:text-white">{project.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {project.colorsNeeded.map((n) => `${n.color} ${n.material}`).join(", ")}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE_CLASSES[project.status]}`}
+                    >
+                      {project.status}
+                    </span>
+                    {project.files.length > 0 && (
+                      <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                        {project.files.length} file{project.files.length === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {flagged && (
+                      <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                        Order now
+                      </span>
+                    )}
+                    <div className="ml-auto flex shrink-0 gap-2">
+                      <Link
+                        href={`/projects/${project.id}/edit`}
+                        className="flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(project)}
+                        aria-label="Delete project"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((project) => {
-                const needsReorder = project.colorsNeeded.some((need) =>
-                  need.rollIds.some((id) => (rollsById.get(id)?.remainingGrams ?? 0) === 0),
-                );
+              {sorted.map((project) => {
+                const flagged = needsReorder(project);
                 return (
                   <div
                     key={project.id}
                     className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
-                      needsReorder ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-white/10"
+                      flagged ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-white/10"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -182,7 +350,7 @@ export default function ProjectsPage() {
                       </span>
                     </div>
 
-                    {needsReorder && (
+                    {flagged && (
                       <span className="mt-3 inline-flex w-fit items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                         Order now — missing filament
                       </span>
