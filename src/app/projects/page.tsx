@@ -328,6 +328,7 @@ export default function ProjectsPage() {
                 return (
                   <div
                     key={project.id}
+                    onDoubleClick={() => router.push(`/projects/${project.id}/edit`)}
                     className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
@@ -381,6 +382,7 @@ export default function ProjectsPage() {
                 return (
                   <div
                     key={project.id}
+                    onDoubleClick={() => router.push(`/projects/${project.id}/edit`)}
                     className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
                       flagged ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-white/10"
                     }`}
