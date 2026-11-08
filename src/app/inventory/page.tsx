@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
-import { addRoll, deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { addRoll, deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, updateRoll, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
@@ -222,7 +222,33 @@ export default function InventoryPage() {
     try {
       if (roll.level === "full") {
         await incrementRollQuantity(roll.id, 1, roll.sizeGrams);
+      } else if (roll.remainingGrams === 0) {
+        // Nothing to keep in a 0g entry — restock it in place instead of leaving a stale duplicate.
+        const match = rolls.find(
+          (r) =>
+            r.id !== roll.id &&
+            r.level === "full" &&
+            r.brand === roll.brand &&
+            r.material === roll.material &&
+            r.color === roll.color &&
+            r.sizeGrams === roll.sizeGrams,
+        );
+        if (match) {
+          await incrementRollQuantity(match.id, 1, match.sizeGrams);
+        } else {
+          await updateRoll(roll.id, {
+            brand: roll.brand,
+            material: roll.material,
+            color: roll.color,
+            sizeGrams: roll.sizeGrams,
+            price: roll.price,
+            level: "full",
+            quantity: 1,
+            excludeFromReorder: roll.excludeFromReorder,
+          });
+        }
       } else {
+        // Genuinely partial roll still in use — add a fresh full roll alongside it.
         const match = rolls.find(
           (r) =>
             r.level === "full" &&
