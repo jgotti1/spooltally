@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -83,6 +84,27 @@ export function subscribeToRolls(
     },
     (error) => onError?.(error),
   );
+}
+
+export async function getRoll(rollId: string): Promise<Roll | null> {
+  if (!db) throw configError;
+  const snap = await getDoc(doc(rollsCollection(), rollId));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    id: snap.id,
+    ownerId: data.ownerId,
+    brand: data.brand,
+    material: data.material,
+    color: data.color,
+    sizeGrams: data.sizeGrams,
+    price: data.price,
+    level: data.level,
+    quantity: data.quantity,
+    remainingGrams: data.remainingGrams,
+    createdAt: data.createdAt ?? null,
+    updatedAt: data.updatedAt ?? null,
+  };
 }
 
 export async function addRoll(ownerId: string, input: RollInput) {
