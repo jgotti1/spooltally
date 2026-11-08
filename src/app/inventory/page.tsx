@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
-import { deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { addRoll, deleteRoll, incrementRollQuantity, setRollReorderExclusion, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
@@ -196,14 +196,35 @@ export default function InventoryPage() {
       setQuickAddWarning("That roll no longer exists. Select another.");
       return;
     }
-    if (roll.level !== "full") {
-      setQuickAddWarning("Quick add only works on full rolls. Edit this roll to change its quantity.");
-      return;
-    }
     setQuickAddWarning("");
     setQuickAdding(true);
     try {
-      await incrementRollQuantity(roll.id, 1, roll.sizeGrams);
+      if (roll.level === "full") {
+        await incrementRollQuantity(roll.id, 1, roll.sizeGrams);
+      } else {
+        const match = rolls.find(
+          (r) =>
+            r.level === "full" &&
+            r.brand === roll.brand &&
+            r.material === roll.material &&
+            r.color === roll.color &&
+            r.sizeGrams === roll.sizeGrams,
+        );
+        if (match) {
+          await incrementRollQuantity(match.id, 1, match.sizeGrams);
+        } else if (user) {
+          await addRoll(user.uid, {
+            brand: roll.brand,
+            material: roll.material,
+            color: roll.color,
+            sizeGrams: roll.sizeGrams,
+            price: roll.price,
+            level: "full",
+            quantity: 1,
+            excludeFromReorder: false,
+          });
+        }
+      }
     } catch (error) {
       setRollsError(error instanceof Error ? error.message : "Couldn't quick-add a roll. Please try again.");
     } finally {
@@ -236,7 +257,7 @@ export default function InventoryPage() {
               type="button"
               onClick={handleQuickAdd}
               disabled={rolls.length === 0 || quickAdding}
-              title="Select a full roll below, then click here to add +1 to its quantity"
+              title="Select a roll below, then click here: full rolls get +1 to quantity, partial rolls get a new full roll added of the same type"
               className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
             >
               <DuplicateIcon />
