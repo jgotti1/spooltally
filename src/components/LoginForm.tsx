@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import { Logo } from "@/components/Logo";
 import styles from "@/app/page.module.css";
 
 function MailIcon() {
@@ -113,10 +114,8 @@ export function LoginForm() {
   return (
     <div className={`${styles.authCard} rounded-[28px] border border-white/80 bg-white/88 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:p-9 dark:shadow-black/40`}>
       <div className="mb-7">
-        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">
-          {mode === "signin" ? "Welcome back" : "Get started"}
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-slate-950 dark:text-white">
+        <Logo className="h-7 w-auto" />
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-slate-950 dark:text-white">
           {mode === "signin" ? "Sign in to your workshop" : "Start your free trial"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">

@@ -160,6 +160,10 @@ export default function LoginPage() {
             <a href="#" className="hover:text-slate-600 dark:hover:text-slate-300">Terms</a>
             <a href="#" className="hover:text-slate-600 dark:hover:text-slate-300">Privacy</a>
           </div>
+
+          <p className="mt-4 text-center text-[11px] text-slate-400 dark:text-slate-500">
+            &copy; 2026 margotticode.com
+          </p>
         </div>
       </section>
     </main>
