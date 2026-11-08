@@ -11,6 +11,7 @@ import { deleteRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, statusByKey } from "@/lib/inventory-status";
+import { SORT_OPTIONS, sortRolls, type SortOption } from "@/lib/inventory-sort";
 
 function PlusIcon() {
   return (
@@ -47,6 +48,25 @@ function TrashIcon() {
   );
 }
 
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <rect x="3" y="3" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="3" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="3" y="11" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="11" width="6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M4 5.5h12M4 10h12M4 14.5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function InventoryPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -57,6 +77,8 @@ export default function InventoryPage() {
   const [materialFilter, setMaterialFilter] = useState("All");
   const [colorFilter, setColorFilter] = useState("All");
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,6 +126,7 @@ export default function InventoryPage() {
     }
     return true;
   });
+  const sorted = useMemo(() => sortRolls(filtered, sortBy), [filtered, sortBy]);
 
   async function handleDelete(roll: Roll) {
     if (!window.confirm(`Delete this ${roll.brand} ${roll.color} ${roll.material} roll?`)) return;
@@ -176,6 +199,45 @@ export default function InventoryPage() {
               </option>
             ))}
           </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                Sort: {opt.label}
+              </option>
+            ))}
+          </select>
+          <div className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.03]">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+              aria-pressed={viewMode === "grid"}
+              className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
+                viewMode === "grid"
+                  ? "bg-slate-950 text-white dark:bg-white/15"
+                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+              }`}
+            >
+              <GridIcon />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              aria-pressed={viewMode === "list"}
+              className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
+                viewMode === "list"
+                  ? "bg-slate-950 text-white dark:bg-white/15"
+                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+              }`}
+            >
+              <ListIcon />
+            </button>
+          </div>
         </div>
 
         {rollsError && (
@@ -187,7 +249,7 @@ export default function InventoryPage() {
         <div className="mt-6">
           {rollsLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading rolls…</p>
-          ) : filtered.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.02]">
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 {rolls.length === 0 ? "No rolls yet." : "No rolls match your filters."}
@@ -202,9 +264,74 @@ export default function InventoryPage() {
                 </Link>
               )}
             </div>
+          ) : viewMode === "list" ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+              {sorted.map((roll, i) => {
+                const status = stockStatusByKey.get(`${roll.material}__${roll.color}`);
+                return (
+                  <div
+                    key={roll.id}
+                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
+                      i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
+                    } ${
+                      status === "reorder"
+                        ? "bg-rose-50/60 dark:bg-rose-500/[0.06]"
+                        : status === "warn"
+                          ? "bg-amber-50/60 dark:bg-amber-500/[0.06]"
+                          : ""
+                    }`}
+                  >
+                    <div className="min-w-[160px] flex-1">
+                      <p className="font-semibold text-slate-900 dark:text-white">
+                        {roll.color} {roll.material}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{roll.brand}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                      {ROLL_LEVEL_LABELS[roll.level]}
+                      {roll.level === "full" && roll.quantity > 1 ? ` ×${roll.quantity}` : ""}
+                    </span>
+                    <span className="w-24 shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                      {Math.round(roll.remainingGrams)} g
+                    </span>
+                    <span className="w-16 shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                      ${roll.price.toFixed(2)}
+                    </span>
+                    {status && (
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          status === "reorder"
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                        }`}
+                      >
+                        {status === "reorder" ? "Order soon" : "Last roll"}
+                      </span>
+                    )}
+                    <div className="ml-auto flex shrink-0 gap-2">
+                      <Link
+                        href={`/inventory/${roll.id}/edit`}
+                        aria-label="Edit roll"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                      >
+                        <PencilIcon />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(roll)}
+                        aria-label="Delete roll"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((roll) => {
+              {sorted.map((roll) => {
                 const status = stockStatusByKey.get(`${roll.material}__${roll.color}`);
                 return (
                 <div
