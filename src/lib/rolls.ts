@@ -4,6 +4,8 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  increment,
   onSnapshot,
   query,
   serverTimestamp,
@@ -85,6 +87,28 @@ export function subscribeToRolls(
   );
 }
 
+export async function listRolls(ownerId: string): Promise<Roll[]> {
+  if (!db) throw configError;
+  const snapshot = await getDocs(query(rollsCollection(), where("ownerId", "==", ownerId)));
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ownerId: data.ownerId,
+      brand: data.brand,
+      material: data.material,
+      color: data.color,
+      sizeGrams: data.sizeGrams,
+      price: data.price,
+      level: data.level,
+      quantity: data.quantity,
+      remainingGrams: data.remainingGrams,
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+    } satisfies Roll;
+  });
+}
+
 export async function getRoll(rollId: string): Promise<Roll | null> {
   if (!db) throw configError;
   const snap = await getDoc(doc(rollsCollection(), rollId));
@@ -136,6 +160,15 @@ export async function updateRoll(rollId: string, input: RollInput) {
     level: input.level,
     quantity: input.level === "full" ? input.quantity : 1,
     remainingGrams,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function incrementRollQuantity(rollId: string, addQuantity: number, sizeGrams: number) {
+  if (!db) throw configError;
+  await updateDoc(doc(rollsCollection(), rollId), {
+    quantity: increment(addQuantity),
+    remainingGrams: increment(addQuantity * sizeGrams),
     updatedAt: serverTimestamp(),
   });
 }

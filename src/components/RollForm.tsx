@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
@@ -14,7 +14,7 @@ import {
   CUSTOM_OPTION,
   type RollLevel,
 } from "@/lib/inventory-constants";
-import { addRoll, updateRoll, type Roll } from "@/lib/rolls";
+import { addRoll, incrementRollQuantity, listRolls, updateRoll, type Roll } from "@/lib/rolls";
 
 type RollFormProps = {
   roll?: Roll;
@@ -37,11 +37,33 @@ export function RollForm({ roll }: RollFormProps) {
   const [quantity, setQuantity] = useState(roll?.quantity ?? 1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
+  const [duplicateMatch, setDuplicateMatch] = useState<Roll | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (roll || !user) return;
+    let active = true;
+    listRolls(user.uid).then((rolls) => {
+      if (active) setExistingRolls(rolls);
+    });
+    return () => {
+      active = false;
+    };
+  }, [roll, user]);
+
+  function resetForm() {
+    setBrand(BRAND_OPTIONS[0]);
+    setMaterial(MATERIAL_OPTIONS[0]);
+    setColor(COLOR_OPTIONS[0]);
+    setSizeIsCustom(false);
+    setSizeGrams(1000);
+    setPrice("");
+    setLevel("full");
+    setQuantity(1);
+  }
+
+  async function performSave() {
     if (!user) return;
-    setError("");
     setSaving(true);
     try {
       const input = {
@@ -59,21 +81,56 @@ export function RollForm({ roll }: RollFormProps) {
         await addRoll(user.uid, input);
       }
       setSaving(false);
-      if (!roll) {
-        setBrand(BRAND_OPTIONS[0]);
-        setMaterial(MATERIAL_OPTIONS[0]);
-        setColor(COLOR_OPTIONS[0]);
-        setSizeIsCustom(false);
-        setSizeGrams(1000);
-        setPrice("");
-        setLevel("full");
-        setQuantity(1);
-      }
+      if (!roll) resetForm();
       router.push("/inventory");
     } catch {
       setError("Something went wrong saving this roll. Please try again.");
       setSaving(false);
     }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setError("");
+
+    if (!roll && level === "full") {
+      const match = existingRolls.find(
+        (r) =>
+          r.level === "full" &&
+          r.brand === brand &&
+          r.material === material &&
+          r.color === color &&
+          r.sizeGrams === sizeGrams,
+      );
+      if (match) {
+        setDuplicateMatch(match);
+        return;
+      }
+    }
+
+    await performSave();
+  }
+
+  async function handleMergeIntoExisting() {
+    if (!duplicateMatch) return;
+    setError("");
+    setSaving(true);
+    try {
+      await incrementRollQuantity(duplicateMatch.id, Math.max(1, quantity), sizeGrams);
+      setSaving(false);
+      setDuplicateMatch(null);
+      resetForm();
+      router.push("/inventory");
+    } catch {
+      setError("Couldn't update that roll. Please try again.");
+      setSaving(false);
+    }
+  }
+
+  async function handleAddSeparately() {
+    setDuplicateMatch(null);
+    await performSave();
   }
 
   return (
@@ -184,15 +241,54 @@ export function RollForm({ roll }: RollFormProps) {
         </p>
       )}
 
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {saving ? "Saving…" : roll ? "Save changes" : "Add roll"}
-        </button>
-      </div>
+      {duplicateMatch ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            You already have {duplicateMatch.quantity} full {sizeGrams}g roll{duplicateMatch.quantity === 1 ? "" : "s"} of{" "}
+            {brand} {color} {material}.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-300/80">
+            Add {Math.max(1, quantity)} more to that entry instead of creating a duplicate, or add this as a separate
+            roll anyway.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleMergeIntoExisting}
+              className="flex h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {saving ? "Updating…" : `Add to existing (→ ${duplicateMatch.quantity + Math.max(1, quantity)} total)`}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleAddSeparately}
+              className="flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-xs font-semibold text-amber-800 transition-colors disabled:cursor-not-allowed disabled:opacity-70 dark:border-amber-500/30 dark:bg-transparent dark:text-amber-200"
+            >
+              Add as separate roll
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setDuplicateMatch(null)}
+              className="flex h-10 items-center justify-center rounded-lg px-4 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70 dark:text-amber-300 dark:hover:bg-amber-500/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {saving ? "Saving…" : roll ? "Save changes" : "Add roll"}
+          </button>
+        </div>
+      )}
     </form>
   );
 }
