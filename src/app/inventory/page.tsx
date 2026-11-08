@@ -12,6 +12,7 @@ import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySetting
 import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
 import { SORT_OPTIONS, sortRolls, type SortOption } from "@/lib/inventory-sort";
+import { exportRollsToExcel } from "@/lib/inventory-export";
 
 function PlusIcon() {
   return (
@@ -63,6 +64,20 @@ function ListIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
       <path d="M4 5.5h12M4 10h12M4 14.5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M10 3v9m0 0 3.5-3.5M10 12l-3.5-3.5M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -238,6 +253,15 @@ export default function InventoryPage() {
               <ListIcon />
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => exportRollsToExcel(sorted)}
+            disabled={sorted.length === 0}
+            className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+          >
+            <DownloadIcon />
+            Export to Excel
+          </button>
         </div>
 
         {rollsError && (
