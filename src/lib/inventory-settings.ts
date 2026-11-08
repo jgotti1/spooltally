@@ -12,7 +12,7 @@ export type InventorySettings = {
 
 export const DEFAULT_INVENTORY_SETTINGS: InventorySettings = {
   reorderBelowRolls: 1,
-  warnAtRolls: 2,
+  warnAtRolls: 1,
 };
 
 function settingsDoc(ownerId: string) {
