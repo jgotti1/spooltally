@@ -1,0 +1,62 @@
+.shell { background: #f5f8fc; }
+:global(.dark) .shell { background: #05080e; }
+
+.brandPanel {
+  background: radial-gradient(circle at 18% 24%, rgba(21, 137, 255, 0.2), transparent 30%), linear-gradient(145deg, #061725 0%, #0b2235 52%, #071a29 100%);
+}
+
+.gridPattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.orb { position: absolute; border-radius: 9999px; filter: blur(2px); opacity: 0.7; }
+.orbOne { top: 11%; right: -110px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(24, 144, 255, 0.25), rgba(24, 144, 255, 0)); animation: drift 9s ease-in-out infinite; }
+.orbTwo { bottom: 12%; left: -150px; width: 360px; height: 360px; background: radial-gradient(circle, rgba(20, 172, 102, 0.17), rgba(20, 172, 102, 0)); animation: drift 11s ease-in-out infinite reverse; }
+
+.gradientText { color: transparent; background: linear-gradient(92deg, #45a9ff 2%, #28df98 98%); background-clip: text; -webkit-background-clip: text; }
+
+.dashboard {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  color: #0f172a;
+  transform: perspective(1200px) rotateX(1deg) rotateY(-1.5deg);
+}
+
+.liveDot { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.12); animation: pulse 2.5s ease-out infinite; }
+.authPanel { background: linear-gradient(145deg, #f8fbff 0%, #eef5fb 100%); }
+:global(.dark) .authPanel { background: linear-gradient(145deg, #0a1018 0%, #070b12 100%); }
+.authGlow { background: radial-gradient(circle at 90% 12%, rgba(17, 133, 255, 0.12), transparent 25%), radial-gradient(circle at 8% 86%, rgba(20, 165, 99, 0.08), transparent 25%); }
+:global(.dark) .authGlow { background: radial-gradient(circle at 90% 12%, rgba(69, 169, 255, 0.1), transparent 25%), radial-gradient(circle at 8% 86%, rgba(40, 223, 152, 0.07), transparent 25%); }
+.authCard { box-shadow: 0 32px 80px -34px rgba(15, 41, 64, 0.35), 0 1px 0 rgba(255, 255, 255, 0.9) inset; }
+:global(.dark) .authCard { background: rgba(13, 19, 28, 0.86) !important; border-color: rgba(255, 255, 255, 0.08) !important; box-shadow: 0 32px 80px -34px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.04) inset; }
+
+.googleButton, .input, .submitButton { transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease; }
+.googleButton:hover { border-color: #b8c5d3; background: #f8fafc; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 41, 64, 0.08); }
+:global(.dark) .googleButton { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+:global(.dark) .googleButton:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); }
+.input:hover { border-color: #c3cfdb; background: white; }
+.input:focus { border-color: #1688ff; background: white; outline: none; box-shadow: 0 0 0 4px rgba(22, 136, 255, 0.12), 0 8px 20px rgba(15, 41, 64, 0.04); }
+:global(.dark) .input { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+:global(.dark) .input:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.2); }
+:global(.dark) .input:focus { background: rgba(255, 255, 255, 0.06); border-color: #45a9ff; box-shadow: 0 0 0 4px rgba(69, 169, 255, 0.16), 0 8px 20px rgba(0, 0, 0, 0.2); }
+.inputIcon svg, .submitButton svg, .authCard svg { width: 100%; height: 100%; }
+.inputIcon svg, .submitButton svg { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.submitButton { background: linear-gradient(100deg, #0a1e2e 0%, #0f2940 58%, #0b5eb6 140%); }
+.submitButton:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(11, 94, 182, 0.22); }
+.submitButton:active, .googleButton:active { transform: translateY(0); }
+.submitButton:focus-visible, .googleButton:focus-visible { outline: 2px solid #1688ff; outline-offset: 3px; }
+
+@keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(-18px, 16px, 0) scale(1.06); } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.24); } 70%, 100% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); } }
+
+@media (max-width: 1023px) { .brandPanel { min-height: 540px; } }
+@media (max-width: 639px) { .brandPanel { min-height: auto; padding-bottom: 3.5rem; } .authPanel { margin-top: -20px; border-radius: 22px 22px 0 0; } }
+@media (prefers-reduced-motion: reduce) { .orbOne, .orbTwo, .liveDot { animation: none; } .googleButton, .input, .submitButton { transition: none; } }

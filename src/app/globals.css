@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.dark body {
+  background: #05080e;
+  color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(22, 136, 255, 0.2);
+  color: #071a29;
+}
+
+.dark ::selection {
+  background: rgba(69, 169, 255, 0.3);
+  color: #f0f7ff;
+}
