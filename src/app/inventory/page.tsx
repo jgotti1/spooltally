@@ -10,6 +10,7 @@ import { ROLL_LEVEL_LABELS } from "@/lib/inventory-constants";
 import { deleteRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { InventoryReport } from "@/components/InventoryReport";
+import { groupLowRolls, statusByKey } from "@/lib/inventory-status";
 
 function PlusIcon() {
   return (
@@ -92,6 +93,7 @@ export default function InventoryPage() {
 
   const materials = useMemo(() => ["All", ...Array.from(new Set(rolls.map((r) => r.material)))], [rolls]);
   const colors = useMemo(() => ["All", ...Array.from(new Set(rolls.map((r) => r.color)))], [rolls]);
+  const stockStatusByKey = useMemo(() => statusByKey(groupLowRolls(rolls, settings)), [rolls, settings]);
 
   const filtered = rolls.filter((r) => {
     if (materialFilter !== "All" && r.material !== materialFilter) return false;
@@ -202,10 +204,18 @@ export default function InventoryPage() {
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((roll) => (
+              {filtered.map((roll) => {
+                const status = stockStatusByKey.get(`${roll.material}__${roll.color}`);
+                return (
                 <div
                   key={roll.id}
-                  className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.03]"
+                  className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
+                    status === "reorder"
+                      ? "border-rose-300 dark:border-rose-500/40"
+                      : status === "warn"
+                        ? "border-amber-300 dark:border-amber-500/40"
+                        : "border-slate-200 dark:border-white/10"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -219,6 +229,18 @@ export default function InventoryPage() {
                       {roll.level === "full" && roll.quantity > 1 ? ` ×${roll.quantity}` : ""}
                     </span>
                   </div>
+
+                  {status && (
+                    <span
+                      className={`mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        status === "reorder"
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                      }`}
+                    >
+                      {status === "reorder" ? "Order soon — less than a roll" : "Last roll — running low"}
+                    </span>
+                  )}
 
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>{Math.round(roll.remainingGrams)} g on hand</span>
@@ -243,7 +265,8 @@ export default function InventoryPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Roll } from "@/lib/rolls";
 import { saveInventorySettings, type InventorySettings } from "@/lib/inventory-settings";
+import { groupLowRolls } from "@/lib/inventory-status";
 
 function GearIcon() {
   return (
@@ -20,39 +21,6 @@ function GearIcon() {
       />
     </svg>
   );
-}
-
-type Group = {
-  key: string;
-  material: string;
-  color: string;
-  totalGrams: number;
-  rollsEquivalent: number;
-  status: "reorder" | "warn";
-};
-
-function groupLowRolls(rolls: Roll[], settings: InventorySettings): Group[] {
-  const map = new Map<string, { material: string; color: string; totalGrams: number; sizes: number[] }>();
-  for (const roll of rolls) {
-    const key = `${roll.material}__${roll.color}`;
-    const entry = map.get(key) ?? { material: roll.material, color: roll.color, totalGrams: 0, sizes: [] };
-    entry.totalGrams += roll.remainingGrams;
-    entry.sizes.push(roll.sizeGrams);
-    map.set(key, entry);
-  }
-
-  const groups: Group[] = [];
-  for (const [key, entry] of map) {
-    const referenceSize = entry.sizes.sort((a, b) => a - b)[Math.floor(entry.sizes.length / 2)] || 1000;
-    const rollsEquivalent = entry.totalGrams / referenceSize;
-    if (rollsEquivalent < settings.reorderBelowRolls) {
-      groups.push({ key, material: entry.material, color: entry.color, totalGrams: entry.totalGrams, rollsEquivalent, status: "reorder" });
-    } else if (rollsEquivalent <= settings.warnAtRolls) {
-      groups.push({ key, material: entry.material, color: entry.color, totalGrams: entry.totalGrams, rollsEquivalent, status: "warn" });
-    }
-  }
-
-  return groups.sort((a, b) => a.rollsEquivalent - b.rollsEquivalent);
 }
 
 type InventoryReportProps = {
