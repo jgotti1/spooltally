@@ -8,7 +8,7 @@ import { UserMenu } from "@/components/UserMenu";
 const navItems = [
   { label: "Estimator", href: null },
   { label: "Inventory", href: "/inventory" },
-  { label: "Projects", href: null },
+  { label: "Projects", href: "/projects" },
 ];
 
 /** Shared top nav for authenticated app pages. */

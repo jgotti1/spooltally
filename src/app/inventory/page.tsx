@@ -13,6 +13,7 @@ import { InventoryReport } from "@/components/InventoryReport";
 import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
 import { SORT_OPTIONS, sortRolls, type SortOption } from "@/lib/inventory-sort";
 import { exportRollsToExcel } from "@/lib/inventory-export";
+import { subscribeToProjects, type Project } from "@/lib/projects";
 
 function PlusIcon() {
   return (
@@ -106,6 +107,7 @@ export default function InventoryPage() {
   const [quickAdding, setQuickAdding] = useState(false);
   const [selectedRollId, setSelectedRollId] = useState<string | null>(null);
   const [quickAddWarning, setQuickAddWarning] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -139,6 +141,25 @@ export default function InventoryPage() {
       },
     );
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToProjects(user.uid, setProjects);
+  }, [user]);
+
+  const projectsByRollId = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }[]>();
+    for (const project of projects) {
+      for (const need of project.colorsNeeded) {
+        for (const rollId of need.rollIds) {
+          const entry = map.get(rollId) ?? [];
+          if (!entry.some((p) => p.id === project.id)) entry.push({ id: project.id, name: project.name });
+          map.set(rollId, entry);
+        }
+      }
+    }
+    return map;
+  }, [projects]);
 
   const materials = useMemo(() => ["All", ...Array.from(new Set(rolls.map((r) => r.material)))], [rolls]);
   const colors = useMemo(() => ["All", ...Array.from(new Set(rolls.map((r) => r.color)))], [rolls]);
@@ -419,6 +440,19 @@ export default function InventoryPage() {
                         {roll.color} {roll.material}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{roll.brand}</p>
+                      {(projectsByRollId.get(roll.id)?.length ?? 0) > 0 && (
+                        <p className="text-[11px] text-blue-600 dark:text-blue-400">
+                          Used in:{" "}
+                          {projectsByRollId.get(roll.id)!.map((p, i, arr) => (
+                            <span key={p.id}>
+                              <Link href={`/projects/${p.id}/edit`} className="hover:underline">
+                                {p.name}
+                              </Link>
+                              {i < arr.length - 1 ? ", " : ""}
+                            </span>
+                          ))}
+                        </p>
+                      )}
                     </div>
                     <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                       {ROLL_LEVEL_LABELS[roll.level]}
@@ -514,6 +548,19 @@ export default function InventoryPage() {
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {roll.brand} · {roll.material}
                         </p>
+                        {(projectsByRollId.get(roll.id)?.length ?? 0) > 0 && (
+                          <p className="text-[11px] text-blue-600 dark:text-blue-400">
+                            Used in:{" "}
+                            {projectsByRollId.get(roll.id)!.map((p, i, arr) => (
+                              <span key={p.id}>
+                                <Link href={`/projects/${p.id}/edit`} className="hover:underline">
+                                  {p.name}
+                                </Link>
+                                {i < arr.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                          </p>
+                        )}
                       </div>
                     </label>
                     <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
