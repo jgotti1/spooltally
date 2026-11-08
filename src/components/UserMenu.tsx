@@ -4,6 +4,33 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
+function MessageIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M3 5.5A1.5 1.5 0 0 1 4.5 4h11A1.5 1.5 0 0 1 17 5.5v6A1.5 1.5 0 0 1 15.5 13H9l-3.2 2.4a.5.5 0 0 1-.8-.4V13h-1A1.5 1.5 0 0 1 2.5 11.5v-6Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SignOutIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M7.5 3H5a1.5 1.5 0 0 0-1.5 1.5v11A1.5 1.5 0 0 0 5 17h2.5M13 13.5 17 10l-4-3.5M17 10H7.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Account dropdown: profile info pulled from the signed-in provider, plus billing placeholders. */
 export function UserMenu() {
   const { user, signOut } = useAuth();
@@ -83,22 +110,27 @@ export function UserMenu() {
             </Link>
           </div>
 
-          <div className="border-t border-slate-100 px-4 py-3 dark:border-white/10">
+          <div className="border-t border-slate-100 px-2 py-2 dark:border-white/10">
             <Link
               href="/contact"
               onClick={() => setOpen(false)}
-              className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
             >
+              <MessageIcon />
               Contact support
             </Link>
+          </div>
+
+          <div className="border-t border-slate-100 px-2 py-2 dark:border-white/10">
             <button
               type="button"
               onClick={() => {
                 setOpen(false);
                 signOut();
               }}
-              className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
             >
+              <SignOutIcon />
               Sign out
             </button>
           </div>
