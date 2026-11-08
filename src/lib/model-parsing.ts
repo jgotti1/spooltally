@@ -157,17 +157,42 @@ async function parseGcode(file: File): Promise<ModelParseResult> {
   };
 }
 
-async function parse3mf(file: File): Promise<ModelParseResult> {
+/** Sums the volume (mm^3) of every <mesh> in a 3MF's 3D model XML — a geometry-only fallback for when no slicer summary is embedded. */
+function volumeFrom3mfModelXml(xmlText: string): number {
+  const dom = new DOMParser().parseFromString(xmlText, "application/xml");
+  let totalMm3 = 0;
+  for (const meshEl of Array.from(dom.getElementsByTagName("mesh"))) {
+    const vertexEls = meshEl.getElementsByTagName("vertex");
+    const vertices: number[] = [];
+    for (const v of Array.from(vertexEls)) {
+      vertices.push(parseFloat(v.getAttribute("x") ?? "0"), parseFloat(v.getAttribute("y") ?? "0"), parseFloat(v.getAttribute("z") ?? "0"));
+    }
+    const triangleEls = meshEl.getElementsByTagName("triangle");
+    const positions: number[] = [];
+    for (const t of Array.from(triangleEls)) {
+      for (const attr of ["v1", "v2", "v3"]) {
+        const idx = parseInt(t.getAttribute(attr) ?? "0", 10);
+        positions.push(vertices[idx * 3], vertices[idx * 3 + 1], vertices[idx * 3 + 2]);
+      }
+    }
+    totalMm3 += signedVolumeMm3(positions);
+  }
+  return totalMm3;
+}
+
+async function parse3mf(file: File, material: string): Promise<ModelParseResult> {
   const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   let grams: number | null = null;
   let printHours: number | null = null;
   let thumbnailDataUrl: string | null = null;
+  const modelXmls: string[] = [];
 
   for (const entry of Object.values(zip.files)) {
     if (entry.dir) continue;
-    if (/\.(config|xml|gcode)$/i.test(entry.name)) {
+    if (/\.(config|xml|gcode|model)$/i.test(entry.name)) {
       const text = await entry.async("text");
+      if (/^3D\/.*\.model$/i.test(entry.name)) modelXmls.push(text);
 
       const usedGMatch = text.match(/used_g="([\d.]+)"/) ?? text.match(/total filament weight \[g\]\s*:\s*([\d.]+)/i);
       if (usedGMatch && grams === null) grams = parseFloat(usedGMatch[1]);
@@ -185,19 +210,29 @@ async function parse3mf(file: File): Promise<ModelParseResult> {
     }
   }
 
-  return {
-    grams,
-    printHours,
-    accuracy: "exact",
-    note: grams === null ? "Couldn't find a filament weight in this file — enter grams manually." : undefined,
-    thumbnailDataUrl,
-  };
+  let accuracy: "estimated" | "exact" = "exact";
+  let note: string | undefined;
+  if (grams === null && modelXmls.length > 0) {
+    try {
+      const volumeCm3 = modelXmls.reduce((sum, xml) => sum + volumeFrom3mfModelXml(xml), 0) / 1000;
+      if (volumeCm3 > 0) {
+        grams = volumeCm3 * densityFor(material);
+        accuracy = "estimated";
+        note = "No slicer weight summary in this file — estimated from the model's geometry instead.";
+      }
+    } catch {
+      // fall through — grams stays null and the row falls back to manual entry.
+    }
+  }
+  if (grams === null) note = "Couldn't find or estimate a filament weight in this file — enter grams manually.";
+
+  return { grams, printHours, accuracy, note, thumbnailDataUrl };
 }
 
 export async function parseModelFile(file: File, material: string): Promise<ModelParseResult> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".stl")) return parseStl(file, material);
-  if (name.endsWith(".3mf")) return parse3mf(file);
+  if (name.endsWith(".3mf")) return parse3mf(file, material);
   if (name.endsWith(".gcode") || name.endsWith(".gco")) return parseGcode(file);
   throw new Error("Unsupported file type. Upload an STL, 3MF, or G-code file.");
 }
