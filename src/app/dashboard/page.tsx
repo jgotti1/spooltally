@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
+import { subscribeToRolls, type Roll } from "@/lib/rolls";
+import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
+import { groupLowRolls } from "@/lib/inventory-status";
 
 function SpoolIcon() {
   return (
@@ -52,12 +55,33 @@ const sections = [
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [rolls, setRolls] = useState<Roll[]>([]);
+  const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    getInventorySettings(user.uid).then((next) => {
+      if (active) setSettings(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToRolls(user.uid, setRolls);
+  }, [user]);
+
+  const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
+  const reorderCount = useMemo(() => groupLowRolls(rolls, settings).length, [rolls, settings]);
 
   if (loading || !user) {
     return (
@@ -128,6 +152,38 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">At a glance</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">{rolls.length}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Rolls tracked</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
+                {(totalGrams / 1000).toFixed(1)} kg
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Filament on hand</p>
+            </div>
+            <div>
+              <p
+                className={`text-2xl font-semibold tracking-[-0.02em] ${
+                  reorderCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-950 dark:text-white"
+                }`}
+              >
+                {reorderCount}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Needs reorder</p>
+            </div>
+          </div>
+          <Link
+            href="/inventory"
+            className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+          >
+            View inventory →
+          </Link>
         </div>
       </div>
     </main>
