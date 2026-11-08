@@ -164,7 +164,9 @@ export default function ProjectsPage() {
 
   const needsReorder = useMemo(
     () => (project: Project) =>
-      project.colorsNeeded.some((need) => need.rollIds.some((id) => (rollsById.get(id)?.remainingGrams ?? 0) === 0)),
+      project.colorsNeeded.some((need) =>
+        need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0),
+      ),
     [rollsById],
   );
 
