@@ -350,6 +350,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
             projectId: id,
           });
           await updateProject(id, { ...input, estimateId });
+          router.push(`/estimator/${estimateId}/edit`);
+          return;
         }
         router.push(`/projects/${id}/edit`);
       }
@@ -876,18 +878,30 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             {breakdown.defaultedColors.length > 0 && (
-              <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                ⚠ No roll price for{" "}
-                {breakdown.defaultedColors.map((c, i) => (
-                  <span key={i}>
-                    {i > 0 && ", "}
-                    <span className="font-semibold">
-                      {c.material} {c.color}
-                    </span>
-                  </span>
-                ))}{" "}
-                — this estimate uses a default of {money(DEFAULT_ROLL_PRICE)}/roll until a real price is set.
-              </p>
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <p>
+                  ⚠ Using the {money(DEFAULT_ROLL_PRICE)}/roll default — enter the real price to make this accurate:
+                </p>
+                <ul className="mt-1 space-y-0.5">
+                  {breakdown.defaultedColors.map((c, i) => (
+                    <li key={i}>
+                      <span className="font-semibold">
+                        {c.material} {c.color}
+                      </span>
+                      {c.rollId ? (
+                        <>
+                          {" — "}
+                          <Link href={`/inventory/${c.rollId}/edit`} className="underline hover:no-underline">
+                            set its price →
+                          </Link>
+                        </>
+                      ) : (
+                        " — pick or add a roll for this color above"
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             <div className="mt-4">

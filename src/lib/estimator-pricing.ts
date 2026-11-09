@@ -19,16 +19,18 @@ export function costPerGram(roll: Roll | undefined): number {
   return roll.price / roll.sizeGrams;
 }
 
+export type DefaultedColor = { material: string; color: string; rollId: string | null };
+
 /** Total filament cost across all colors used, based on each color's linked roll, plus which colors (if any) had to fall back to the default roll price. */
 export function calcFilamentCost(
   colorsUsed: EstimateColorUsage[],
   rollsById: Map<string, Roll>,
-): { cost: number; defaultedColors: { material: string; color: string }[] } {
+): { cost: number; defaultedColors: DefaultedColor[] } {
   let cost = 0;
-  const defaultedColors: { material: string; color: string }[] = [];
+  const defaultedColors: DefaultedColor[] = [];
   for (const c of colorsUsed) {
     const roll = c.rollId ? rollsById.get(c.rollId) : undefined;
-    if (isUsingDefaultRollCost(roll)) defaultedColors.push({ material: c.material, color: c.color });
+    if (isUsingDefaultRollCost(roll)) defaultedColors.push({ material: c.material, color: c.color, rollId: c.rollId });
     cost += c.grams * costPerGram(roll);
   }
   return { cost, defaultedColors };
@@ -45,7 +47,7 @@ export type CostBreakdown = {
   totalCost: number;
   costPerUnit: number;
   /** Colors whose filament cost used the $20/roll default because no real roll price was available. */
-  defaultedColors: { material: string; color: string }[];
+  defaultedColors: DefaultedColor[];
 };
 
 /** Total cost for the whole print batch, plus a per-unit figure once quantity is applied. */
