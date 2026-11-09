@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -25,6 +25,14 @@ import {
   type ProjectColorNeed,
   type ProjectFile,
 } from "@/lib/projects";
+import { addEstimate, type EstimateColorUsage } from "@/lib/estimates";
+import {
+  getEstimatorSettings,
+  DEFAULT_ESTIMATOR_SETTINGS,
+  type EstimatorSettings,
+} from "@/lib/estimator-settings";
+import type { SalesChannelId } from "@/lib/estimator-constants";
+import { calcCostBreakdown, calcSuggestedPrice } from "@/lib/estimator-pricing";
 
 type ProjectFormProps = {
   project?: Project;
@@ -104,20 +112,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   const [name, setName] = useState(project?.name ?? "");
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "Active");
-  const [colorsNeeded, setColorsNeeded] = useState<ProjectColorNeed[]>(
-    project?.colorsNeeded && project.colorsNeeded.length > 0 ? project.colorsNeeded : [emptyColorNeed()],
-  );
-  const [nozzleSizeMm, setNozzleSizeMm] = useState<number | null>(project?.nozzleSizeMm ?? null);
+  const [colorsNeeded, setColorsNeeded] = useState<ProjectColorNeed[]>(project?.colorsNeeded ?? []);
+  const [nozzleSizeMm, setNozzleSizeMm] = useState<number | null>(project ? (project.nozzleSizeMm ?? null) : 0.4);
   const [files, setFiles] = useState<ProjectFile[]>(project?.files ?? []);
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
 
   const [initial] = useState(() => ({
     name: project?.name ?? "",
     status: project?.status ?? "Active",
-    colorsNeededJson: JSON.stringify(
-      project?.colorsNeeded && project.colorsNeeded.length > 0 ? project.colorsNeeded : [emptyColorNeed()],
-    ),
-    nozzleSizeMm: project?.nozzleSizeMm ?? null,
+    colorsNeededJson: JSON.stringify(project?.colorsNeeded ?? []),
+    nozzleSizeMm: project ? (project.nozzleSizeMm ?? null) : 0.4,
   }));
 
   const isDirty =
@@ -129,23 +133,36 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
-  const [colorWarning, setColorWarning] = useState("");
-  const [accuracyNote, setAccuracyNote] = useState("");
-  const [unknownColorRows, setUnknownColorRows] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
   const modelInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const [startMode, setStartMode] = useState<"choose" | "manual">(project ? "manual" : "choose");
   const [parsingNew, setParsingNew] = useState(false);
-  const [pendingModelFile, setPendingModelFile] = useState<File | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<File | null>(null);
+  const [pendingAttachmentType, setPendingAttachmentType] = useState<"model" | "image" | null>(null);
   const [pendingThumbnail, setPendingThumbnail] = useState<string | null>(null);
   const newFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [printHours, setPrintHours] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [channelId, setChannelId] = useState<SalesChannelId>("etsy");
+  const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
 
   useEffect(() => {
     if (!user) return;
     return subscribeToRolls(user.uid, setExistingRolls);
   }, [user]);
+
+  useEffect(() => {
+    if (!user || project) return;
+    let active = true;
+    getEstimatorSettings(user.uid).then((next) => {
+      if (active) setSettings(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user, project]);
 
   function updateColorNeed(index: number, patch: Partial<ProjectColorNeed>) {
     setColorsNeeded((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -157,23 +174,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   function removeColorNeedRow(index: number) {
     setColorsNeeded((rows) => rows.filter((_, i) => i !== index));
-    setUnknownColorRows((s) => {
-      const next = new Set<number>();
-      for (const i of s) {
-        if (i === index) continue;
-        next.add(i > index ? i - 1 : i);
-      }
-      return next;
-    });
-  }
-
-  function clearUnknownColor(index: number) {
-    setUnknownColorRows((s) => {
-      if (!s.has(index)) return s;
-      const next = new Set(s);
-      next.delete(index);
-      return next;
-    });
   }
 
   function toggleRollLink(index: number, rollId: string) {
@@ -223,62 +223,37 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
   }
 
-  async function handleChooseUpload(file: File | undefined) {
+  /** Uploads a model file purely to pull a preview photo out of it (rendered snapshot for STL, embedded thumbnail for 3MF/G-code) — doesn't touch colors needed or grams, since that import turned out too unreliable to trust. */
+  async function handlePreviewUpload(file: File | undefined) {
     if (!file) return;
     setParsingNew(true);
     setError("");
-    setColorWarning("");
-    setAccuracyNote("");
-    setUnknownColorRows(new Set());
     try {
-      const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
-      const result = await parseModelFile(file, material);
-      if (result.filaments && result.filaments.length > 1) {
-        setColorsNeeded(
-          result.filaments.map((f) => ({
-            material,
-            color: f.colorName ?? COLOR_OPTIONS[0],
-            gramsNeeded: Math.round(f.grams * 100) / 100,
-            gramsSource: result.accuracy,
-            rollIds: [],
-          })),
-        );
-        setUnknownColorRows(new Set(result.filaments.flatMap((f, i) => (f.colorName ? [] : [i]))));
+      if (file.type.startsWith("image/")) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Couldn't read that image."));
+          reader.readAsDataURL(file);
+        });
+        setPendingAttachment(file);
+        setPendingAttachmentType("image");
+        setPendingThumbnail(dataUrl);
       } else {
-        if (result.grams !== null || result.colorName) {
-          setColorsNeeded((rows) =>
-            rows.map((row, i) =>
-              i === 0
-                ? {
-                    ...row,
-                    ...(result.grams !== null
-                      ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
-                      : {}),
-                    ...(result.colorName && result.colorName !== row.color
-                      ? { color: result.colorName, rollIds: [] }
-                      : {}),
-                  }
-                : row,
-            ),
-          );
+        const result = await parseModelFile(file, MATERIAL_OPTIONS[0]);
+        if (!name.trim()) setName(file.name.replace(/\.(stl|3mf|gcode|gco)$/i, ""));
+        setPendingAttachment(file);
+        setPendingAttachmentType("model");
+        if (result.thumbnailDataUrl) {
+          setPendingThumbnail(result.thumbnailDataUrl);
+        } else {
+          setError("Uploaded, but couldn't generate a preview image from this file.");
         }
-        setUnknownColorRows(result.colorName ? new Set() : new Set([0]));
-      }
-      if (!name.trim()) setName(file.name.replace(/\.(stl|3mf|gcode|gco)$/i, ""));
-      setPendingModelFile(file);
-      if (result.thumbnailDataUrl) setPendingThumbnail(result.thumbnailDataUrl);
-      setColorWarning(result.colorWarning ?? "");
-      if (result.grams === null) {
-        setError(result.note ?? "Couldn't read a filament weight from that file — fill it in below.");
-      } else {
-        setAccuracyNote(result.note ?? "");
       }
     } catch (err) {
-      setPendingModelFile(file);
-      setError(err instanceof Error ? err.message : "Couldn't read that file — fill in the details below.");
+      setError(err instanceof Error ? err.message : "Couldn't read that file.");
     } finally {
       setParsingNew(false);
-      setStartMode("manual");
     }
   }
 
@@ -298,10 +273,29 @@ export function ProjectForm({ project }: ProjectFormProps) {
         router.push("/projects");
       } else {
         const id = await addProject(user.uid, input);
-        if (pendingModelFile) await uploadProjectFile(user.uid, id, pendingModelFile, "model");
-        if (pendingThumbnail) {
-          const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingModelFile?.name ?? "model"}-preview.png`);
-          await uploadProjectFile(user.uid, id, imageFile, "image");
+        if (pendingAttachment && pendingAttachmentType) {
+          await uploadProjectFile(user.uid, id, pendingAttachment, pendingAttachmentType);
+          if (pendingAttachmentType === "model" && pendingThumbnail) {
+            const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingAttachment.name}-preview.png`);
+            await uploadProjectFile(user.uid, id, imageFile, "image");
+          }
+        }
+        if (colorsNeeded.length > 0) {
+          const colorsUsed: EstimateColorUsage[] = colorsNeeded.map((c) => ({
+            material: c.material,
+            color: c.color,
+            grams: c.gramsNeeded ?? 0,
+            rollId: c.rollIds[0] ?? null,
+          }));
+          const estimateId = await addEstimate(user.uid, {
+            name: name.trim(),
+            colorsUsed,
+            printHours: Number(printHours) || 0,
+            quantity: Math.max(1, quantity),
+            channelId,
+            projectId: id,
+          });
+          await updateProject(id, { ...input, estimateId });
         }
         router.push(`/projects/${id}/edit`);
       }
@@ -318,93 +312,26 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setUploading(type);
     setError("");
     setUploadStatus(null);
-    if (type === "model") {
-      setColorWarning("");
-      setAccuracyNote("");
-    }
     try {
       const meta = await uploadProjectFile(user.uid, project.id, file, type);
       setFiles((prev) => [...prev, meta]);
 
       if (type === "model") {
         try {
-          const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
-          const result = await parseModelFile(file, material);
-          if (result.filaments && result.filaments.length > 1) {
-            const newlyUnknown: number[] = [];
-            setColorsNeeded((rows) => {
-              const next = [...rows];
-              for (const f of result.filaments!) {
-                const color = f.colorName ?? COLOR_OPTIONS[0];
-                const existingIndex = next.findIndex((r) => r.material === material && r.color === color);
-                if (existingIndex >= 0 && next[existingIndex].gramsNeeded === null) {
-                  next[existingIndex] = {
-                    ...next[existingIndex],
-                    gramsNeeded: Math.round(f.grams * 100) / 100,
-                    gramsSource: result.accuracy,
-                  };
-                  if (!f.colorName) newlyUnknown.push(existingIndex);
-                } else if (existingIndex < 0) {
-                  next.push({
-                    material,
-                    color,
-                    gramsNeeded: Math.round(f.grams * 100) / 100,
-                    gramsSource: result.accuracy,
-                    rollIds: [],
-                  });
-                  if (!f.colorName) newlyUnknown.push(next.length - 1);
-                }
-              }
-              const isUntouchedDefault = (r: ProjectColorNeed) =>
-                r.material === MATERIAL_OPTIONS[0] && r.color === COLOR_OPTIONS[0] && r.gramsNeeded === null && r.rollIds.length === 0;
-              if (next.length > 1 && isUntouchedDefault(next[0])) {
-                next.shift();
-                for (let i = 0; i < newlyUnknown.length; i++) newlyUnknown[i] -= 1;
-              }
-              return next;
-            });
-            setUnknownColorRows((s) => new Set([...s, ...newlyUnknown.filter((i) => i >= 0)]));
-          } else {
-            if (result.grams !== null || result.colorName) {
-              setColorsNeeded((rows) =>
-                rows.map((row, i) =>
-                  i === 0
-                    ? {
-                        ...row,
-                        ...(result.grams !== null && row.gramsNeeded === null
-                          ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
-                          : {}),
-                        ...(result.colorName && result.colorName !== row.color
-                          ? { color: result.colorName, rollIds: [] }
-                          : {}),
-                      }
-                    : row,
-                ),
-              );
-            }
-            if (!result.colorName) setUnknownColorRows((s) => new Set([...s, 0]));
-          }
+          const result = await parseModelFile(file, MATERIAL_OPTIONS[0]);
           if (result.thumbnailDataUrl) {
             const res = await fetch(result.thumbnailDataUrl);
             const blob = await res.blob();
             const imageFile = new File([blob], `${file.name}-preview.png`, { type: blob.type });
             const imageMeta = await uploadProjectFile(user.uid, project.id, imageFile, "image");
             setFiles((prev) => [...prev, imageMeta]);
+            setUploadStatus({ kind: "ok", message: `Added a preview photo from ${file.name}.` });
+          } else {
+            setUploadStatus({ kind: "error", message: "Uploaded, but couldn't generate a preview image from this file." });
           }
-          setColorWarning(result.colorWarning ?? "");
-          if (result.grams !== null) setAccuracyNote(result.note ?? "");
-          setUploadStatus({
-            kind: result.grams !== null ? "ok" : "error",
-            message:
-              result.filaments && result.filaments.length > 1
-                ? `Split into ${result.filaments.length} colors from ${file.name}.`
-                : result.grams !== null
-                  ? `Filled grams needed for the first color from ${file.name}.`
-                  : (result.note ?? "Uploaded, but couldn't read a filament weight from this file."),
-          });
         } catch (parseErr) {
-          console.error("Model file parse failed:", parseErr);
-          setUploadStatus({ kind: "error", message: "File uploaded, but couldn't read grams or a thumbnail from it." });
+          console.error("Model file preview extraction failed:", parseErr);
+          setUploadStatus({ kind: "error", message: "File uploaded, but couldn't generate a preview image from it." });
         }
       }
     } catch (err) {
@@ -426,94 +353,82 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
   }
 
-  if (startMode === "choose") {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-end">
-          <CloseLink href="/projects" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">How do you want to start?</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Upload a model file to pull in filament needed and a preview photo automatically, or start from a blank form.
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            ref={newFileInputRef}
-            type="file"
-            accept=".stl,.3mf,.gcode,.gco"
-            className="hidden"
-            disabled={parsingNew}
-            onChange={(e) => {
-              void handleChooseUpload(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            disabled={parsingNew}
-            onClick={() => newFileInputRef.current?.click()}
-            className="flex flex-col items-start gap-2 rounded-2xl border-2 border-blue-200 bg-blue-50 p-5 text-left transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
-          >
-            <FileIcon />
-            <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-              {parsingNew ? "Reading file…" : "Upload a file"}
-            </span>
-            <span className="text-xs text-blue-700/80 dark:text-blue-300/80">STL / 3MF / G-code — import filament needed</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStartMode("manual")}
-            className="flex flex-col items-start gap-2 rounded-2xl border-2 border-slate-200 bg-white p-5 text-left transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-          >
-            <PlusIcon />
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Enter manually</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Start from a blank form</span>
-          </button>
-        </div>
-
-        {error && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
-            {error}
-          </p>
-        )}
-      </div>
-    );
-  }
+  const rollsById = useMemo(() => new Map(existingRolls.map((r) => [r.id, r])), [existingRolls]);
+  const estimateColorsUsed: EstimateColorUsage[] = useMemo(
+    () =>
+      colorsNeeded.map((c) => ({
+        material: c.material,
+        color: c.color,
+        grams: c.gramsNeeded ?? 0,
+        rollId: c.rollIds[0] ?? null,
+      })),
+    [colorsNeeded],
+  );
+  const breakdown = useMemo(
+    () => calcCostBreakdown(estimateColorsUsed, rollsById, Number(printHours) || 0, quantity, settings),
+    [estimateColorsUsed, rollsById, printHours, quantity, settings],
+  );
+  const channelPrices = useMemo(
+    () =>
+      settings.channels.map((c) => ({
+        channel: c,
+        price: calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, c),
+      })),
+    [settings, breakdown],
+  );
+  const selectedChannel = settings.channels.find((c) => c.id === channelId) ?? settings.channels[0];
+  const suggestedPrice = selectedChannel
+    ? calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, selectedChannel)
+    : 0;
+  const money = (n: number) => `$${n.toFixed(2)}`;
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="flex justify-end">
         <CloseLink href="/projects" dirty={isDirty} />
       </div>
-      {pendingModelFile && (
-        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+
+      {!project && (
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Preview photo <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+          </label>
           {pendingThumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pendingThumbnail} alt={pendingModelFile.name} className="h-12 w-16 rounded-lg object-cover" />
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={pendingThumbnail} alt="Preview" className="h-14 w-20 rounded-lg object-cover" />
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                <span className="font-semibold">{pendingAttachment?.name}</span> will be attached as this project&rsquo;s photo once
+                you save.
+              </p>
+            </div>
           ) : (
-            <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-blue-600 dark:bg-white/10">
-              <FileIcon />
-            </span>
+            <>
+              <input
+                ref={newFileInputRef}
+                type="file"
+                accept=".stl,.3mf,.gcode,.gco,image/*"
+                className="hidden"
+                disabled={parsingNew}
+                onChange={(e) => {
+                  void handlePreviewUpload(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                disabled={parsingNew}
+                onClick={() => newFileInputRef.current?.click()}
+                className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+              >
+                <FileIcon />
+                {parsingNew ? "Reading file…" : "Upload a photo or STL / 3MF / G-code for a preview"}
+              </button>
+            </>
           )}
-          <p className="text-xs text-blue-800 dark:text-blue-200">
-            <span className="font-semibold">{pendingModelFile.name}</span> will be attached once you save this project.
-          </p>
         </div>
       )}
-      {colorWarning && (
-        <p className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300">
-          ⚠ {colorWarning}
-        </p>
-      )}
-      {accuracyNote && (
-        <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          {accuracyNote}
-        </p>
-      )}
+
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Project name
@@ -530,7 +445,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Status</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {PROJECT_STATUSES.map((s) => (
             <button
               key={s}
@@ -577,6 +492,12 @@ export function ProjectForm({ project }: ProjectFormProps) {
           </button>
         </div>
 
+        {colorsNeeded.length === 0 && (
+          <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 text-center text-sm text-slate-500 dark:border-white/15 dark:bg-white/[0.02] dark:text-slate-400">
+            No colors added yet — click &ldquo;Add color&rdquo; for each filament this needs.
+          </p>
+        )}
+
         <div className="space-y-4">
           {colorsNeeded.map((need, index) => {
             const matches = existingRolls.filter((r) => r.material === need.material && r.color === need.color);
@@ -594,23 +515,13 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     options={MATERIAL_OPTIONS}
                     customPlaceholder="e.g. HIPS"
                   />
-                  <div className={unknownColorRows.has(index) ? "rounded-xl ring-2 ring-rose-400" : ""}>
                   <ComboSelect
                     label="Color"
                     value={need.color}
-                    onChange={(v) => {
-                      updateColorNeed(index, { color: v });
-                      clearUnknownColor(index);
-                    }}
+                    onChange={(v) => updateColorNeed(index, { color: v })}
                     options={COLOR_OPTIONS}
                     customPlaceholder="e.g. Galaxy Purple"
                   />
-                  {unknownColorRows.has(index) && (
-                    <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
-                      Not read from the file — pick the real color
-                    </p>
-                  )}
-                  </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Grams needed <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
@@ -724,6 +635,89 @@ export function ProjectForm({ project }: ProjectFormProps) {
           })}
         </div>
       </div>
+
+      {!project && colorsNeeded.length > 0 && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Print time (hours) <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+              </label>
+              <input
+                id="printHours"
+                type="number"
+                min={0}
+                step="0.1"
+                value={printHours}
+                onChange={(e) => setPrintHours(e.target.value)}
+                placeholder="3.5"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="quantity" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Units per batch
+              </label>
+              <input
+                id="quantity"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost &amp; suggested price</p>
+            <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex justify-between">
+                <span>Filament</span>
+                <span>{money(breakdown.filamentCost / Math.max(1, quantity))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Machine + electricity + labor</span>
+                <span>
+                  {money((breakdown.machineCost + breakdown.electricityCost + breakdown.laborCost) / Math.max(1, quantity))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Packaging + shipping</span>
+                <span>{money((breakdown.packagingCost + breakdown.shippingCost) / Math.max(1, quantity))}</span>
+              </div>
+              <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-sm font-semibold text-slate-900 dark:border-white/10 dark:text-white">
+                <span>Cost per unit</span>
+                <span>{money(breakdown.costPerUnit)}</span>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-xs font-semibold text-slate-500 dark:text-slate-400">Sales channel</label>
+              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+                {channelPrices.map(({ channel, price }) => (
+                  <button
+                    key={channel.id}
+                    type="button"
+                    onClick={() => setChannelId(channel.id)}
+                    className={`flex w-full items-center justify-between px-4 py-2 text-sm transition-colors ${
+                      channelId === channel.id
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-700 hover:bg-slate-50 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:bg-white/[0.06]"
+                    } ${channel.id !== channelPrices[channelPrices.length - 1].channel.id ? "border-b border-slate-100 dark:border-white/10" : ""}`}
+                  >
+                    <span>{channel.label}</span>
+                    <span className="font-semibold">{Number.isFinite(price) ? money(price) : "—"}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                Suggested price via {selectedChannel?.label}: {Number.isFinite(suggestedPrice) ? money(suggestedPrice) : "—"} / unit
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {project && !project.estimateId && (
         <Link

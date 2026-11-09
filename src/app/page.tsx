@@ -41,8 +41,8 @@ const projectPreviewCards = [
   },
   {
     name: "Keychain samples",
-    status: "Queued",
-    statusClass: "bg-slate-100 text-slate-700",
+    status: "Archived",
+    statusClass: "bg-emerald-100 text-emerald-700",
     colors: ["Red PLA — 40g"],
     flagged: false,
     thumb: "model" as const,

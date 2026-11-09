@@ -10,7 +10,7 @@ export const PROJECT_SORT_OPTIONS = [
 
 export type ProjectSortOption = (typeof PROJECT_SORT_OPTIONS)[number]["value"];
 
-const STATUS_ORDER = { Active: 0, Queued: 1, Archived: 2 };
+const STATUS_ORDER = { Active: 0, Archived: 1 };
 
 export function sortProjects(projects: Project[], sortBy: ProjectSortOption): Project[] {
   const sorted = [...projects];
