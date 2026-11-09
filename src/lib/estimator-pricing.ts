@@ -3,18 +3,35 @@ import type { EstimateColorUsage } from "@/lib/estimates";
 import type { EstimatorSettings } from "@/lib/estimator-settings";
 import type { ChannelFeeProfile } from "@/lib/estimator-constants";
 
-/** Cost per gram for a roll, from its purchase price and size. */
+/** Used for filament cost whenever a color has no linked roll, or its roll has no price set — a guess so the estimate isn't silently $0, not a real number. */
+export const DEFAULT_ROLL_PRICE = 20;
+const DEFAULT_ROLL_SIZE_GRAMS = 1000;
+const DEFAULT_COST_PER_GRAM = DEFAULT_ROLL_PRICE / DEFAULT_ROLL_SIZE_GRAMS;
+
+/** True when a roll has no real price to cost from — missing, or priced at $0. */
+export function isUsingDefaultRollCost(roll: Roll | undefined): boolean {
+  return !roll || roll.sizeGrams <= 0 || roll.price <= 0;
+}
+
+/** Cost per gram for a roll, from its purchase price and size — falls back to the default roll price when the roll has none. */
 export function costPerGram(roll: Roll | undefined): number {
-  if (!roll || roll.sizeGrams <= 0) return 0;
+  if (!roll || roll.sizeGrams <= 0 || roll.price <= 0) return DEFAULT_COST_PER_GRAM;
   return roll.price / roll.sizeGrams;
 }
 
-/** Total filament cost across all colors used, based on each color's linked roll. */
-export function calcFilamentCost(colorsUsed: EstimateColorUsage[], rollsById: Map<string, Roll>): number {
-  return colorsUsed.reduce((sum, c) => {
+/** Total filament cost across all colors used, based on each color's linked roll, plus which colors (if any) had to fall back to the default roll price. */
+export function calcFilamentCost(
+  colorsUsed: EstimateColorUsage[],
+  rollsById: Map<string, Roll>,
+): { cost: number; defaultedColors: { material: string; color: string }[] } {
+  let cost = 0;
+  const defaultedColors: { material: string; color: string }[] = [];
+  for (const c of colorsUsed) {
     const roll = c.rollId ? rollsById.get(c.rollId) : undefined;
-    return sum + c.grams * costPerGram(roll);
-  }, 0);
+    if (isUsingDefaultRollCost(roll)) defaultedColors.push({ material: c.material, color: c.color });
+    cost += c.grams * costPerGram(roll);
+  }
+  return { cost, defaultedColors };
 }
 
 export type CostBreakdown = {
@@ -27,6 +44,8 @@ export type CostBreakdown = {
   failureBuffer: number;
   totalCost: number;
   costPerUnit: number;
+  /** Colors whose filament cost used the $20/roll default because no real roll price was available. */
+  defaultedColors: { material: string; color: string }[];
 };
 
 /** Total cost for the whole print batch, plus a per-unit figure once quantity is applied. */
@@ -37,7 +56,7 @@ export function calcCostBreakdown(
   quantity: number,
   settings: EstimatorSettings,
 ): CostBreakdown {
-  const filamentCost = calcFilamentCost(colorsUsed, rollsById);
+  const { cost: filamentCost, defaultedColors } = calcFilamentCost(colorsUsed, rollsById);
   const machineCost = printHours * settings.machineRatePerHour;
   const electricityCost = printHours * settings.electricityRatePerHour;
   const laborCost = printHours * settings.laborRatePerHour;
@@ -57,6 +76,7 @@ export function calcCostBreakdown(
     failureBuffer,
     totalCost,
     costPerUnit: totalCost / units,
+    defaultedColors,
   };
 }
 
