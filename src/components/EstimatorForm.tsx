@@ -99,6 +99,9 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
     estimate?.colorsUsed && estimate.colorsUsed.length > 0 ? estimate.colorsUsed : [emptyColorUsage()],
   );
   const [printHours, setPrintHours] = useState(estimate ? String(estimate.printHours) : "");
+  const [slicerFilamentCost, setSlicerFilamentCost] = useState(
+    estimate?.slicerFilamentCost ? String(estimate.slicerFilamentCost) : "",
+  );
   const [quantity, setQuantity] = useState(estimate?.quantity ?? 1);
   const [channelId, setChannelId] = useState<SalesChannelId>(estimate?.channelId ?? "etsy");
   const [linkedProjectId, setLinkedProjectId] = useState<string | null>(estimate?.projectId ?? null);
@@ -138,6 +141,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
     ),
     printHours: estimate ? String(estimate.printHours) : "",
     quantity: estimate?.quantity ?? 1,
+    slicerFilamentCost: estimate?.slicerFilamentCost ? String(estimate.slicerFilamentCost) : "",
   }));
 
   useEffect(() => {
@@ -330,8 +334,16 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
   }, [initialProjectId, projects, estimate]);
 
   const breakdown = useMemo(
-    () => calcCostBreakdown(colorsUsed, rollsById, Number(printHours) || 0, quantity, settings),
-    [colorsUsed, rollsById, printHours, quantity, settings],
+    () =>
+      calcCostBreakdown(
+        colorsUsed,
+        rollsById,
+        Number(printHours) || 0,
+        quantity,
+        settings,
+        slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
+      ),
+    [colorsUsed, rollsById, printHours, quantity, settings, slicerFilamentCost],
   );
 
   const channelPrices = useMemo(
@@ -384,6 +396,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         quantity: Math.max(1, quantity),
         channelId,
         projectId: linkedProjectId,
+        slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
       };
       if (estimate) {
         await updateEstimate(estimate.id, input);
@@ -414,6 +427,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         quantity: Math.max(1, quantity),
         channelId,
         projectId: linkedProjectId,
+        slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
       };
       if (!estimateId) {
         estimateId = await addEstimate(user.uid, input);
@@ -464,7 +478,8 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
     name !== initial.name ||
     JSON.stringify(colorsUsed) !== initial.colorsUsedJson ||
     printHours !== initial.printHours ||
-    quantity !== initial.quantity;
+    quantity !== initial.quantity ||
+    slicerFilamentCost !== initial.slicerFilamentCost;
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -812,6 +827,27 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         </div>
       </div>
 
+      <div>
+        <label htmlFor="slicerFilamentCost" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Filament cost from your slicer{" "}
+          <span className="font-normal text-slate-400 dark:text-slate-500">(optional, total for the batch)</span>
+        </label>
+        <input
+          id="slicerFilamentCost"
+          type="number"
+          min={0}
+          step="0.01"
+          value={slicerFilamentCost}
+          onChange={(e) => setSlicerFilamentCost(e.target.value)}
+          placeholder="e.g. 0.65"
+          className="h-12 w-40 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+        />
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          If your slicer shows a filament cost (e.g. Bambu Studio&rsquo;s &ldquo;Cost&rdquo; line), enter it here and
+          we&rsquo;ll use that instead of calculating from roll prices. Leave blank to calculate it ourselves.
+        </p>
+      </div>
+
       <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost breakdown (per unit)</p>
@@ -945,6 +981,13 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
             <span>{money(breakdown.costPerUnit)}</span>
           </div>
         </div>
+
+        {breakdown.usedSlicerFilamentCost && (
+          <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+            Using your slicer&rsquo;s reported filament cost ({money(breakdown.filamentCost)}) instead of calculating
+            from roll prices.
+          </p>
+        )}
 
         {breakdown.defaultedColors.length > 0 && (
           <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">

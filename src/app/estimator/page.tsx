@@ -157,6 +157,7 @@ export default function EstimatorPage() {
                   estimate.printHours,
                   estimate.quantity,
                   settings,
+                  estimate.slicerFilamentCost,
                 );
                 const channel = settings.channels.find((c) => c.id === estimate.channelId) ?? settings.channels[0];
                 const price = channel ? calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, channel) : 0;

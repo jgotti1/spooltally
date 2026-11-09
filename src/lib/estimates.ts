@@ -36,6 +36,8 @@ export type Estimate = {
   quantity: number;
   channelId: SalesChannelId;
   projectId: string | null;
+  /** Total filament cost straight from the slicer (e.g. Bambu Studio's own "Cost" line), for the whole batch. When set, this is used instead of calculating filament cost from roll prices. */
+  slicerFilamentCost: number | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -47,6 +49,7 @@ export type EstimateInput = {
   quantity: number;
   channelId: SalesChannelId;
   projectId: string | null;
+  slicerFilamentCost: number | null;
 };
 
 function estimatesCollection() {
@@ -64,6 +67,7 @@ function mapEstimate(id: string, data: Record<string, unknown>): Estimate {
     quantity: (data.quantity as number) ?? 1,
     channelId: (data.channelId as SalesChannelId) ?? "etsy",
     projectId: (data.projectId as string | null) ?? null,
+    slicerFilamentCost: (data.slicerFilamentCost as number | null) ?? null,
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
   };

@@ -150,6 +150,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const newFileInputRef = useRef<HTMLInputElement>(null);
 
   const [printHours, setPrintHours] = useState("");
+  const [slicerFilamentCost, setSlicerFilamentCost] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [channelId, setChannelId] = useState<SalesChannelId>("etsy");
   const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
@@ -348,6 +349,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             quantity: Math.max(1, quantity),
             channelId,
             projectId: id,
+            slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
           });
           await updateProject(id, { ...input, estimateId });
           router.push(`/estimator/${estimateId}/edit`);
@@ -421,8 +423,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
     [colorsNeeded],
   );
   const breakdown = useMemo(
-    () => calcCostBreakdown(estimateColorsUsed, rollsById, Number(printHours) || 0, quantity, settings),
-    [estimateColorsUsed, rollsById, printHours, quantity, settings],
+    () =>
+      calcCostBreakdown(
+        estimateColorsUsed,
+        rollsById,
+        Number(printHours) || 0,
+        quantity,
+        settings,
+        slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
+      ),
+    [estimateColorsUsed, rollsById, printHours, quantity, settings, slicerFilamentCost],
   );
   const channelPrices = useMemo(
     () =>
@@ -852,6 +862,32 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       )}
 
+      {showStep(4) && !project && colorsNeeded.length > 0 && (
+        <div>
+          <label
+            htmlFor="slicerFilamentCost"
+            className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            Filament cost from your slicer{" "}
+            <span className="font-normal text-slate-400 dark:text-slate-500">(optional, total for the batch)</span>
+          </label>
+          <input
+            id="slicerFilamentCost"
+            type="number"
+            min={0}
+            step="0.01"
+            value={slicerFilamentCost}
+            onChange={(e) => setSlicerFilamentCost(e.target.value)}
+            placeholder="e.g. 0.65"
+            className="h-12 w-40 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          />
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            If your slicer shows a filament cost (e.g. Bambu Studio&rsquo;s &ldquo;Cost&rdquo; line), enter it here and
+            we&rsquo;ll use that instead of calculating from roll prices. Leave blank to calculate it ourselves.
+          </p>
+        </div>
+      )}
+
       {showStep(5) && !project && colorsNeeded.length > 0 && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
@@ -876,6 +912,13 @@ export function ProjectForm({ project }: ProjectFormProps) {
                 <span>{money(breakdown.costPerUnit)}</span>
               </div>
             </div>
+
+            {breakdown.usedSlicerFilamentCost && (
+              <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                Using your slicer&rsquo;s reported filament cost ({money(breakdown.filamentCost)}) instead of
+                calculating from roll prices.
+              </p>
+            )}
 
             {breakdown.defaultedColors.length > 0 && (
               <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">

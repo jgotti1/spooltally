@@ -46,19 +46,24 @@ export type CostBreakdown = {
   failureBuffer: number;
   totalCost: number;
   costPerUnit: number;
-  /** Colors whose filament cost used the $20/roll default because no real roll price was available. */
+  /** Colors whose filament cost used the $20/roll default because no real roll price was available. Always empty when a slicer-reported cost override is in use. */
   defaultedColors: DefaultedColor[];
+  /** True when filamentCost came from a slicer-reported total instead of being calculated from roll prices. */
+  usedSlicerFilamentCost: boolean;
 };
 
-/** Total cost for the whole print batch, plus a per-unit figure once quantity is applied. */
+/** Total cost for the whole print batch, plus a per-unit figure once quantity is applied. `slicerFilamentCost`, when a positive number, is used as the filament cost directly instead of calculating it from roll prices — e.g. the "Cost" line a slicer like Bambu Studio already reports for the plate. */
 export function calcCostBreakdown(
   colorsUsed: EstimateColorUsage[],
   rollsById: Map<string, Roll>,
   printHours: number,
   quantity: number,
   settings: EstimatorSettings,
+  slicerFilamentCost?: number | null,
 ): CostBreakdown {
-  const { cost: filamentCost, defaultedColors } = calcFilamentCost(colorsUsed, rollsById);
+  const usedSlicerFilamentCost = slicerFilamentCost !== null && slicerFilamentCost !== undefined && slicerFilamentCost > 0;
+  const { cost: calculatedFilamentCost, defaultedColors } = calcFilamentCost(colorsUsed, rollsById);
+  const filamentCost = usedSlicerFilamentCost ? slicerFilamentCost : calculatedFilamentCost;
   const machineCost = printHours * settings.machineRatePerHour;
   const electricityCost = printHours * settings.electricityRatePerHour;
   const laborCost = printHours * settings.laborRatePerHour;
@@ -78,7 +83,8 @@ export function calcCostBreakdown(
     failureBuffer,
     totalCost,
     costPerUnit: totalCost / units,
-    defaultedColors,
+    defaultedColors: usedSlicerFilamentCost ? [] : defaultedColors,
+    usedSlicerFilamentCost,
   };
 }
 
