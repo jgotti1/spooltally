@@ -265,6 +265,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
       setError("Give this project a name.");
       return;
     }
+    if (!project) {
+      const missing: string[] = [];
+      if (nozzleSizeMm === null) missing.push("a nozzle size");
+      if (colorsNeeded.length === 0) missing.push("at least one color");
+      else if (!printHours.trim()) missing.push("the print time");
+      if (missing.length > 0) {
+        setError(`Add ${missing.join(", ")} before creating this project — check your slicer for the exact numbers.`);
+        return;
+      }
+    }
     setSaving(true);
     try {
       const input = { name: name.trim(), status, colorsNeeded, nozzleSizeMm };
@@ -381,6 +391,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
     ? calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, selectedChannel)
     : 0;
   const money = (n: number) => `$${n.toFixed(2)}`;
+  const canSubmit = project ? true : nozzleSizeMm !== null && colorsNeeded.length > 0 && printHours.trim() !== "";
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -465,7 +476,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       <div>
         <label htmlFor="nozzleSize" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Nozzle size (mm) <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+          Nozzle size (mm){" "}
+          {project && <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>}
         </label>
         <input
           id="nozzleSize"
@@ -477,6 +489,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
           placeholder="0.4"
           className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
         />
+        {!project && (
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            Please check your slicer for the exact nozzle size you used.
+          </p>
+        )}
       </div>
 
       <div>
@@ -641,7 +658,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Print time (hours) <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+                Print time (hours)
               </label>
               <input
                 id="printHours"
@@ -653,6 +670,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
                 placeholder="3.5"
                 className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
               />
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                Please check your slicer for the exact print time.
+              </p>
             </div>
             <div>
               <label htmlFor="quantity" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -830,7 +850,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       <button
         type="submit"
-        disabled={saving}
+        disabled={saving || !canSubmit}
         className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
       >
         {saving ? "Saving…" : project ? "Save changes" : "Create project"}
