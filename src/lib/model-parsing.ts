@@ -1,3 +1,5 @@
+import { COLOR_OPTIONS } from "@/lib/inventory-constants";
+
 /** Density in g/cm^3 for common filament materials, used to turn an STL's volume into an estimated weight. */
 export const MATERIAL_DENSITIES_G_CM3: Record<string, number> = {
   PLA: 1.24,
@@ -24,7 +26,65 @@ export type ModelParseResult = {
   note?: string;
   /** A data URL for a preview image — a rendered snapshot for STL, or the slicer's own embedded thumbnail for 3MF/G-code. */
   thumbnailDataUrl?: string | null;
+  /** Nearest match in COLOR_OPTIONS to a filament color read from the file's own metadata (3MF/G-code only — STL carries no color data). */
+  colorName?: string | null;
 };
+
+/** Representative RGB for each color in COLOR_OPTIONS, used to map a filament hex color to the nearest named option. */
+const COLOR_OPTION_RGB: Record<string, [number, number, number]> = {
+  Black: [20, 20, 20],
+  White: [245, 245, 245],
+  Gray: [128, 128, 128],
+  Red: [200, 30, 30],
+  Orange: [230, 120, 20],
+  Yellow: [230, 200, 30],
+  Green: [40, 150, 60],
+  Blue: [30, 80, 200],
+  Purple: [120, 50, 160],
+  Pink: [230, 130, 180],
+  Brown: [120, 70, 40],
+  "Natural / Clear": [230, 225, 210],
+  Gold: [200, 160, 60],
+  Silver: [190, 190, 195],
+};
+
+function nearestColorName(hex: string): string | null {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!match) return null;
+  const r = parseInt(match[1].slice(0, 2), 16);
+  const g = parseInt(match[1].slice(2, 4), 16);
+  const b = parseInt(match[1].slice(4, 6), 16);
+
+  let best: string | null = null;
+  let bestDist = Infinity;
+  for (const name of COLOR_OPTIONS) {
+    const [cr, cg, cb] = COLOR_OPTION_RGB[name] ?? [128, 128, 128];
+    const dist = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = name;
+    }
+  }
+  return best;
+}
+
+/** Looks for a filament color hex written by PrusaSlicer/SuperSlicer/Bambu/OrcaSlicer (config keys or 3MF basematerials). Multi-color lists take the first entry, matching the first colors-needed row these results prefill. */
+function extractColorName(text: string): string | null {
+  const patterns = [
+    /filament_colou?r\s*=\s*"?#?([0-9a-f]{6})/i,
+    /extruder_colou?r\s*=\s*"?#?([0-9a-f]{6})/i,
+    /displaycolor\s*=\s*"#?([0-9a-f]{6})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const first = match[1].split(/[;,]/)[0];
+      const name = nearestColorName(first);
+      if (name) return name;
+    }
+  }
+  return null;
+}
 
 /** Renders a quick preview snapshot of a parsed mesh so an STL upload has something to look at, same as a slicer's thumbnail. */
 async function renderMeshThumbnail(geometry: import("three").BufferGeometry): Promise<string | null> {
@@ -154,6 +214,7 @@ async function parseGcode(file: File): Promise<ModelParseResult> {
     accuracy: "exact",
     note: grams === null ? "Couldn't find a filament weight in this file — enter grams manually." : undefined,
     thumbnailDataUrl: extractGcodeThumbnail(text),
+    colorName: extractColorName(text),
   };
 }
 
@@ -186,6 +247,7 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
   let grams: number | null = null;
   let printHours: number | null = null;
   let thumbnailDataUrl: string | null = null;
+  let colorName: string | null = null;
   const modelXmls: string[] = [];
 
   for (const entry of Object.values(zip.files)) {
@@ -199,6 +261,8 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
 
       const timeMatch = text.match(/prediction="(\d+)"/) ?? text.match(/;TIME:(\d+)/);
       if (timeMatch && printHours === null) printHours = parseFloat(timeMatch[1]) / 3600;
+
+      if (colorName === null) colorName = extractColorName(text);
     } else if (
       thumbnailDataUrl === null &&
       /\.(png|jpe?g)$/i.test(entry.name) &&
@@ -226,7 +290,7 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
   }
   if (grams === null) note = "Couldn't find or estimate a filament weight in this file — enter grams manually.";
 
-  return { grams, printHours, accuracy, note, thumbnailDataUrl };
+  return { grams, printHours, accuracy, note, thumbnailDataUrl, colorName };
 }
 
 export async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {

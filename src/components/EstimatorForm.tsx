@@ -170,6 +170,10 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
           if (i !== index) return row;
           const next = { ...row, gramsSource: result.accuracy };
           if (result.grams !== null) next.grams = Math.round(result.grams * 100) / 100;
+          if (result.colorName && result.colorName !== row.color) {
+            next.color = result.colorName;
+            next.rollId = null;
+          }
           return next;
         }),
       );

@@ -203,10 +203,20 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setError("");
     try {
       const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
-      if (result.grams !== null) {
+      if (result.grams !== null || result.colorName) {
         setColorsNeeded((rows) =>
           rows.map((row, i) =>
-            i === 0 ? { ...row, gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy } : row,
+            i === 0
+              ? {
+                  ...row,
+                  ...(result.grams !== null
+                    ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                    : {}),
+                  ...(result.colorName && result.colorName !== row.color
+                    ? { color: result.colorName, rollIds: [] }
+                    : {}),
+                }
+              : row,
           ),
         );
       }
@@ -268,11 +278,19 @@ export function ProjectForm({ project }: ProjectFormProps) {
       if (type === "model") {
         try {
           const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
-          if (result.grams !== null) {
+          if (result.grams !== null || result.colorName) {
             setColorsNeeded((rows) =>
               rows.map((row, i) =>
-                i === 0 && row.gramsNeeded === null
-                  ? { ...row, gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                i === 0
+                  ? {
+                      ...row,
+                      ...(result.grams !== null && row.gramsNeeded === null
+                        ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                        : {}),
+                      ...(result.colorName && result.colorName !== row.color
+                        ? { color: result.colorName, rollIds: [] }
+                        : {}),
+                    }
                   : row,
               ),
             );
