@@ -28,6 +28,8 @@ export type ModelParseResult = {
   thumbnailDataUrl?: string | null;
   /** Nearest match in COLOR_OPTIONS to a filament color read from the file's own metadata (3MF/G-code only — STL carries no color data). */
   colorName?: string | null;
+  /** Per-color breakdown when a 3MF has multiple objects, each assigned its own base-material color — one entry per color/part instead of one lumped total. */
+  filaments?: { grams: number; colorName: string | null }[];
 };
 
 /** Representative RGB for each color in COLOR_OPTIONS, used to map a filament hex color to the nearest named option. */
@@ -218,11 +220,25 @@ async function parseGcode(file: File): Promise<ModelParseResult> {
   };
 }
 
-/** Sums the volume (mm^3) of every <mesh> in a 3MF's 3D model XML — a geometry-only fallback for when no slicer summary is embedded. */
-function volumeFrom3mfModelXml(xmlText: string): number {
+type Object3mfGeometry = { volumeMm3: number; colorHex: string | null };
+
+/** Parses every <object>'s own <mesh> in a 3MF's 3D model XML separately (volume + its assigned <basematerials> color, when present) — a geometry-only fallback for when no slicer summary is embedded, that also lets multi-part/multi-color files split out per color instead of lumping everything into one total. */
+function objectsFrom3mfModelXml(xmlText: string): Object3mfGeometry[] {
   const dom = new DOMParser().parseFromString(xmlText, "application/xml");
-  let totalMm3 = 0;
-  for (const meshEl of Array.from(dom.getElementsByTagName("mesh"))) {
+
+  const baseColorsById = new Map<string, string[]>();
+  for (const bm of Array.from(dom.getElementsByTagName("basematerials"))) {
+    const id = bm.getAttribute("id") ?? "";
+    baseColorsById.set(
+      id,
+      Array.from(bm.getElementsByTagName("base")).map((b) => b.getAttribute("displaycolor") ?? ""),
+    );
+  }
+
+  const results: Object3mfGeometry[] = [];
+  for (const objEl of Array.from(dom.getElementsByTagName("object"))) {
+    const meshEl = objEl.getElementsByTagName("mesh")[0];
+    if (!meshEl) continue;
     const vertexEls = meshEl.getElementsByTagName("vertex");
     const vertices: number[] = [];
     for (const v of Array.from(vertexEls)) {
@@ -233,12 +249,21 @@ function volumeFrom3mfModelXml(xmlText: string): number {
     for (const t of Array.from(triangleEls)) {
       for (const attr of ["v1", "v2", "v3"]) {
         const idx = parseInt(t.getAttribute(attr) ?? "0", 10);
-        positions.push(vertices[idx * 3], vertices[idx * 3 + 1], vertices[idx * 3 + 2]);
+        positions.push(vertices[idx * 3] ?? 0, vertices[idx * 3 + 1] ?? 0, vertices[idx * 3 + 2] ?? 0);
       }
     }
-    totalMm3 += signedVolumeMm3(positions);
+    const volumeMm3 = signedVolumeMm3(positions);
+    if (volumeMm3 <= 0) continue;
+
+    const pid = objEl.getAttribute("pid");
+    const pindexAttr = objEl.getAttribute("pindex");
+    let colorHex: string | null = null;
+    if (pid && pindexAttr !== null && baseColorsById.has(pid)) {
+      colorHex = baseColorsById.get(pid)![parseInt(pindexAttr, 10)] || null;
+    }
+    results.push({ volumeMm3, colorHex });
   }
-  return totalMm3;
+  return results;
 }
 
 async function parse3mf(file: File, material: string): Promise<ModelParseResult> {
@@ -276,13 +301,24 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
 
   let accuracy: "estimated" | "exact" = "exact";
   let note: string | undefined;
+  let filaments: { grams: number; colorName: string | null }[] | undefined;
+
   if (grams === null && modelXmls.length > 0) {
     try {
-      const volumeCm3 = modelXmls.reduce((sum, xml) => sum + volumeFrom3mfModelXml(xml), 0) / 1000;
-      if (volumeCm3 > 0) {
-        grams = volumeCm3 * densityFor(material);
+      const objects = modelXmls.flatMap((xml) => objectsFrom3mfModelXml(xml));
+      const totalVolumeMm3 = objects.reduce((sum, o) => sum + o.volumeMm3, 0);
+      if (totalVolumeMm3 > 0) {
+        grams = (totalVolumeMm3 / 1000) * densityFor(material);
         accuracy = "estimated";
         note = "No slicer weight summary in this file — estimated from the model's geometry instead.";
+
+        const distinctColors = new Set(objects.map((o) => o.colorHex).filter(Boolean));
+        if (objects.length > 1 && distinctColors.size > 1) {
+          filaments = objects
+            .filter((o) => o.colorHex)
+            .map((o) => ({ grams: (o.volumeMm3 / 1000) * densityFor(material), colorName: nearestColorName(o.colorHex!) }));
+          note = `Split into ${filaments.length} colors using the model's own material colors — grams per color are estimated from geometry.`;
+        }
       }
     } catch {
       // fall through — grams stays null and the row falls back to manual entry.
@@ -290,7 +326,7 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
   }
   if (grams === null) note = "Couldn't find or estimate a filament weight in this file — enter grams manually.";
 
-  return { grams, printHours, accuracy, note, thumbnailDataUrl, colorName };
+  return { grams, printHours, accuracy, note, thumbnailDataUrl, colorName, filaments };
 }
 
 export async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {

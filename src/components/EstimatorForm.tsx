@@ -165,18 +165,35 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
     try {
       const usage = colorsUsed[index];
       const result = await parseModelFile(file, usage.material);
-      setColorsUsed((rows) =>
-        rows.map((row, i) => {
-          if (i !== index) return row;
-          const next = { ...row, gramsSource: result.accuracy };
-          if (result.grams !== null) next.grams = Math.round(result.grams * 100) / 100;
-          if (result.colorName && result.colorName !== row.color) {
-            next.color = result.colorName;
-            next.rollId = null;
-          }
-          return next;
-        }),
-      );
+
+      if (result.filaments && result.filaments.length > 1) {
+        setColorsUsed((rows) => {
+          const inserted = result.filaments!.map((f) => ({
+            material: usage.material,
+            color: f.colorName ?? usage.color,
+            grams: Math.round(f.grams * 100) / 100,
+            rollId: null,
+            gramsSource: result.accuracy,
+          }));
+          return [...rows.slice(0, index), ...inserted, ...rows.slice(index + 1)];
+        });
+        setRowStatus({});
+        setModelPreviews({});
+      } else {
+        setColorsUsed((rows) =>
+          rows.map((row, i) => {
+            if (i !== index) return row;
+            const next = { ...row, gramsSource: result.accuracy };
+            if (result.grams !== null) next.grams = Math.round(result.grams * 100) / 100;
+            if (result.colorName && result.colorName !== row.color) {
+              next.color = result.colorName;
+              next.rollId = null;
+            }
+            return next;
+          }),
+        );
+      }
+
       if (result.printHours !== null) setPrintHours(String(Math.round(result.printHours * 100) / 100));
       if (result.thumbnailDataUrl) {
         setModelPreviews((p) => ({ ...p, [index]: { dataUrl: result.thumbnailDataUrl!, fileName: file.name } }));
@@ -186,9 +203,11 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         [index]: {
           kind: result.grams !== null ? "ok" : "error",
           message:
-            result.grams !== null
-              ? `Read ${Math.round(result.grams * 100) / 100}g from ${file.name}.`
-              : (result.note ?? "Couldn't read grams from that file — enter manually."),
+            result.filaments && result.filaments.length > 1
+              ? `Split into ${result.filaments.length} colors from ${file.name}.`
+              : result.grams !== null
+                ? `Read ${Math.round(result.grams * 100) / 100}g from ${file.name}.`
+                : (result.note ?? "Couldn't read grams from that file — enter manually."),
         },
       }));
     } catch (err) {

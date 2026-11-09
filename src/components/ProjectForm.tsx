@@ -202,8 +202,19 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setParsingNew(true);
     setError("");
     try {
-      const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
-      if (result.grams !== null || result.colorName) {
+      const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
+      const result = await parseModelFile(file, material);
+      if (result.filaments && result.filaments.length > 1) {
+        setColorsNeeded(
+          result.filaments.map((f) => ({
+            material,
+            color: f.colorName ?? COLOR_OPTIONS[0],
+            gramsNeeded: Math.round(f.grams * 100) / 100,
+            gramsSource: result.accuracy,
+            rollIds: [],
+          })),
+        );
+      } else if (result.grams !== null || result.colorName) {
         setColorsNeeded((rows) =>
           rows.map((row, i) =>
             i === 0
@@ -277,8 +288,35 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       if (type === "model") {
         try {
-          const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
-          if (result.grams !== null || result.colorName) {
+          const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
+          const result = await parseModelFile(file, material);
+          if (result.filaments && result.filaments.length > 1) {
+            setColorsNeeded((rows) => {
+              const next = [...rows];
+              for (const f of result.filaments!) {
+                const color = f.colorName ?? COLOR_OPTIONS[0];
+                const existingIndex = next.findIndex((r) => r.material === material && r.color === color);
+                if (existingIndex >= 0 && next[existingIndex].gramsNeeded === null) {
+                  next[existingIndex] = {
+                    ...next[existingIndex],
+                    gramsNeeded: Math.round(f.grams * 100) / 100,
+                    gramsSource: result.accuracy,
+                  };
+                } else if (existingIndex < 0) {
+                  next.push({
+                    material,
+                    color,
+                    gramsNeeded: Math.round(f.grams * 100) / 100,
+                    gramsSource: result.accuracy,
+                    rollIds: [],
+                  });
+                }
+              }
+              const isUntouchedDefault = (r: ProjectColorNeed) =>
+                r.material === MATERIAL_OPTIONS[0] && r.color === COLOR_OPTIONS[0] && r.gramsNeeded === null && r.rollIds.length === 0;
+              return next.length > 1 ? next.filter((r, i) => !(i === 0 && isUntouchedDefault(r))) : next;
+            });
+          } else if (result.grams !== null || result.colorName) {
             setColorsNeeded((rows) =>
               rows.map((row, i) =>
                 i === 0
@@ -305,9 +343,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
           setUploadStatus({
             kind: result.grams !== null ? "ok" : "error",
             message:
-              result.grams !== null
-                ? `Filled grams needed for the first color from ${file.name}.`
-                : (result.note ?? "Uploaded, but couldn't read a filament weight from this file."),
+              result.filaments && result.filaments.length > 1
+                ? `Split into ${result.filaments.length} colors from ${file.name}.`
+                : result.grams !== null
+                  ? `Filled grams needed for the first color from ${file.name}.`
+                  : (result.note ?? "Uploaded, but couldn't read a filament weight from this file."),
           });
         } catch (parseErr) {
           console.error("Model file parse failed:", parseErr);
