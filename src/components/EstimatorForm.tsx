@@ -163,7 +163,16 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
   const rollsById = useMemo(() => new Map(rolls.map((r) => [r.id, r])), [rolls]);
 
   function updateColorUsage(index: number, patch: Partial<EstimateColorUsage>) {
-    setColorsUsed((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    setColorsUsed((rows) =>
+      rows.map((row, i) => {
+        if (i !== index) return row;
+        const merged: EstimateColorUsage = { ...row, ...patch };
+        // Firestore rejects a literal `undefined` field value — drop it instead of writing it in,
+        // since {...row, gramsSource: undefined} otherwise leaves that key explicitly set to undefined.
+        if (merged.gramsSource === undefined) delete merged.gramsSource;
+        return merged;
+      }),
+    );
   }
 
   function addColorUsageRow() {

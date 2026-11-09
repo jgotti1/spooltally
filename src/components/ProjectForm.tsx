@@ -185,7 +185,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
   }, [user, project]);
 
   function updateColorNeed(index: number, patch: Partial<ProjectColorNeed>) {
-    setColorsNeeded((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    setColorsNeeded((rows) =>
+      rows.map((row, i) => {
+        if (i !== index) return row;
+        const merged: ProjectColorNeed = { ...row, ...patch };
+        // Firestore rejects a literal `undefined` field value — drop it instead of writing it in,
+        // since {...row, gramsSource: undefined} otherwise leaves that key explicitly set to undefined.
+        if (merged.gramsSource === undefined) delete merged.gramsSource;
+        return merged;
+      }),
+    );
   }
 
   function addColorNeedRow() {

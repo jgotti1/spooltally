@@ -97,11 +97,16 @@ export async function getEstimate(estimateId: string): Promise<Estimate | null> 
   return mapEstimate(snap.id, snap.data());
 }
 
+/** Firestore rejects any field holding a literal `undefined` (e.g. an optional field spread in but never set) — strip those before every write instead of relying on every caller to remember. */
+function stripUndefined<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
+
 export async function addEstimate(ownerId: string, input: EstimateInput): Promise<string> {
   if (!db) throw configError;
   const ref = await addDoc(estimatesCollection(), {
     ownerId,
-    ...input,
+    ...stripUndefined(input),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -111,7 +116,7 @@ export async function addEstimate(ownerId: string, input: EstimateInput): Promis
 export async function updateEstimate(estimateId: string, input: EstimateInput) {
   if (!db) throw configError;
   await updateDoc(doc(estimatesCollection(), estimateId), {
-    ...input,
+    ...stripUndefined(input),
     updatedAt: serverTimestamp(),
   });
 }

@@ -112,13 +112,18 @@ export async function getProject(projectId: string): Promise<Project | null> {
   return mapProject(snap.id, snap.data());
 }
 
+/** Firestore rejects any field holding a literal `undefined` (e.g. an optional field spread in but never set) — strip those before every write instead of relying on every caller to remember. */
+function stripUndefined<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
+
 export async function addProject(ownerId: string, input: ProjectInput): Promise<string> {
   if (!db) throw configError;
   const ref = await addDoc(projectsCollection(), {
     ownerId,
     name: input.name,
     status: input.status,
-    colorsNeeded: input.colorsNeeded,
+    colorsNeeded: stripUndefined(input.colorsNeeded),
     files: [],
     estimateId: input.estimateId ?? null,
     nozzleSizeMm: input.nozzleSizeMm ?? null,
@@ -133,7 +138,7 @@ export async function updateProject(projectId: string, input: ProjectInput) {
   await updateDoc(doc(projectsCollection(), projectId), {
     name: input.name,
     status: input.status,
-    colorsNeeded: input.colorsNeeded,
+    colorsNeeded: stripUndefined(input.colorsNeeded),
     ...(input.estimateId !== undefined ? { estimateId: input.estimateId } : {}),
     ...(input.nozzleSizeMm !== undefined ? { nozzleSizeMm: input.nozzleSizeMm } : {}),
     updatedAt: serverTimestamp(),
