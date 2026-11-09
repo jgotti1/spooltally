@@ -6,6 +6,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -16,6 +17,7 @@ import {
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import type { ProjectStatus } from "@/lib/inventory-constants";
+import { deleteRoll, getRoll } from "@/lib/rolls";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -26,6 +28,8 @@ export type ProjectColorNeed = {
   color: string;
   gramsNeeded: number | null;
   rollIds: string[];
+  /** How `gramsNeeded` was determined: "estimated" from an uploaded STL/3MF's geometry, "exact" from a sliced file, or unset for manual entry. */
+  gramsSource?: "estimated" | "exact";
 };
 
 export type ProjectFileType = "model" | "image";
@@ -130,9 +134,37 @@ export async function updateProject(projectId: string, input: ProjectInput) {
   });
 }
 
+/** Deletes a project, and with it any 0g placeholder rolls that only existed because this project needed them. */
 export async function deleteProject(projectId: string) {
   if (!db) throw configError;
-  await deleteDoc(doc(projectsCollection(), projectId));
+  const projectRef = doc(projectsCollection(), projectId);
+  const snap = await getDoc(projectRef);
+
+  if (snap.exists()) {
+    const project = mapProject(snap.id, snap.data());
+    const rollIds = Array.from(new Set(project.colorsNeeded.flatMap((need) => need.rollIds)));
+
+    if (rollIds.length > 0) {
+      const othersSnap = await getDocs(query(projectsCollection(), where("ownerId", "==", project.ownerId)));
+      const stillNeededElsewhere = new Set<string>();
+      for (const d of othersSnap.docs) {
+        if (d.id === projectId) continue;
+        for (const need of mapProject(d.id, d.data()).colorsNeeded) {
+          for (const id of need.rollIds) stillNeededElsewhere.add(id);
+        }
+      }
+
+      for (const rollId of rollIds) {
+        if (stillNeededElsewhere.has(rollId)) continue;
+        const roll = await getRoll(rollId).catch(() => null);
+        if (roll && roll.remainingGrams === 0) {
+          await deleteRoll(rollId).catch(() => {});
+        }
+      }
+    }
+  }
+
+  await deleteDoc(projectRef);
 }
 
 export async function uploadProjectFile(

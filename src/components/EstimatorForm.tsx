@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
@@ -21,6 +21,8 @@ import { parseModelFile } from "@/lib/model-parsing";
 
 type EstimatorFormProps = {
   estimate?: Estimate;
+  /** Project id to pull colors-needed from on first load, e.g. from a "Get a cost estimate" link on the Project page. */
+  initialProjectId?: string;
 };
 
 function emptyColorUsage(): EstimateColorUsage {
@@ -85,7 +87,7 @@ function GearIcon() {
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
-export function EstimatorForm({ estimate }: EstimatorFormProps) {
+export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps) {
   const { user } = useAuth();
   const router = useRouter();
 
@@ -243,6 +245,16 @@ export function EstimatorForm({ estimate }: EstimatorFormProps) {
       );
     }
   }
+
+  const appliedInitialProject = useRef(false);
+  useEffect(() => {
+    if (!initialProjectId || estimate || appliedInitialProject.current) return;
+    if (projects.length === 0) return;
+    appliedInitialProject.current = true;
+    // One-time prefill from a "?projectId=" link, guarded by the ref above — not a sync loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    handlePullFromProject(initialProjectId);
+  }, [initialProjectId, projects, estimate]);
 
   const breakdown = useMemo(
     () => calcCostBreakdown(colorsUsed, rollsById, Number(printHours) || 0, quantity, settings),

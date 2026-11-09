@@ -185,7 +185,12 @@ export default function ProjectsPage() {
   const sorted = useMemo(() => sortProjects(filtered, sortBy), [filtered, sortBy]);
 
   async function handleDelete(project: Project) {
-    if (!window.confirm(`Delete project "${project.name}"? This won't delete any linked rolls.`)) return;
+    if (
+      !window.confirm(
+        `Delete project "${project.name}"? Any linked rolls still in stock are kept — only ones at 0g that aren't needed by another project are removed too.`,
+      )
+    )
+      return;
     try {
       await deleteProject(project.id);
     } catch (error) {

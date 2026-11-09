@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
 import { CloseLink } from "@/components/CloseLink";
+import { parseModelFile } from "@/lib/model-parsing";
 import {
   BRAND_OPTIONS,
   COLOR_OPTIONS,
@@ -120,6 +122,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [placeholderDraft, setPlaceholderDraft] = useState<Record<number, { brand: string; sizeGrams: number }>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
   const [error, setError] = useState("");
   const modelInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -218,9 +221,42 @@ export function ProjectForm({ project }: ProjectFormProps) {
     const file = fileList[0];
     setUploading(type);
     setError("");
+    setUploadStatus(null);
     try {
       const meta = await uploadProjectFile(user.uid, project.id, file, type);
       setFiles((prev) => [...prev, meta]);
+
+      if (type === "model") {
+        try {
+          const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
+          if (result.grams !== null) {
+            setColorsNeeded((rows) =>
+              rows.map((row, i) =>
+                i === 0 && row.gramsNeeded === null
+                  ? { ...row, gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                  : row,
+              ),
+            );
+          }
+          if (result.thumbnailDataUrl) {
+            const res = await fetch(result.thumbnailDataUrl);
+            const blob = await res.blob();
+            const imageFile = new File([blob], `${file.name}-preview.png`, { type: blob.type });
+            const imageMeta = await uploadProjectFile(user.uid, project.id, imageFile, "image");
+            setFiles((prev) => [...prev, imageMeta]);
+          }
+          setUploadStatus({
+            kind: result.grams !== null ? "ok" : "error",
+            message:
+              result.grams !== null
+                ? `Filled grams needed for the first color from ${file.name}.`
+                : (result.note ?? "Uploaded, but couldn't read a filament weight from this file."),
+          });
+        } catch (parseErr) {
+          console.error("Model file parse failed:", parseErr);
+          setUploadStatus({ kind: "error", message: "File uploaded, but couldn't read grams or a thumbnail from it." });
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't upload that file. Please try again.");
     } finally {
@@ -325,11 +361,20 @@ export function ProjectForm({ project }: ProjectFormProps) {
                       min={0}
                       value={need.gramsNeeded ?? ""}
                       onChange={(e) =>
-                        updateColorNeed(index, { gramsNeeded: e.target.value === "" ? null : Number(e.target.value) })
+                        updateColorNeed(index, {
+                          gramsNeeded: e.target.value === "" ? null : Number(e.target.value),
+                          gramsSource: undefined,
+                        })
                       }
                       placeholder="Not sure yet"
                       className="h-12 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
                     />
+                    {need.gramsSource === "estimated" && (
+                      <p className="mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">Estimated from model</p>
+                    )}
+                    {need.gramsSource === "exact" && (
+                      <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Exact from slicer</p>
+                    )}
                   </div>
                   {colorsNeeded.length > 1 && (
                     <button
@@ -420,6 +465,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       </div>
 
+      {project && !project.estimateId && (
+        <Link
+          href={`/estimator/new?projectId=${project.id}`}
+          className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
+        >
+          Get a cost &amp; price estimate for this project
+          <span aria-hidden="true">→</span>
+        </Link>
+      )}
+
       {project && (
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -461,6 +516,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
               {uploading === "image" ? "Uploading…" : "Take / upload photo"}
             </button>
           </div>
+
+          {uploadStatus && (
+            <p
+              className={`mt-2 text-xs ${
+                uploadStatus.kind === "error" ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              {uploadStatus.message}
+            </p>
+          )}
 
           {files.length > 0 && (
             <ul className="mt-3 space-y-1.5">
