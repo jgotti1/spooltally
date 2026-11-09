@@ -20,15 +20,6 @@ function SpoolIcon() {
   );
 }
 
-function CalculatorIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5">
-      <rect x="5" y="3.5" width="14" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 7.5h8M8 12h1.5M11.5 12H13M14.5 12H16M8 15.5h1.5M11.5 15.5H13M14.5 15.5H16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function ClipboardIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5">
@@ -48,9 +39,8 @@ function PlusIcon() {
 }
 
 const sections = [
-  { label: "Estimator", href: "/estimator", description: "Price a job from grams or an uploaded file.", icon: CalculatorIcon },
   { label: "Inventory", href: "/inventory", description: "Track rolls, levels, and what to reorder.", icon: SpoolIcon },
-  { label: "Projects", href: "/projects", description: "Turn saved estimates into tracked jobs.", icon: ClipboardIcon },
+  { label: "Projects", href: "/projects", description: "Colors, pricing, and tracking in one place.", icon: ClipboardIcon },
 ];
 
 export default function DashboardPage() {
@@ -123,7 +113,7 @@ export default function DashboardPage() {
             Welcome back, {name}.
           </h1>
           <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
-            Rolls, estimates, and projects live here as they ship — inventory is up first.
+            Track your filament and price your prints — inventory is up first.
           </p>
           <Link
             href="/inventory/new"
@@ -134,7 +124,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {sections.map((item) => {
             const Icon = item.icon;
             const content = (

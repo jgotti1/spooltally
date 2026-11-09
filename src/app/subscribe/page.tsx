@@ -64,7 +64,7 @@ export default function SubscribePage() {
             Pick a plan to keep going
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Your rolls, estimates, and projects are saved and waiting — they&rsquo;re locked, not deleted. Choose a plan
+            Your rolls and projects are saved and waiting — they&rsquo;re locked, not deleted. Choose a plan
             below to pick up right where you left off.
           </p>
         </div>

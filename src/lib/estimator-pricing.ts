@@ -1,7 +1,15 @@
 import type { Roll } from "@/lib/rolls";
-import type { EstimateColorUsage } from "@/lib/estimates";
 import type { EstimatorSettings } from "@/lib/estimator-settings";
 import type { ChannelFeeProfile } from "@/lib/estimator-constants";
+
+export type ColorUsage = {
+  material: string;
+  color: string;
+  grams: number;
+  rollId: string | null;
+  /** How `grams` was determined: "estimated" from an uploaded STL/3MF's geometry, "exact" from a sliced file, or unset for manual entry. */
+  gramsSource?: "estimated" | "exact";
+};
 
 /** Used for filament cost whenever a color has no linked roll, or its roll has no price set — a guess so the estimate isn't silently $0, not a real number. */
 export const DEFAULT_ROLL_PRICE = 20;
@@ -23,7 +31,7 @@ export type DefaultedColor = { material: string; color: string; rollId: string |
 
 /** Total filament cost across all colors used, based on each color's linked roll, plus which colors (if any) had to fall back to the default roll price. */
 export function calcFilamentCost(
-  colorsUsed: EstimateColorUsage[],
+  colorsUsed: ColorUsage[],
   rollsById: Map<string, Roll>,
 ): { cost: number; defaultedColors: DefaultedColor[] } {
   let cost = 0;
@@ -54,7 +62,7 @@ export type CostBreakdown = {
 
 /** Total cost for the whole print batch, plus a per-unit figure once quantity is applied. `slicerFilamentCost`, when a positive number, is used as the filament cost directly instead of calculating it from roll prices — e.g. the "Cost" line a slicer like Bambu Studio already reports for the plate. */
 export function calcCostBreakdown(
-  colorsUsed: EstimateColorUsage[],
+  colorsUsed: ColorUsage[],
   rollsById: Map<string, Roll>,
   printHours: number,
   quantity: number,

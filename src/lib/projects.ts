@@ -18,6 +18,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage
 import { db, storage } from "@/lib/firebase";
 import type { ProjectStatus } from "@/lib/inventory-constants";
 import { deleteRoll, getRoll } from "@/lib/rolls";
+import type { SalesChannelId } from "@/lib/estimator-constants";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -40,7 +41,25 @@ export type ProjectFile = {
   url: string;
   type: ProjectFileType;
   uploadedAt: number;
+  /** Set when this image was generated automatically as the thumbnail for an uploaded model file. */
+  generatedPreviewFor?: string;
 };
+
+/** Generated model thumbnails are supporting assets, not separate user uploads. */
+export function isGeneratedProjectPreview(file: ProjectFile, files: ProjectFile[]): boolean {
+  return (
+    file.type === "image" &&
+    files.some(
+      (model) =>
+        model.type === "model" &&
+        (file.generatedPreviewFor === model.name || file.name === `${model.name}-preview.png`),
+    )
+  );
+}
+
+export function visibleProjectFiles(files: ProjectFile[]): ProjectFile[] {
+  return files.filter((file) => !isGeneratedProjectPreview(file, files));
+}
 
 export type Project = {
   id: string;
@@ -49,9 +68,13 @@ export type Project = {
   status: ProjectStatus;
   colorsNeeded: ProjectColorNeed[];
   files: ProjectFile[];
-  estimateId: string | null;
   /** Optional — the nozzle size this was printed/sliced with, in mm. */
   nozzleSizeMm: number | null;
+  printHours: number;
+  quantity: number;
+  channelId: SalesChannelId;
+  /** Total filament cost straight from the slicer (e.g. Bambu Studio's own "Cost" line), for the whole batch. When set, this is used instead of calculating filament cost from roll prices. */
+  slicerFilamentCost: number | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -60,8 +83,11 @@ export type ProjectInput = {
   name: string;
   status: ProjectStatus;
   colorsNeeded: ProjectColorNeed[];
-  estimateId?: string | null;
   nozzleSizeMm?: number | null;
+  printHours?: number;
+  quantity?: number;
+  channelId?: SalesChannelId;
+  slicerFilamentCost?: number | null;
 };
 
 function projectsCollection() {
@@ -77,8 +103,11 @@ function mapProject(id: string, data: Record<string, unknown>): Project {
     status: data.status as ProjectStatus,
     colorsNeeded: (data.colorsNeeded as ProjectColorNeed[]) ?? [],
     files: (data.files as ProjectFile[]) ?? [],
-    estimateId: (data.estimateId as string | null) ?? null,
     nozzleSizeMm: (data.nozzleSizeMm as number | null) ?? null,
+    printHours: (data.printHours as number) ?? 0,
+    quantity: (data.quantity as number) ?? 1,
+    channelId: (data.channelId as SalesChannelId) ?? "etsy",
+    slicerFilamentCost: (data.slicerFilamentCost as number | null) ?? null,
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
   };
@@ -125,8 +154,11 @@ export async function addProject(ownerId: string, input: ProjectInput): Promise<
     status: input.status,
     colorsNeeded: stripUndefined(input.colorsNeeded),
     files: [],
-    estimateId: input.estimateId ?? null,
     nozzleSizeMm: input.nozzleSizeMm ?? null,
+    printHours: input.printHours ?? 0,
+    quantity: input.quantity ?? 1,
+    channelId: input.channelId ?? "etsy",
+    slicerFilamentCost: input.slicerFilamentCost ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -139,8 +171,11 @@ export async function updateProject(projectId: string, input: ProjectInput) {
     name: input.name,
     status: input.status,
     colorsNeeded: stripUndefined(input.colorsNeeded),
-    ...(input.estimateId !== undefined ? { estimateId: input.estimateId } : {}),
     ...(input.nozzleSizeMm !== undefined ? { nozzleSizeMm: input.nozzleSizeMm } : {}),
+    ...(input.printHours !== undefined ? { printHours: input.printHours } : {}),
+    ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
+    ...(input.channelId !== undefined ? { channelId: input.channelId } : {}),
+    ...(input.slicerFilamentCost !== undefined ? { slicerFilamentCost: input.slicerFilamentCost } : {}),
     updatedAt: serverTimestamp(),
   });
 }
@@ -183,6 +218,7 @@ export async function uploadProjectFile(
   projectId: string,
   file: File,
   type: ProjectFileType,
+  generatedPreviewFor?: string,
 ): Promise<ProjectFile> {
   if (!storage || !db) throw configError;
   const path = `projects/${ownerId}/${projectId}/${Date.now()}-${file.name}`;
@@ -190,7 +226,14 @@ export async function uploadProjectFile(
   const disposition = type === "model" ? "attachment" : "inline";
   await uploadBytes(storageRef, file, { contentDisposition: `${disposition}; filename="${file.name}"` });
   const url = await getDownloadURL(storageRef);
-  const fileMeta: ProjectFile = { name: file.name, path, url, type, uploadedAt: Date.now() };
+  const fileMeta: ProjectFile = {
+    name: file.name,
+    path,
+    url,
+    type,
+    uploadedAt: Date.now(),
+    ...(generatedPreviewFor ? { generatedPreviewFor } : {}),
+  };
   await updateDoc(doc(projectsCollection(), projectId), {
     files: arrayUnion(fileMeta),
     updatedAt: serverTimestamp(),

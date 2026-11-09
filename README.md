@@ -37,10 +37,20 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 
 In Firebase Console → Authentication → Sign-in method, enable the **Email/Password** and **Google** providers.
 
+## Product model
+
+SpoolTally has two primary areas: Inventory and Projects. Pricing is part of each project; there is no separate Estimate route or Firestore collection.
+
+- Every project color must be matched to an inventory roll. A new roll can be added inline when needed.
+- Slicer filament cost is entered as a batch total and overrides filament cost calculated from roll price and size. The app shows total batch cost, cost per unit, and suggested sale price per unit.
+- Project grid and list previews summarize cost, filament, colors, nozzle, print time, quantity, channel, and uploaded-file count.
+- Generated model thumbnails support previews but are not displayed or counted as separate user uploads.
+- Sales channels: Etsy, eBay, Amazon Handmade, own site, Facebook Marketplace, and in person.
+
 ## Build order
 
 1. Rolls (inventory) + projects + low-filament report
-2. Estimator (manual, STL, 3MF/G-code) + roll selection + save-as-project
+2. Project pricing (slicer inputs, roll selection, costs, and suggested sale price)
 3. Channel fee settings and pricing math
 4. Login and trial
 5. Contact support form

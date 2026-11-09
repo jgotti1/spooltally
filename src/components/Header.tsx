@@ -6,7 +6,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 
 const navItems = [
-  { label: "Estimator", href: "/estimator" },
   { label: "Inventory", href: "/inventory" },
   { label: "Projects", href: "/projects" },
 ];

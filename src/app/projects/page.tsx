@@ -7,9 +7,15 @@ import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 import { PROJECT_STATUSES, type ProjectStatus } from "@/lib/inventory-constants";
-import { deleteProject, subscribeToProjects, type Project } from "@/lib/projects";
+import { deleteProject, subscribeToProjects, visibleProjectFiles, type Project } from "@/lib/projects";
 import { subscribeToRolls, type Roll } from "@/lib/rolls";
 import { PROJECT_SORT_OPTIONS, sortProjects, type ProjectSortOption } from "@/lib/project-sort";
+import {
+  DEFAULT_ESTIMATOR_SETTINGS,
+  getEstimatorSettings,
+  type EstimatorSettings,
+} from "@/lib/estimator-settings";
+import { calcCostBreakdown, calcSuggestedPrice } from "@/lib/estimator-pricing";
 
 function PlusIcon() {
   return (
@@ -119,11 +125,14 @@ const STATUS_BADGE_CLASSES: Record<ProjectStatus, string> = {
   Archived: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
 };
 
+const money = (value: number) => `$${value.toFixed(2)}`;
+
 export default function ProjectsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [rolls, setRolls] = useState<Roll[]>([]);
+  const [pricingSettings, setPricingSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "All">("All");
@@ -159,7 +168,57 @@ export default function ProjectsPage() {
     return subscribeToRolls(user.uid, setRolls);
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    getEstimatorSettings(user.uid)
+      .then((next) => {
+        if (active) setPricingSettings(next);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
   const rollsById = useMemo(() => new Map(rolls.map((r) => [r.id, r])), [rolls]);
+
+  const projectMetrics = useMemo(
+    () =>
+      new Map(
+        projects.map((project) => {
+          const breakdown = calcCostBreakdown(
+            project.colorsNeeded.map((color) => ({
+              material: color.material,
+              color: color.color,
+              grams: color.gramsNeeded ?? 0,
+              rollId: color.rollIds[0] ?? null,
+            })),
+            rollsById,
+            project.printHours,
+            project.quantity,
+            pricingSettings,
+            project.slicerFilamentCost,
+          );
+          const channel =
+            pricingSettings.channels.find((candidate) => candidate.id === project.channelId) ??
+            pricingSettings.channels[0];
+          return [
+            project.id,
+            {
+              breakdown,
+              channel,
+              suggestedPrice: channel
+                ? calcSuggestedPrice(breakdown.costPerUnit, pricingSettings.targetProfitPercent, channel)
+                : 0,
+              totalGrams: project.colorsNeeded.reduce((sum, color) => sum + (color.gramsNeeded ?? 0), 0),
+              visibleFileCount: visibleProjectFiles(project.files).length,
+            },
+          ] as const;
+        }),
+      ),
+    [projects, rollsById, pricingSettings],
+  );
 
   const needsReorder = useMemo(
     () => (project: Project) =>
@@ -331,6 +390,7 @@ export default function ProjectsPage() {
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
               {sorted.map((project, i) => {
                 const flagged = needsReorder(project);
+                const metrics = projectMetrics.get(project.id);
                 return (
                   <div
                     key={project.id}
@@ -340,10 +400,14 @@ export default function ProjectsPage() {
                     } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
                   >
                     <ProjectThumb project={project} className="h-11 w-11 shrink-0 rounded-lg" />
-                    <div className="min-w-[160px] flex-1">
+                    <div className="min-w-[240px] flex-1">
                       <p className="font-semibold text-slate-900 dark:text-white">{project.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {project.colorsNeeded.map((n) => `${n.color} ${n.material}`).join(", ")}
+                        {metrics ? `${money(metrics.breakdown.totalCost)} total · ${money(metrics.breakdown.costPerUnit)}/unit cost · ${money(metrics.suggestedPrice)}/unit suggested` : "Calculating cost…"}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+                        {metrics?.totalGrams ?? 0}g filament · {project.colorsNeeded.length} color
+                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm ?? "—"}mm nozzle · {project.printHours || "—"}h · batch of {project.quantity}
                       </p>
                     </div>
                     <span
@@ -351,9 +415,9 @@ export default function ProjectsPage() {
                     >
                       {project.status}
                     </span>
-                    {project.files.length > 0 && (
+                    {(metrics?.visibleFileCount ?? 0) > 0 && (
                       <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                        {project.files.length} file{project.files.length === 1 ? "" : "s"}
+                        {metrics?.visibleFileCount} file{metrics?.visibleFileCount === 1 ? "" : "s"}
                       </span>
                     )}
                     {flagged && (
@@ -385,6 +449,7 @@ export default function ProjectsPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sorted.map((project) => {
                 const flagged = needsReorder(project);
+                const metrics = projectMetrics.get(project.id);
                 return (
                   <div
                     key={project.id}
@@ -410,18 +475,36 @@ export default function ProjectsPage() {
                       </span>
                     )}
 
-                    <ul className="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                      {project.colorsNeeded.map((need, i) => (
-                        <li key={i}>
-                          {need.color} {need.material}
-                          {need.gramsNeeded != null ? ` — ${need.gramsNeeded}g` : ""}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs dark:bg-white/[0.03]">
+                      <div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
+                        <span>Total cost</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {metrics ? money(metrics.breakdown.totalCost) : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
+                        <span>Per unit</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {metrics ? `${money(metrics.breakdown.costPerUnit)} cost · ${money(metrics.suggestedPrice)} suggested` : "—"}
+                        </span>
+                      </div>
+                      <p className="border-t border-slate-200 pt-1.5 text-slate-500 dark:border-white/10 dark:text-slate-400">
+                        {metrics?.totalGrams ?? 0}g filament · {project.colorsNeeded.length} color
+                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm ?? "—"}mm nozzle
+                      </p>
+                      <p className="text-slate-500 dark:text-slate-400">
+                        {project.printHours || "—"}h print · batch of {project.quantity} · {metrics?.channel?.label ?? "No channel"}
+                      </p>
+                      {project.colorsNeeded.length > 0 && (
+                        <p className="truncate text-slate-400 dark:text-slate-500">
+                          {project.colorsNeeded.map((need) => `${need.color} ${need.material}`).join(", ")}
+                        </p>
+                      )}
+                    </div>
 
-                    {project.files.length > 0 && (
+                    {(metrics?.visibleFileCount ?? 0) > 0 && (
                       <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                        {project.files.length} file{project.files.length === 1 ? "" : "s"} attached
+                        {metrics?.visibleFileCount} file{metrics?.visibleFileCount === 1 ? "" : "s"} attached
                       </p>
                     )}
 

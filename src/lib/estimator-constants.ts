@@ -27,7 +27,6 @@ export const DEFAULT_CHANNELS: ChannelFeeProfile[] = [
   { id: "own_site", label: "Own site", percentFee: 0, fixedFee: 0, processingPercent: 2.9, processingFixed: 0.3 },
   { id: "facebook_marketplace", label: "Facebook Marketplace", percentFee: 5, fixedFee: 0, processingPercent: 0, processingFixed: 0 },
   { id: "in_person", label: "In person / local sale", percentFee: 0, fixedFee: 0, processingPercent: 0, processingFixed: 0 },
-  { id: "custom", label: "Custom", percentFee: 0, fixedFee: 0, processingPercent: 0, processingFixed: 0 },
 ];
 
 export const DEFAULT_FAILURE_BUFFER_PERCENT = 10;

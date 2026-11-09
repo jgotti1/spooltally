@@ -43,6 +43,7 @@ export async function getEstimatorSettings(ownerId: string): Promise<EstimatorSe
   const snap = await getDoc(settingsDoc(ownerId));
   if (!snap.exists()) return DEFAULT_ESTIMATOR_SETTINGS;
   const data = snap.data();
+  const savedChannels = (data.channels as ChannelFeeProfile[] | undefined)?.filter((channel) => channel.id !== "custom");
   return {
     machineRatePerHour: data.machineRatePerHour ?? DEFAULT_ESTIMATOR_SETTINGS.machineRatePerHour,
     electricityRatePerHour: data.electricityRatePerHour ?? DEFAULT_ESTIMATOR_SETTINGS.electricityRatePerHour,
@@ -51,7 +52,7 @@ export async function getEstimatorSettings(ownerId: string): Promise<EstimatorSe
     targetProfitPercent: data.targetProfitPercent ?? DEFAULT_ESTIMATOR_SETTINGS.targetProfitPercent,
     packagingCost: data.packagingCost ?? DEFAULT_ESTIMATOR_SETTINGS.packagingCost,
     shippingCost: data.shippingCost ?? DEFAULT_ESTIMATOR_SETTINGS.shippingCost,
-    channels: data.channels && data.channels.length > 0 ? data.channels : DEFAULT_ESTIMATOR_SETTINGS.channels,
+    channels: savedChannels && savedChannels.length > 0 ? savedChannels : DEFAULT_ESTIMATOR_SETTINGS.channels,
   };
 }
 

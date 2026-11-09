@@ -23,24 +23,26 @@ import { addRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import {
   addProject,
   deleteProjectFile,
+  visibleProjectFiles,
   updateProject,
   uploadProjectFile,
   type Project,
   type ProjectColorNeed,
   type ProjectFile,
 } from "@/lib/projects";
-import { addEstimate, type EstimateColorUsage } from "@/lib/estimates";
 import {
   getEstimatorSettings,
   DEFAULT_ESTIMATOR_SETTINGS,
   type EstimatorSettings,
 } from "@/lib/estimator-settings";
 import type { SalesChannelId } from "@/lib/estimator-constants";
-import { calcCostBreakdown, calcSuggestedPrice, DEFAULT_ROLL_PRICE } from "@/lib/estimator-pricing";
+import { calcCostBreakdown, calcSuggestedPrice, DEFAULT_ROLL_PRICE, type ColorUsage } from "@/lib/estimator-pricing";
 
 type ProjectFormProps = {
   project?: Project;
 };
+
+const ADD_NEW_ROLL_OPTION = "__add_new_roll__";
 
 function emptyColorNeed(): ProjectColorNeed {
   return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], gramsNeeded: null, rollIds: [] };
@@ -120,22 +122,38 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [nozzleSizeMm, setNozzleSizeMm] = useState<number | null>(project ? (project.nozzleSizeMm ?? null) : 0.4);
   const [files, setFiles] = useState<ProjectFile[]>(project?.files ?? []);
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
+  const [printHours, setPrintHours] = useState(project ? String(project.printHours) : "");
+  const [slicerFilamentCost, setSlicerFilamentCost] = useState(
+    project?.slicerFilamentCost ? String(project.slicerFilamentCost) : "",
+  );
+  const [quantity, setQuantity] = useState(project?.quantity ?? 1);
+  const [channelId, setChannelId] = useState<SalesChannelId>(project?.channelId ?? "etsy");
+  const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
 
   const [initial] = useState(() => ({
     name: project?.name ?? "",
     status: project?.status ?? "Active",
     colorsNeededJson: JSON.stringify(project?.colorsNeeded ?? []),
     nozzleSizeMm: project ? (project.nozzleSizeMm ?? null) : 0.4,
+    printHours: project ? String(project.printHours) : "",
+    slicerFilamentCost: project?.slicerFilamentCost ? String(project.slicerFilamentCost) : "",
+    quantity: project?.quantity ?? 1,
+    channelId: project?.channelId ?? "etsy",
   }));
 
   const isDirty =
     name !== initial.name ||
     status !== initial.status ||
     JSON.stringify(colorsNeeded) !== initial.colorsNeededJson ||
-    nozzleSizeMm !== initial.nozzleSizeMm;
+    nozzleSizeMm !== initial.nozzleSizeMm ||
+    printHours !== initial.printHours ||
+    slicerFilamentCost !== initial.slicerFilamentCost ||
+    quantity !== initial.quantity ||
+    channelId !== initial.channelId;
   const [placeholderDraft, setPlaceholderDraft] = useState<
     Record<number, { brand: string; sizeGrams: number; level: RollLevel; quantity: number; price: number }>
   >({});
+  const [addingRoll, setAddingRoll] = useState<Record<number, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
@@ -148,12 +166,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [pendingAttachmentType, setPendingAttachmentType] = useState<"model" | "image" | null>(null);
   const [pendingThumbnail, setPendingThumbnail] = useState<string | null>(null);
   const newFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [printHours, setPrintHours] = useState("");
-  const [slicerFilamentCost, setSlicerFilamentCost] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [channelId, setChannelId] = useState<SalesChannelId>("etsy");
-  const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
 
   const STEP_LABELS = [
     "Preview photo",
@@ -175,15 +187,20 @@ export function ProjectForm({ project }: ProjectFormProps) {
   }, [user]);
 
   useEffect(() => {
-    if (!user || project) return;
+    if (!user) return;
     let active = true;
     getEstimatorSettings(user.uid).then((next) => {
-      if (active) setSettings(next);
+      if (active) {
+        setSettings(next);
+        setChannelId((current) =>
+          next.channels.some((channel) => channel.id === current) ? current : (next.channels[0]?.id ?? "etsy"),
+        );
+      }
     });
     return () => {
       active = false;
     };
-  }, [user, project]);
+  }, [user]);
 
   function updateColorNeed(index: number, patch: Partial<ProjectColorNeed>) {
     setColorsNeeded((rows) =>
@@ -206,18 +223,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setColorsNeeded((rows) => rows.filter((_, i) => i !== index));
   }
 
-  function toggleRollLink(index: number, rollId: string) {
-    setColorsNeeded((rows) =>
-      rows.map((row, i) => {
-        if (i !== index) return row;
-        const rollIds = row.rollIds.includes(rollId)
-          ? row.rollIds.filter((id) => id !== rollId)
-          : [...row.rollIds, rollId];
-        return { ...row, rollIds };
-      }),
-    );
-  }
-
   async function handleAddPlaceholder(index: number) {
     if (!user) return;
     const need = colorsNeeded[index];
@@ -236,7 +241,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
       // The live rolls subscription will pick up the new roll — no optimistic local push, to avoid
       // racing it (Firestore can deliver the subscription update before this await even resolves,
       // which previously caused the same roll to be added to state twice).
-      toggleRollLink(index, rollId);
+      updateColorNeed(index, { rollIds: [rollId] });
+      setAddingRoll((rows) => ({ ...rows, [index]: false }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't add that color to inventory. Please try again.");
     }
@@ -286,9 +292,15 @@ export function ProjectForm({ project }: ProjectFormProps) {
       setError("Enter a nozzle size — check your slicer for the one you used.");
       return;
     }
-    if (step === 3 && colorsNeeded.length === 0) {
-      setError("Add at least one color before continuing.");
-      return;
+    if (step === 3) {
+      if (colorsNeeded.length === 0) {
+        setError("Add at least one color before continuing.");
+        return;
+      }
+      if (colorsNeeded.some((color) => color.rollIds.length === 0)) {
+        setError("Select an inventory roll, or add a new roll, for every color before continuing.");
+        return;
+      }
     }
     if (step === 4 && !printHours.trim()) {
       setError("Enter the print time — check your slicer for the exact number.");
@@ -310,6 +322,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
       setError("Give this project a name.");
       return;
     }
+    if (colorsNeeded.some((color) => color.rollIds.length === 0)) {
+      setError("Select an inventory roll, or add a new roll, for every color before saving.");
+      return;
+    }
     if (!project) {
       const missing: string[] = [];
       if (nozzleSizeMm === null) missing.push("a nozzle size");
@@ -322,7 +338,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
     setSaving(true);
     try {
-      const input = { name: name.trim(), status, colorsNeeded, nozzleSizeMm };
+      const input = {
+        name: name.trim(),
+        status,
+        colorsNeeded,
+        nozzleSizeMm,
+        printHours: Number(printHours) || 0,
+        quantity: Math.max(1, quantity),
+        channelId,
+        slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
+      };
       if (project) {
         await updateProject(project.id, input);
         router.push("/projects");
@@ -332,30 +357,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
           await uploadProjectFile(user.uid, id, pendingAttachment, pendingAttachmentType);
           if (pendingAttachmentType === "model" && pendingThumbnail) {
             const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingAttachment.name}-preview.png`);
-            await uploadProjectFile(user.uid, id, imageFile, "image");
+            await uploadProjectFile(user.uid, id, imageFile, "image", pendingAttachment.name);
           }
         }
-        if (colorsNeeded.length > 0) {
-          const colorsUsed: EstimateColorUsage[] = colorsNeeded.map((c) => ({
-            material: c.material,
-            color: c.color,
-            grams: c.gramsNeeded ?? 0,
-            rollId: c.rollIds[0] ?? null,
-          }));
-          const estimateId = await addEstimate(user.uid, {
-            name: name.trim(),
-            colorsUsed,
-            printHours: Number(printHours) || 0,
-            quantity: Math.max(1, quantity),
-            channelId,
-            projectId: id,
-            slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
-          });
-          await updateProject(id, { ...input, estimateId });
-          router.push(`/estimator/${estimateId}/edit`);
-          return;
-        }
-        router.push(`/projects/${id}/edit`);
+        router.replace(`/projects/${id}/edit`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong saving this project. Please try again.");
@@ -381,7 +386,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             const res = await fetch(result.thumbnailDataUrl);
             const blob = await res.blob();
             const imageFile = new File([blob], `${file.name}-preview.png`, { type: blob.type });
-            const imageMeta = await uploadProjectFile(user.uid, project.id, imageFile, "image");
+            const imageMeta = await uploadProjectFile(user.uid, project.id, imageFile, "image", file.name);
             setFiles((prev) => [...prev, imageMeta]);
             setUploadStatus({ kind: "ok", message: `Added a preview photo from ${file.name}.` });
           } else {
@@ -404,15 +409,29 @@ export function ProjectForm({ project }: ProjectFormProps) {
   async function handleDeleteFile(file: ProjectFile) {
     if (!project) return;
     try {
-      await deleteProjectFile(project.id, file);
-      setFiles((prev) => prev.filter((f) => f.path !== file.path));
+      const filesToDelete =
+        file.type === "model"
+          ? [
+              file,
+              ...files.filter(
+                (candidate) =>
+                  candidate.type === "image" &&
+                  (candidate.generatedPreviewFor === file.name || candidate.name === `${file.name}-preview.png`),
+              ),
+            ]
+          : [file];
+      for (const projectFile of filesToDelete) {
+        await deleteProjectFile(project.id, projectFile);
+      }
+      const deletedPaths = new Set(filesToDelete.map((projectFile) => projectFile.path));
+      setFiles((prev) => prev.filter((projectFile) => !deletedPaths.has(projectFile.path)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't remove that file. Please try again.");
     }
   }
 
   const rollsById = useMemo(() => new Map(existingRolls.map((r) => [r.id, r])), [existingRolls]);
-  const estimateColorsUsed: EstimateColorUsage[] = useMemo(
+  const colorUsage: ColorUsage[] = useMemo(
     () =>
       colorsNeeded.map((c) => ({
         material: c.material,
@@ -425,14 +444,14 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const breakdown = useMemo(
     () =>
       calcCostBreakdown(
-        estimateColorsUsed,
+        colorUsage,
         rollsById,
         Number(printHours) || 0,
         quantity,
         settings,
         slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
       ),
-    [estimateColorsUsed, rollsById, printHours, quantity, settings, slicerFilamentCost],
+    [colorUsage, rollsById, printHours, quantity, settings, slicerFilamentCost],
   );
   const channelPrices = useMemo(
     () =>
@@ -447,10 +466,15 @@ export function ProjectForm({ project }: ProjectFormProps) {
     ? calcSuggestedPrice(breakdown.costPerUnit, settings.targetProfitPercent, selectedChannel)
     : 0;
   const money = (n: number) => `$${n.toFixed(2)}`;
-  const canSubmit = project ? true : nozzleSizeMm !== null && colorsNeeded.length > 0 && printHours.trim() !== "";
+  const units = Math.max(1, quantity);
+  const displayedFiles = visibleProjectFiles(files);
+  const everyColorHasRoll = colorsNeeded.every((color) => color.rollIds.length > 0);
+  const canSubmit = project
+    ? everyColorHasRoll
+    : nozzleSizeMm !== null && colorsNeeded.length > 0 && everyColorHasRoll && printHours.trim() !== "";
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6" autoComplete="off" onSubmit={handleSubmit}>
       <div className="flex justify-end">
         <CloseLink href="/projects" dirty={isDirty} />
       </div>
@@ -520,6 +544,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           <input
             id="name"
             required
+            autoComplete="off"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Hex planters — craft fair batch"
@@ -629,7 +654,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
         <div className="space-y-4">
           {colorsNeeded.map((need, index) => {
-            const matches = existingRolls.filter((r) => r.material === need.material && r.color === need.color);
             const draft = placeholderDraft[index] ?? {
               brand: BRAND_OPTIONS[0],
               sizeGrams: 1000,
@@ -644,16 +668,18 @@ export function ProjectForm({ project }: ProjectFormProps) {
               >
                 <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
                   <ComboSelect
+                    key={`material-${need.rollIds[0] ?? "unlinked"}`}
                     label="Material"
                     value={need.material}
-                    onChange={(v) => updateColorNeed(index, { material: v })}
+                    onChange={(v) => updateColorNeed(index, { material: v, rollIds: [] })}
                     options={MATERIAL_OPTIONS}
                     customPlaceholder="e.g. HIPS"
                   />
                   <ComboSelect
+                    key={`color-${need.rollIds[0] ?? "unlinked"}`}
                     label="Color"
                     value={need.color}
-                    onChange={(v) => updateColorNeed(index, { color: v })}
+                    onChange={(v) => updateColorNeed(index, { color: v, rollIds: [] })}
                     options={COLOR_OPTIONS}
                     customPlaceholder="e.g. Galaxy Purple"
                   />
@@ -695,16 +721,63 @@ export function ProjectForm({ project }: ProjectFormProps) {
                 </div>
 
                 <div className="mt-3">
-                  <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Rolls to use for this color
+                  <label
+                    htmlFor={`inventory-roll-${index}`}
+                    className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400"
+                  >
+                    Inventory roll <span className="text-rose-600 dark:text-rose-400">(required)</span>
+                  </label>
+                  <select
+                    id={`inventory-roll-${index}`}
+                    required
+                    aria-invalid={need.rollIds.length === 0}
+                    value={addingRoll[index] ? ADD_NEW_ROLL_OPTION : (need.rollIds[0] ?? "")}
+                    onChange={(e) => {
+                      if (e.target.value === ADD_NEW_ROLL_OPTION) {
+                        updateColorNeed(index, { rollIds: [] });
+                        setAddingRoll((rows) => ({ ...rows, [index]: true }));
+                        return;
+                      }
+                      setAddingRoll((rows) => ({ ...rows, [index]: false }));
+                      if (!e.target.value) {
+                        updateColorNeed(index, { rollIds: [] });
+                        return;
+                      }
+                      const roll = existingRolls.find((candidate) => candidate.id === e.target.value);
+                      if (roll) {
+                        updateColorNeed(index, {
+                          material: roll.material,
+                          color: roll.color,
+                          rollIds: [roll.id],
+                        });
+                      }
+                    }}
+                    className={`h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:bg-white/[0.03] dark:text-white ${
+                      need.rollIds.length === 0
+                        ? "border-rose-300 dark:border-rose-500/50"
+                        : "border-slate-200 dark:border-white/10"
+                    }`}
+                  >
+                    <option value="">Select a roll from current inventory</option>
+                    {existingRolls.map((roll) => (
+                      <option key={roll.id} value={roll.id}>
+                        {roll.brand} — {roll.color} {roll.material} — {Math.round(roll.remainingGrams)}g on hand
+                      </option>
+                    ))}
+                    <option value={ADD_NEW_ROLL_OPTION}>＋ Add a new roll</option>
+                  </select>
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    Required: choose a roll already in your inventory, or add a new one for this project.
                   </p>
-                  {matches.length === 0 ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10">
-                      <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Not in your inventory</p>
-                      <p className="mt-1 text-xs text-rose-600/90 dark:text-rose-300/80">
-                        Add it to your spool list — pick how much you actually have, or leave it at 0g to flag it for
-                        reorder. No price yet? The cost estimate will use a default of {money(DEFAULT_ROLL_PRICE)}/roll
-                        until you set a real one.
+
+                  {addingRoll[index] && (
+                    <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                        Add {need.color} {need.material} to inventory
+                      </p>
+                      <p className="mt-1 text-xs text-blue-600/90 dark:text-blue-300/80">
+                        Enter what you have, or leave it at 0g to flag it for reorder. If the price is $0, project
+                        pricing uses the {money(DEFAULT_ROLL_PRICE)}/roll default until you enter the real price.
                       </p>
                       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                         <select
@@ -712,7 +785,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, brand: e.target.value } }))
                           }
-                          className="h-9 rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                          className="h-9 rounded-lg border border-blue-200 bg-white px-2 text-xs text-slate-950 dark:border-blue-500/30 dark:bg-white/[0.03] dark:text-white"
                         >
                           {BRAND_OPTIONS.map((b) => (
                             <option key={b} value={b}>
@@ -725,7 +798,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, sizeGrams: Number(e.target.value) } }))
                           }
-                          className="h-9 rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                          className="h-9 rounded-lg border border-blue-200 bg-white px-2 text-xs text-slate-950 dark:border-blue-500/30 dark:bg-white/[0.03] dark:text-white"
                         >
                           {SIZE_OPTIONS_GRAMS.map((g) => (
                             <option key={g} value={g}>
@@ -739,7 +812,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, level: e.target.value as RollLevel } }))
                           }
-                          className="h-9 rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                          className="h-9 rounded-lg border border-blue-200 bg-white px-2 text-xs text-slate-950 dark:border-blue-500/30 dark:bg-white/[0.03] dark:text-white"
                         >
                           {ROLL_LEVELS.map((l) => (
                             <option key={l} value={l}>
@@ -760,7 +833,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                                 [index]: { ...draft, quantity: Math.max(1, Number(e.target.value)) },
                               }))
                             }
-                            className="h-9 w-full rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                            className="h-9 w-full rounded-lg border border-blue-200 bg-white px-2 text-xs text-slate-950 dark:border-blue-500/30 dark:bg-white/[0.03] dark:text-white"
                           />
                         )}
                         <input
@@ -773,37 +846,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, price: Number(e.target.value) } }))
                           }
-                          className="h-9 w-full rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                          className="h-9 w-full rounded-lg border border-blue-200 bg-white px-2 text-xs text-slate-950 dark:border-blue-500/30 dark:bg-white/[0.03] dark:text-white"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleAddPlaceholder(index)}
-                        className="mt-2 h-9 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-rose-700"
+                        className="mt-2 h-9 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
                       >
                         Add to inventory
                       </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {matches.map((roll) => (
-                        <label
-                          key={roll.id}
-                          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-white/10 dark:bg-white/[0.03]"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={need.rollIds.includes(roll.id)}
-                            onChange={() => toggleRollLink(index, roll.id)}
-                            className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
-                          />
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{roll.brand}</span>
-                          <span className="text-slate-500 dark:text-slate-400">
-                            {Math.round(roll.remainingGrams)} g on hand
-                            {roll.remainingGrams === 0 ? " — needs reorder" : ""}
-                          </span>
-                        </label>
-                      ))}
                     </div>
                   )}
                 </div>
@@ -825,7 +877,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
       </div>
       )}
 
-      {showStep(4) && !project && colorsNeeded.length > 0 && (
+      {showStep(4) && colorsNeeded.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -855,6 +907,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
               type="number"
               min={1}
               value={quantity}
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
               onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
               className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
             />
@@ -862,7 +916,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       )}
 
-      {showStep(4) && !project && colorsNeeded.length > 0 && (
+      {showStep(4) && colorsNeeded.length > 0 && (
         <div>
           <label
             htmlFor="slicerFilamentCost"
@@ -882,32 +936,44 @@ export function ProjectForm({ project }: ProjectFormProps) {
             className="h-12 w-40 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
           />
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            If your slicer shows a filament cost (e.g. Bambu Studio&rsquo;s &ldquo;Cost&rdquo; line), enter it here and
-            we&rsquo;ll use that instead of calculating from roll prices. Leave blank to calculate it ourselves.
+            If your slicer shows a filament cost (for example, Bambu Studio&rsquo;s &ldquo;Cost&rdquo; line), enter it here.
+            That value will be used to estimate this project&rsquo;s costs instead of our internal calculation based on
+            each roll&rsquo;s purchase price and size. Leave it blank to use the internal roll-price calculation.
           </p>
         </div>
       )}
 
-      {showStep(5) && !project && colorsNeeded.length > 0 && (
+      {showStep(5) && colorsNeeded.length > 0 && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost &amp; suggested price</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Per-unit breakdown for a batch of {units} unit{units === 1 ? "" : "s"}.
+            </p>
             <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex justify-between">
-                <span>Filament</span>
-                <span>{money(breakdown.filamentCost / Math.max(1, quantity))}</span>
+                <span>Filament ({money(breakdown.filamentCost)} batch ÷ {units})</span>
+                <span>{money(breakdown.filamentCost / units)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Machine + electricity + labor</span>
                 <span>
-                  {money((breakdown.machineCost + breakdown.electricityCost + breakdown.laborCost) / Math.max(1, quantity))}
+                  {money((breakdown.machineCost + breakdown.electricityCost + breakdown.laborCost) / units)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Packaging + shipping</span>
-                <span>{money((breakdown.packagingCost + breakdown.shippingCost) / Math.max(1, quantity))}</span>
+                <span>{money((breakdown.packagingCost + breakdown.shippingCost) / units)}</span>
               </div>
-              <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-sm font-semibold text-slate-900 dark:border-white/10 dark:text-white">
+              <div className="flex justify-between">
+                <span>Failure buffer</span>
+                <span>{money(breakdown.failureBuffer / units)}</span>
+              </div>
+              <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 font-semibold text-slate-800 dark:border-white/10 dark:text-slate-200">
+                <span>Total batch cost ({units} unit{units === 1 ? "" : "s"})</span>
+                <span>{money(breakdown.totalCost)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold text-slate-900 dark:text-white">
                 <span>Cost per unit</span>
                 <span>{money(breakdown.costPerUnit)}</span>
               </div>
@@ -915,8 +981,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
             {breakdown.usedSlicerFilamentCost && (
               <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-                Using your slicer&rsquo;s reported filament cost ({money(breakdown.filamentCost)}) instead of
-                calculating from roll prices.
+                Using your slicer&rsquo;s reported filament cost: {money(breakdown.filamentCost)} for {units} unit
+                {units === 1 ? "" : "s"} = {money(breakdown.filamentCost / units)} per unit. The internal roll-price
+                calculation is not being used.
               </p>
             )}
 
@@ -948,7 +1015,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
             )}
 
             <div className="mt-4">
-              <label className="mb-2 block text-xs font-semibold text-slate-500 dark:text-slate-400">Sales channel</label>
+              <label className="mb-2 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Suggested sale price per unit
+              </label>
               <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
                 {channelPrices.map(({ channel, price }) => (
                   <button
@@ -962,7 +1031,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     } ${channel.id !== channelPrices[channelPrices.length - 1].channel.id ? "border-b border-slate-100 dark:border-white/10" : ""}`}
                   >
                     <span>{channel.label}</span>
-                    <span className="font-semibold">{Number.isFinite(price) ? money(price) : "—"}</span>
+                    <span className="font-semibold">{Number.isFinite(price) ? `${money(price)} / unit` : "—"}</span>
                   </button>
                 ))}
               </div>
@@ -972,16 +1041,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </div>
           </div>
         </>
-      )}
-
-      {project && !project.estimateId && (
-        <Link
-          href={`/estimator/new?projectId=${project.id}`}
-          className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
-        >
-          Get a cost &amp; price estimate for this project
-          <span aria-hidden="true">→</span>
-        </Link>
       )}
 
       {project && (
@@ -1036,9 +1095,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </p>
           )}
 
-          {files.length > 0 && (
+          {displayedFiles.length > 0 && (
             <ul className="mt-3 space-y-1.5">
-              {files.map((file) => (
+              {displayedFiles.map((file) => (
                 <li
                   key={file.path}
                   className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-white/10 dark:bg-white/[0.03]"
