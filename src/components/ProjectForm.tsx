@@ -12,10 +12,13 @@ import {
   COLOR_OPTIONS,
   MATERIAL_OPTIONS,
   PROJECT_STATUSES,
+  ROLL_LEVELS,
+  ROLL_LEVEL_LABELS,
   SIZE_OPTIONS_GRAMS,
   type ProjectStatus,
+  type RollLevel,
 } from "@/lib/inventory-constants";
-import { addPlaceholderRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
+import { addRoll, subscribeToRolls, type Roll } from "@/lib/rolls";
 import {
   addProject,
   deleteProjectFile,
@@ -129,7 +132,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
     status !== initial.status ||
     JSON.stringify(colorsNeeded) !== initial.colorsNeededJson ||
     nozzleSizeMm !== initial.nozzleSizeMm;
-  const [placeholderDraft, setPlaceholderDraft] = useState<Record<number, { brand: string; sizeGrams: number }>>({});
+  const [placeholderDraft, setPlaceholderDraft] = useState<
+    Record<number, { brand: string; sizeGrams: number; level: RollLevel; quantity: number; price: number }>
+  >({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
@@ -191,32 +196,21 @@ export function ProjectForm({ project }: ProjectFormProps) {
   async function handleAddPlaceholder(index: number) {
     if (!user) return;
     const need = colorsNeeded[index];
-    const draft = placeholderDraft[index] ?? { brand: BRAND_OPTIONS[0], sizeGrams: 1000 };
+    const draft = placeholderDraft[index] ?? { brand: BRAND_OPTIONS[0], sizeGrams: 1000, level: "full" as RollLevel, quantity: 1, price: 0 };
     try {
-      const rollId = await addPlaceholderRoll(user.uid, {
+      const rollId = await addRoll(user.uid, {
         brand: draft.brand,
         material: need.material,
         color: need.color,
         sizeGrams: draft.sizeGrams,
+        price: draft.price,
+        level: draft.level,
+        quantity: draft.level === "full" ? Math.max(1, draft.quantity) : 1,
+        excludeFromReorder: false,
       });
-      setExistingRolls((rolls) => [
-        ...rolls,
-        {
-          id: rollId,
-          ownerId: user.uid,
-          brand: draft.brand,
-          material: need.material,
-          color: need.color,
-          sizeGrams: draft.sizeGrams,
-          price: 0,
-          level: "empty",
-          quantity: 1,
-          remainingGrams: 0,
-          excludeFromReorder: false,
-          createdAt: null,
-          updatedAt: null,
-        },
-      ]);
+      // The live rolls subscription will pick up the new roll — no optimistic local push, to avoid
+      // racing it (Firestore can deliver the subscription update before this await even resolves,
+      // which previously caused the same roll to be added to state twice).
       toggleRollLink(index, rollId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't add that color to inventory. Please try again.");
@@ -518,7 +512,13 @@ export function ProjectForm({ project }: ProjectFormProps) {
         <div className="space-y-4">
           {colorsNeeded.map((need, index) => {
             const matches = existingRolls.filter((r) => r.material === need.material && r.color === need.color);
-            const draft = placeholderDraft[index] ?? { brand: BRAND_OPTIONS[0], sizeGrams: 1000 };
+            const draft = placeholderDraft[index] ?? {
+              brand: BRAND_OPTIONS[0],
+              sizeGrams: 1000,
+              level: "full" as RollLevel,
+              quantity: 1,
+              price: 0,
+            };
             return (
               <div
                 key={index}
@@ -582,13 +582,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
                   </p>
                   {matches.length === 0 ? (
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10">
-                      <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
-                        Not in your inventory — order soon
-                      </p>
+                      <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Not in your inventory</p>
                       <p className="mt-1 text-xs text-rose-600/90 dark:text-rose-300/80">
-                        Add it to your spool list with 0 in stock so it shows up on the reorder report.
+                        Add it to your spool list with how much you actually have on hand.
                       </p>
-                      <div className="mt-2 flex flex-wrap items-end gap-2">
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                         <select
                           value={draft.brand}
                           onChange={(e) =>
@@ -615,14 +613,56 @@ export function ProjectForm({ project }: ProjectFormProps) {
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="button"
-                          onClick={() => handleAddPlaceholder(index)}
-                          className="h-9 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-rose-700"
+                        <select
+                          value={draft.level}
+                          title="How much is on the roll"
+                          onChange={(e) =>
+                            setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, level: e.target.value as RollLevel } }))
+                          }
+                          className="h-9 rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
                         >
-                          Add to inventory (0 in stock)
-                        </button>
+                          {ROLL_LEVELS.filter((l) => l !== "empty").map((l) => (
+                            <option key={l} value={l}>
+                              {ROLL_LEVEL_LABELS[l]}
+                            </option>
+                          ))}
+                        </select>
+                        {draft.level === "full" && (
+                          <input
+                            type="number"
+                            min={1}
+                            value={draft.quantity}
+                            title="Quantity"
+                            placeholder="Qty"
+                            onChange={(e) =>
+                              setPlaceholderDraft((d) => ({
+                                ...d,
+                                [index]: { ...draft, quantity: Math.max(1, Number(e.target.value)) },
+                              }))
+                            }
+                            className="h-9 w-full rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                          />
+                        )}
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={draft.price}
+                          title="Price ($)"
+                          placeholder="Price $"
+                          onChange={(e) =>
+                            setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, price: Number(e.target.value) } }))
+                          }
+                          className="h-9 w-full rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
+                        />
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddPlaceholder(index)}
+                        className="mt-2 h-9 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-rose-700"
+                      >
+                        Add to inventory
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
