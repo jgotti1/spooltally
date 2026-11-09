@@ -369,6 +369,12 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
       setError("Give this estimate a name.");
       return;
     }
+    if (linkedProjectId) {
+      // Already linked to a project — one "Save" should keep both in sync, not leave the
+      // project's own colors-needed list silently out of date until a second button is clicked.
+      await handleSaveAsProject();
+      return;
+    }
     setSaving(true);
     try {
       const input = {
@@ -493,7 +499,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
 
       {linkedProject ? (
         <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-          Linked to project &ldquo;{linkedProject.name}&rdquo;.
+          Linked to project &ldquo;{linkedProject.name}&rdquo; — saving here also updates its colors needed.
         </p>
       ) : (
         !estimate && (
@@ -1002,21 +1008,33 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
       )}
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {saving ? "Saving…" : estimate ? "Save changes" : "Save estimate"}
-        </button>
-        <button
-          type="button"
-          disabled={savingProject}
-          onClick={handleSaveAsProject}
-          className="flex h-12 flex-1 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]"
-        >
-          {savingProject ? "Saving…" : linkedProjectId ? "Update linked project" : "Save as new project"}
-        </button>
+        {linkedProjectId ? (
+          <button
+            type="submit"
+            disabled={savingProject}
+            className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {savingProject ? "Saving…" : "Save changes"}
+          </button>
+        ) : (
+          <>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {saving ? "Saving…" : estimate ? "Save changes" : "Save estimate"}
+            </button>
+            <button
+              type="button"
+              disabled={savingProject}
+              onClick={handleSaveAsProject}
+              className="flex h-12 flex-1 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]"
+            >
+              {savingProject ? "Saving…" : "Save as new project"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
