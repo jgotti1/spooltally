@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
 import { CloseLink } from "@/components/CloseLink";
-import { BRAND_OPTIONS, COLOR_OPTIONS, MATERIAL_OPTIONS, SIZE_OPTIONS_GRAMS } from "@/lib/inventory-constants";
+import {
+  BRAND_OPTIONS,
+  COLOR_OPTIONS,
+  MATERIAL_OPTIONS,
+  ROLL_LEVELS,
+  ROLL_LEVEL_LABELS,
+  SIZE_OPTIONS_GRAMS,
+  type RollLevel,
+} from "@/lib/inventory-constants";
 import { subscribeToRolls, addRoll, type Roll } from "@/lib/rolls";
 import { subscribeToProjects, addProject, updateProject, uploadProjectFile, type Project } from "@/lib/projects";
 import { addEstimate, updateEstimate, type Estimate, type EstimateColorUsage } from "@/lib/estimates";
@@ -113,7 +121,13 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
   const [colorWarning, setColorWarning] = useState("");
   const [accuracyNote, setAccuracyNote] = useState("");
   const [addingRollIndex, setAddingRollIndex] = useState<number | null>(null);
-  const [newRoll, setNewRoll] = useState({ brand: BRAND_OPTIONS[0] as string, sizeGrams: SIZE_OPTIONS_GRAMS[1] as number, price: 0 });
+  const [newRoll, setNewRoll] = useState({
+    brand: BRAND_OPTIONS[0] as string,
+    sizeGrams: SIZE_OPTIONS_GRAMS[1] as number,
+    level: "empty" as RollLevel,
+    quantity: 1,
+    price: 0,
+  });
   const [savingRoll, setSavingRoll] = useState(false);
 
   const [initial] = useState(() => ({
@@ -263,8 +277,8 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         color: usage.color,
         sizeGrams: newRoll.sizeGrams,
         price: newRoll.price,
-        level: "full",
-        quantity: 1,
+        level: newRoll.level,
+        quantity: newRoll.level === "full" ? Math.max(1, newRoll.quantity) : 1,
         excludeFromReorder: false,
       });
       updateColorUsage(index, { rollId });
@@ -644,7 +658,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
                       <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                         New {usage.material} / {usage.color} roll
                       </p>
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="grid gap-2 sm:grid-cols-5">
                         <ComboSelect
                           label="Brand"
                           value={newRoll.brand}
@@ -670,6 +684,36 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
                         </div>
                         <div>
                           <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            On hand
+                          </label>
+                          <select
+                            value={newRoll.level}
+                            onChange={(e) => setNewRoll((r) => ({ ...r, level: e.target.value as RollLevel }))}
+                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                          >
+                            {ROLL_LEVELS.map((l) => (
+                              <option key={l} value={l}>
+                                {l === "empty" ? "Don't have it yet (0g)" : ROLL_LEVEL_LABELS[l]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {newRoll.level === "full" && (
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              Quantity
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={newRoll.quantity}
+                              onChange={(e) => setNewRoll((r) => ({ ...r, quantity: Math.max(1, Number(e.target.value)) }))}
+                              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                             Price ($)
                           </label>
                           <input
@@ -682,6 +726,10 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
                           />
                         </div>
                       </div>
+                      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                        No price yet? The cost estimate will use a default of {money(DEFAULT_ROLL_PRICE)}/roll until you set
+                        a real one.
+                      </p>
                       <div className="mt-3 flex gap-2">
                         <button
                           type="button"

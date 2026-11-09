@@ -211,7 +211,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   async function handleAddPlaceholder(index: number) {
     if (!user) return;
     const need = colorsNeeded[index];
-    const draft = placeholderDraft[index] ?? { brand: BRAND_OPTIONS[0], sizeGrams: 1000, level: "full" as RollLevel, quantity: 1, price: 0 };
+    const draft = placeholderDraft[index] ?? { brand: BRAND_OPTIONS[0], sizeGrams: 1000, level: "empty" as RollLevel, quantity: 1, price: 0 };
     try {
       const rollId = await addRoll(user.uid, {
         brand: draft.brand,
@@ -612,7 +612,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             const draft = placeholderDraft[index] ?? {
               brand: BRAND_OPTIONS[0],
               sizeGrams: 1000,
-              level: "full" as RollLevel,
+              level: "empty" as RollLevel,
               quantity: 1,
               price: 0,
             };
@@ -681,7 +681,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10">
                       <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Not in your inventory</p>
                       <p className="mt-1 text-xs text-rose-600/90 dark:text-rose-300/80">
-                        Add it to your spool list with how much you actually have on hand.
+                        Add it to your spool list — pick how much you actually have, or leave it at 0g to flag it for
+                        reorder. No price yet? The cost estimate will use a default of {money(DEFAULT_ROLL_PRICE)}/roll
+                        until you set a real one.
                       </p>
                       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                         <select
@@ -718,9 +720,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
                           }
                           className="h-9 rounded-lg border border-rose-200 bg-white px-2 text-xs text-slate-950 dark:border-rose-500/30 dark:bg-white/[0.03] dark:text-white"
                         >
-                          {ROLL_LEVELS.filter((l) => l !== "empty").map((l) => (
+                          {ROLL_LEVELS.map((l) => (
                             <option key={l} value={l}>
-                              {ROLL_LEVEL_LABELS[l]}
+                              {l === "empty" ? "Don't have it yet (0g)" : ROLL_LEVEL_LABELS[l]}
                             </option>
                           ))}
                         </select>
