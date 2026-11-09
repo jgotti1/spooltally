@@ -74,3 +74,5 @@ export function gramsForLevel(level: RollLevel, sizeGrams: number, quantity: num
 
 export const PROJECT_STATUSES = ["Active", "Archived"] as const;
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+export const NOZZLE_SIZE_OPTIONS_MM = [0.2, 0.4, 0.6, 0.8] as const;

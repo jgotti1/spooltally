@@ -11,6 +11,7 @@ import {
   BRAND_OPTIONS,
   COLOR_OPTIONS,
   MATERIAL_OPTIONS,
+  NOZZLE_SIZE_OPTIONS_MM,
   PROJECT_STATUSES,
   ROLL_LEVELS,
   ROLL_LEVEL_LABELS,
@@ -153,9 +154,19 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [channelId, setChannelId] = useState<SalesChannelId>("etsy");
   const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
 
-  const STEP_LABELS = ["Preview photo", "Name & status", "Nozzle size", "Colors needed", "Print time & cost"];
+  const STEP_LABELS = [
+    "Preview photo",
+    "Name & status",
+    "Nozzle size",
+    "Colors needed",
+    "Print time & quantity",
+    "Cost & suggested price",
+  ];
   const [step, setStep] = useState(0);
   const showStep = (n: number) => project !== undefined || step === n;
+  const [nozzleCustom, setNozzleCustom] = useState(
+    () => nozzleSizeMm !== null && !NOZZLE_SIZE_OPTIONS_MM.includes(nozzleSizeMm as 0.2),
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -267,6 +278,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
     if (step === 3 && colorsNeeded.length === 0) {
       setError("Add at least one color before continuing.");
+      return;
+    }
+    if (step === 4 && !printHours.trim()) {
+      setError("Enter the print time — check your slicer for the exact number.");
       return;
     }
     setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
@@ -516,20 +531,53 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       {showStep(2) && (
         <div>
-          <label htmlFor="nozzleSize" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
             Nozzle size (mm){" "}
             {project && <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>}
           </label>
-          <input
-            id="nozzleSize"
-            type="number"
-            min={0}
-            step="0.1"
-            value={nozzleSizeMm ?? ""}
-            onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
-            placeholder="0.4"
-            className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
-          />
+          <div className="grid grid-cols-5 gap-2">
+            {NOZZLE_SIZE_OPTIONS_MM.map((mm) => (
+              <button
+                key={mm}
+                type="button"
+                onClick={() => {
+                  setNozzleCustom(false);
+                  setNozzleSizeMm(mm);
+                }}
+                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                  !nozzleCustom && nozzleSizeMm === mm
+                    ? "bg-blue-600 text-white"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+                }`}
+              >
+                {mm}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setNozzleCustom(true)}
+              className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                nozzleCustom
+                  ? "bg-blue-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+              }`}
+            >
+              Other
+            </button>
+          </div>
+          {nozzleCustom && (
+            <input
+              id="nozzleSize"
+              type="number"
+              min={0}
+              step="0.1"
+              autoFocus
+              value={nozzleSizeMm ?? ""}
+              onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
+              placeholder="e.g. 0.3"
+              className="mt-2 h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            />
+          )}
           {!project && (
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               Please check your slicer for the exact nozzle size you used.
@@ -740,45 +788,59 @@ export function ProjectForm({ project }: ProjectFormProps) {
             );
           })}
         </div>
+
+        {colorsNeeded.length > 0 && (
+          <button
+            type="button"
+            onClick={addColorNeedRow}
+            className="mt-3 flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 py-3 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50 dark:border-white/15 dark:text-blue-400 dark:hover:bg-blue-500/10"
+          >
+            <PlusIcon />
+            Add another color
+          </button>
+        )}
       </div>
       )}
 
       {showStep(4) && !project && colorsNeeded.length > 0 && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Print time (hours)
-              </label>
-              <input
-                id="printHours"
-                type="number"
-                min={0}
-                step="0.1"
-                value={printHours}
-                onChange={(e) => setPrintHours(e.target.value)}
-                placeholder="3.5"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
-              />
-              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                Please check your slicer for the exact print time.
-              </p>
-            </div>
-            <div>
-              <label htmlFor="quantity" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Units per batch
-              </label>
-              <input
-                id="quantity"
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
-              />
-            </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="printHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Print time (hours)
+            </label>
+            <input
+              id="printHours"
+              type="number"
+              min={0}
+              step="0.1"
+              autoFocus
+              value={printHours}
+              onChange={(e) => setPrintHours(e.target.value)}
+              placeholder="3.5"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            />
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              Please check your slicer for the exact print time.
+            </p>
           </div>
+          <div>
+            <label htmlFor="quantity" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Units per batch
+            </label>
+            <input
+              id="quantity"
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            />
+          </div>
+        </div>
+      )}
 
+      {showStep(5) && !project && colorsNeeded.length > 0 && (
+        <>
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost &amp; suggested price</p>
             <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
