@@ -50,6 +50,8 @@ export type Project = {
   colorsNeeded: ProjectColorNeed[];
   files: ProjectFile[];
   estimateId: string | null;
+  /** Optional — the nozzle size this was printed/sliced with, in mm. */
+  nozzleSizeMm: number | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -59,6 +61,7 @@ export type ProjectInput = {
   status: ProjectStatus;
   colorsNeeded: ProjectColorNeed[];
   estimateId?: string | null;
+  nozzleSizeMm?: number | null;
 };
 
 function projectsCollection() {
@@ -75,6 +78,7 @@ function mapProject(id: string, data: Record<string, unknown>): Project {
     colorsNeeded: (data.colorsNeeded as ProjectColorNeed[]) ?? [],
     files: (data.files as ProjectFile[]) ?? [],
     estimateId: (data.estimateId as string | null) ?? null,
+    nozzleSizeMm: (data.nozzleSizeMm as number | null) ?? null,
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
   };
@@ -117,6 +121,7 @@ export async function addProject(ownerId: string, input: ProjectInput): Promise<
     colorsNeeded: input.colorsNeeded,
     files: [],
     estimateId: input.estimateId ?? null,
+    nozzleSizeMm: input.nozzleSizeMm ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -130,6 +135,7 @@ export async function updateProject(projectId: string, input: ProjectInput) {
     status: input.status,
     colorsNeeded: input.colorsNeeded,
     ...(input.estimateId !== undefined ? { estimateId: input.estimateId } : {}),
+    ...(input.nozzleSizeMm !== undefined ? { nozzleSizeMm: input.nozzleSizeMm } : {}),
     updatedAt: serverTimestamp(),
   });
 }

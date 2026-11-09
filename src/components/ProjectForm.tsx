@@ -107,6 +107,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [colorsNeeded, setColorsNeeded] = useState<ProjectColorNeed[]>(
     project?.colorsNeeded && project.colorsNeeded.length > 0 ? project.colorsNeeded : [emptyColorNeed()],
   );
+  const [nozzleSizeMm, setNozzleSizeMm] = useState<number | null>(project?.nozzleSizeMm ?? null);
   const [files, setFiles] = useState<ProjectFile[]>(project?.files ?? []);
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
 
@@ -116,14 +117,20 @@ export function ProjectForm({ project }: ProjectFormProps) {
     colorsNeededJson: JSON.stringify(
       project?.colorsNeeded && project.colorsNeeded.length > 0 ? project.colorsNeeded : [emptyColorNeed()],
     ),
+    nozzleSizeMm: project?.nozzleSizeMm ?? null,
   }));
 
-  const isDirty = name !== initial.name || status !== initial.status || JSON.stringify(colorsNeeded) !== initial.colorsNeededJson;
+  const isDirty =
+    name !== initial.name ||
+    status !== initial.status ||
+    JSON.stringify(colorsNeeded) !== initial.colorsNeededJson ||
+    nozzleSizeMm !== initial.nozzleSizeMm;
   const [placeholderDraft, setPlaceholderDraft] = useState<Record<number, { brand: string; sizeGrams: number }>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
   const [colorWarning, setColorWarning] = useState("");
+  const [accuracyNote, setAccuracyNote] = useState("");
   const [unknownColorRows, setUnknownColorRows] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -221,6 +228,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setParsingNew(true);
     setError("");
     setColorWarning("");
+    setAccuracyNote("");
     setUnknownColorRows(new Set());
     try {
       const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
@@ -262,6 +270,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
       setColorWarning(result.colorWarning ?? "");
       if (result.grams === null) {
         setError(result.note ?? "Couldn't read a filament weight from that file — fill it in below.");
+      } else {
+        setAccuracyNote(result.note ?? "");
       }
     } catch (err) {
       setPendingModelFile(file);
@@ -282,7 +292,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
     setSaving(true);
     try {
-      const input = { name: name.trim(), status, colorsNeeded };
+      const input = { name: name.trim(), status, colorsNeeded, nozzleSizeMm };
       if (project) {
         await updateProject(project.id, input);
         router.push("/projects");
@@ -308,7 +318,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setUploading(type);
     setError("");
     setUploadStatus(null);
-    if (type === "model") setColorWarning("");
+    if (type === "model") {
+      setColorWarning("");
+      setAccuracyNote("");
+    }
     try {
       const meta = await uploadProjectFile(user.uid, project.id, file, type);
       setFiles((prev) => [...prev, meta]);
@@ -379,6 +392,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             setFiles((prev) => [...prev, imageMeta]);
           }
           setColorWarning(result.colorWarning ?? "");
+          if (result.grams !== null) setAccuracyNote(result.note ?? "");
           setUploadStatus({
             kind: result.grams !== null ? "ok" : "error",
             message:
@@ -495,6 +509,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
           ⚠ {colorWarning}
         </p>
       )}
+      {accuracyNote && (
+        <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          {accuracyNote}
+        </p>
+      )}
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Project name
@@ -527,6 +546,22 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="nozzleSize" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Nozzle size (mm) <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+        </label>
+        <input
+          id="nozzleSize"
+          type="number"
+          min={0}
+          step="0.1"
+          value={nozzleSizeMm ?? ""}
+          onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
+          placeholder="0.4"
+          className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+        />
       </div>
 
       <div>

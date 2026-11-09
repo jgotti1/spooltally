@@ -156,6 +156,7 @@ async function parseStl(file: File, material: string): Promise<ModelParseResult>
     printHours: null,
     accuracy: "estimated",
     thumbnailDataUrl,
+    note: "This assumes the model is 100% solid. Real prints use shells + partial infill, so actual usage is usually well under this — slice the file in your slicer for an exact number.",
     colorWarning: "STL files don't carry color data — this color couldn't be imported and needs to be set manually.",
   };
 }
@@ -323,14 +324,15 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
       if (totalVolumeMm3 > 0) {
         grams = (totalVolumeMm3 / 1000) * densityFor(material);
         accuracy = "estimated";
-        note = "No slicer weight summary in this file — estimated from the model's geometry instead.";
+        note =
+          "No slicer weight summary in this file — estimated from the model's solid geometry instead. Real prints use shells + partial infill, so actual usage is usually well under this; slice the file for an exact number.";
 
         const distinctColors = new Set(objects.map((o) => o.colorHex).filter(Boolean));
         if (objects.length > 1 && distinctColors.size > 1) {
           filaments = objects
             .filter((o) => o.colorHex)
             .map((o) => ({ grams: (o.volumeMm3 / 1000) * densityFor(material), colorName: nearestColorName(o.colorHex!) }));
-          note = `Split into ${filaments.length} colors using the model's own material colors — grams per color are estimated from geometry.`;
+          note = `Split into ${filaments.length} colors using the model's own material colors — grams per color assume solid infill and are usually well above actual usage; slice the file for exact numbers.`;
           if (filaments.length < objects.length) {
             colorWarning = `${objects.length - filaments.length} of ${objects.length} parts in this file had no color data and were left out of the split — add any missing colors manually instead of guessing from what was imported.`;
           }

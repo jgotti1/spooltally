@@ -111,6 +111,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
   const [modelPreviews, setModelPreviews] = useState<Record<number, { dataUrl: string; fileName: string }>>({});
   const [unknownColorRows, setUnknownColorRows] = useState<Set<number>>(new Set());
   const [colorWarning, setColorWarning] = useState("");
+  const [accuracyNote, setAccuracyNote] = useState("");
   const [addingRollIndex, setAddingRollIndex] = useState<number | null>(null);
   const [newRoll, setNewRoll] = useState({ brand: BRAND_OPTIONS[0] as string, sizeGrams: SIZE_OPTIONS_GRAMS[1] as number, price: 0 });
   const [savingRoll, setSavingRoll] = useState(false);
@@ -180,6 +181,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
     if (!file) return;
     setError("");
     setColorWarning("");
+    setAccuracyNote("");
     setRowStatus((s) => ({ ...s, [index]: { kind: "ok", message: "Reading file…" } }));
     setParsingIndex(index);
     try {
@@ -223,6 +225,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
       }
 
       setColorWarning(result.colorWarning ?? "");
+      if (result.grams !== null) setAccuracyNote(result.note ?? "");
       if (result.printHours !== null) setPrintHours(String(Math.round(result.printHours * 100) / 100));
       if (result.thumbnailDataUrl) {
         setModelPreviews((p) => ({ ...p, [index]: { dataUrl: result.thumbnailDataUrl!, fileName: file.name } }));
@@ -442,6 +445,11 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
       {colorWarning && (
         <p className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300">
           ⚠ {colorWarning}
+        </p>
+      )}
+      {accuracyNote && (
+        <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          {accuracyNote}
         </p>
       )}
 
