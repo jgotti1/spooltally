@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 function XIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -18,13 +16,11 @@ type CloseLinkProps = {
 
 /** Top-right close button for forms, for leaving without saving. Confirms first if there are unsaved changes. */
 export function CloseLink({ href, dirty }: CloseLinkProps) {
-  const router = useRouter();
-
   function handleClick() {
     if (dirty && !window.confirm("Close without saving changes?")) return;
-    router.push(href);
-    // Bust the router cache for the page we're leaving so a later visit gets a fresh form instead of stale state.
-    router.refresh();
+    // A full navigation, not the client-side router — guarantees the form's component state is
+    // completely gone (not just hidden behind a cached route) so revisiting it is always blank.
+    window.location.assign(href);
   }
 
   return (
