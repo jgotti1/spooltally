@@ -126,6 +126,8 @@ const STATUS_BADGE_CLASSES: Record<ProjectStatus, string> = {
 };
 
 const money = (value: number) => `$${value.toFixed(2)}`;
+const measurementFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+const measurement = (value: number) => measurementFormatter.format(value);
 
 export default function ProjectsPage() {
   const { user, loading } = useAuth();
@@ -406,8 +408,8 @@ export default function ProjectsPage() {
                         {metrics ? `${money(metrics.breakdown.totalCost)} total · ${money(metrics.breakdown.costPerUnit)}/unit cost · ${money(metrics.suggestedPrice)}/unit suggested` : "Calculating cost…"}
                       </p>
                       <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-                        {metrics?.totalGrams ?? 0}g filament · {project.colorsNeeded.length} color
-                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm ?? "—"}mm nozzle · {project.printHours || "—"}h · batch of {project.quantity}
+                        {measurement(metrics?.totalGrams ?? 0)}g filament · {project.colorsNeeded.length} color
+                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm === null ? "—" : measurement(project.nozzleSizeMm)}mm nozzle · {project.printHours ? measurement(project.printHours) : "—"}h · batch of {project.quantity}
                       </p>
                     </div>
                     <span
@@ -489,11 +491,11 @@ export default function ProjectsPage() {
                         </span>
                       </div>
                       <p className="border-t border-slate-200 pt-1.5 text-slate-500 dark:border-white/10 dark:text-slate-400">
-                        {metrics?.totalGrams ?? 0}g filament · {project.colorsNeeded.length} color
-                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm ?? "—"}mm nozzle
+                        {measurement(metrics?.totalGrams ?? 0)}g filament · {project.colorsNeeded.length} color
+                        {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm === null ? "—" : measurement(project.nozzleSizeMm)}mm nozzle
                       </p>
                       <p className="text-slate-500 dark:text-slate-400">
-                        {project.printHours || "—"}h print · batch of {project.quantity} · {metrics?.channel?.label ?? "No channel"}
+                        {project.printHours ? measurement(project.printHours) : "—"}h print · batch of {project.quantity} · {metrics?.channel?.label ?? "No channel"}
                       </p>
                       {project.colorsNeeded.length > 0 && (
                         <p className="truncate text-slate-400 dark:text-slate-500">

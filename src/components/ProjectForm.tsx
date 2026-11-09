@@ -948,26 +948,49 @@ export function ProjectForm({ project }: ProjectFormProps) {
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Cost &amp; suggested price</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Per-unit breakdown for a batch of {units} unit{units === 1 ? "" : "s"}.
+              Per-unit breakdown for a batch of {units} unit{units === 1 ? "" : "s"}. All money is rounded to the
+              nearest cent.
             </p>
-            <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-              <div className="flex justify-between">
+            <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex items-start justify-between gap-4">
                 <span>Filament ({money(breakdown.filamentCost)} batch ÷ {units})</span>
-                <span>{money(breakdown.filamentCost / units)}</span>
+                <span className="shrink-0 font-medium">{money(breakdown.filamentCost / units)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Machine + electricity + labor</span>
+              <div className="flex items-start justify-between gap-4">
                 <span>
-                  {money((breakdown.machineCost + breakdown.electricityCost + breakdown.laborCost) / units)}
+                  Machine ({Number(printHours) || 0}h × {money(settings.machineRatePerHour)}/hr = {money(breakdown.machineCost)} batch ÷ {units})
                 </span>
+                <span className="shrink-0 font-medium">{money(breakdown.machineCost / units)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Packaging + shipping</span>
-                <span>{money((breakdown.packagingCost + breakdown.shippingCost) / units)}</span>
+              <div className="flex items-start justify-between gap-4">
+                <span>
+                  Electricity ({Number(printHours) || 0}h × {money(settings.electricityRatePerHour)}/hr = {money(breakdown.electricityCost)} batch ÷ {units})
+                </span>
+                <span className="shrink-0 font-medium">{money(breakdown.electricityCost / units)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Failure buffer</span>
-                <span>{money(breakdown.failureBuffer / units)}</span>
+              <div className="flex items-start justify-between gap-4">
+                <span>
+                  Labor ({Number(printHours) || 0}h × {money(settings.laborRatePerHour)}/hr = {money(breakdown.laborCost)} batch ÷ {units})
+                </span>
+                <span className="shrink-0 font-medium">{money(breakdown.laborCost / units)}</span>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <span>Packaging ({money(breakdown.packagingCost)} batch ÷ {units})</span>
+                <span className="shrink-0 font-medium">{money(breakdown.packagingCost / units)}</span>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <span>Shipping ({money(breakdown.shippingCost)} batch ÷ {units})</span>
+                <span className="shrink-0 font-medium">{money(breakdown.shippingCost / units)}</span>
+              </div>
+              <div className="mt-2 flex items-start justify-between gap-4 border-t border-slate-200 pt-2 dark:border-white/10">
+                <span>Subtotal before failure buffer</span>
+                <span className="shrink-0 font-medium">{money(breakdown.subtotalCost)}</span>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <span>
+                  Failure buffer ({settings.failureBufferPercent}% of {money(breakdown.subtotalCost)} = {money(breakdown.failureBuffer)} batch ÷ {units})
+                </span>
+                <span className="shrink-0 font-medium">{money(breakdown.failureBuffer / units)}</span>
               </div>
               <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 font-semibold text-slate-800 dark:border-white/10 dark:text-slate-200">
                 <span>Total batch cost ({units} unit{units === 1 ? "" : "s"})</span>
@@ -1018,6 +1041,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
               <label className="mb-2 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Suggested sale price per unit
               </label>
+              <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+                Starts at 3× the complete per-unit production cost, then accounts for each channel&rsquo;s fixed and
+                percentage fees.
+              </p>
               <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
                 {channelPrices.map(({ channel, price }) => (
                   <button

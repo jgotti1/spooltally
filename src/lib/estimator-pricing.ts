@@ -16,6 +16,11 @@ export const DEFAULT_ROLL_PRICE = 20;
 const DEFAULT_ROLL_SIZE_GRAMS = 1000;
 const DEFAULT_COST_PER_GRAM = DEFAULT_ROLL_PRICE / DEFAULT_ROLL_SIZE_GRAMS;
 
+/** Round a monetary value to the nearest cent before it feeds later displayed totals. */
+export function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 /** True when a roll has no real price to cost from — missing, or priced at $0. */
 export function isUsingDefaultRollCost(roll: Roll | undefined): boolean {
   return !roll || roll.sizeGrams <= 0 || roll.price <= 0;
@@ -51,6 +56,7 @@ export type CostBreakdown = {
   laborCost: number;
   packagingCost: number;
   shippingCost: number;
+  subtotalCost: number;
   failureBuffer: number;
   totalCost: number;
   costPerUnit: number;
@@ -71,15 +77,17 @@ export function calcCostBreakdown(
 ): CostBreakdown {
   const usedSlicerFilamentCost = slicerFilamentCost !== null && slicerFilamentCost !== undefined && slicerFilamentCost > 0;
   const { cost: calculatedFilamentCost, defaultedColors } = calcFilamentCost(colorsUsed, rollsById);
-  const filamentCost = usedSlicerFilamentCost ? slicerFilamentCost : calculatedFilamentCost;
-  const machineCost = printHours * settings.machineRatePerHour;
-  const electricityCost = printHours * settings.electricityRatePerHour;
-  const laborCost = printHours * settings.laborRatePerHour;
-  const packagingCost = settings.packagingCost;
-  const shippingCost = settings.shippingCost;
-  const subtotal = filamentCost + machineCost + electricityCost + laborCost + packagingCost + shippingCost;
-  const failureBuffer = subtotal * (settings.failureBufferPercent / 100);
-  const totalCost = subtotal + failureBuffer;
+  const filamentCost = roundCurrency(usedSlicerFilamentCost ? slicerFilamentCost : calculatedFilamentCost);
+  const machineCost = roundCurrency(printHours * settings.machineRatePerHour);
+  const electricityCost = roundCurrency(printHours * settings.electricityRatePerHour);
+  const laborCost = roundCurrency(printHours * settings.laborRatePerHour);
+  const packagingCost = roundCurrency(settings.packagingCost);
+  const shippingCost = roundCurrency(settings.shippingCost);
+  const subtotalCost = roundCurrency(
+    filamentCost + machineCost + electricityCost + laborCost + packagingCost + shippingCost,
+  );
+  const failureBuffer = roundCurrency(subtotalCost * (settings.failureBufferPercent / 100));
+  const totalCost = roundCurrency(subtotalCost + failureBuffer);
   const units = Math.max(1, quantity);
   return {
     filamentCost,
@@ -88,20 +96,22 @@ export function calcCostBreakdown(
     laborCost,
     packagingCost,
     shippingCost,
+    subtotalCost,
     failureBuffer,
     totalCost,
-    costPerUnit: totalCost / units,
+    costPerUnit: roundCurrency(totalCost / units),
     defaultedColors: usedSlicerFilamentCost ? [] : defaultedColors,
     usedSlicerFilamentCost,
   };
 }
 
-/** price = (cost + target profit + fixed fees) / (1 - fee %) */
+/** Suggested prices start at 3× complete production cost, then add fixed fees and gross up for percentage fees. A configured markup above 200% can raise that floor. */
 export function calcSuggestedPrice(costPerUnit: number, targetProfitPercent: number, channel: ChannelFeeProfile): number {
-  const targetProfit = costPerUnit * (targetProfitPercent / 100);
+  const configuredPriceBase = costPerUnit * (1 + targetProfitPercent / 100);
+  const priceBase = Math.max(costPerUnit * 3, configuredPriceBase);
   const fixedFees = channel.fixedFee + channel.processingFixed;
   const feePercent = channel.percentFee + channel.processingPercent;
   const denom = 1 - feePercent / 100;
   if (denom <= 0) return Infinity;
-  return (costPerUnit + targetProfit + fixedFees) / denom;
+  return roundCurrency((priceBase + fixedFees) / denom);
 }
