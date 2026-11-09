@@ -17,7 +17,7 @@ import {
 } from "@/lib/estimator-settings";
 import type { SalesChannelId } from "@/lib/estimator-constants";
 import { calcCostBreakdown, calcSuggestedPrice, costPerGram } from "@/lib/estimator-pricing";
-import { parseModelFile } from "@/lib/model-parsing";
+import { parseModelFile, dataUrlToFile } from "@/lib/model-parsing";
 
 type EstimatorFormProps = {
   estimate?: Estimate;
@@ -27,12 +27,6 @@ type EstimatorFormProps = {
 
 function emptyColorUsage(): EstimateColorUsage {
   return { material: MATERIAL_OPTIONS[0], color: COLOR_OPTIONS[0], grams: 0, rollId: null };
-}
-
-async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  return new File([blob], name, { type: blob.type });
 }
 
 function PlusIcon() {

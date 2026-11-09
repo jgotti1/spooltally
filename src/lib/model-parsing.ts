@@ -229,6 +229,12 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
   return { grams, printHours, accuracy, note, thumbnailDataUrl };
 }
 
+export async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], name, { type: blob.type });
+}
+
 export async function parseModelFile(file: File, material: string): Promise<ModelParseResult> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".stl")) return parseStl(file, material);

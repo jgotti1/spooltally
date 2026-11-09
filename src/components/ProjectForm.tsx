@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ComboSelect } from "@/components/ComboSelect";
 import { CloseLink } from "@/components/CloseLink";
-import { parseModelFile } from "@/lib/model-parsing";
+import { parseModelFile, dataUrlToFile } from "@/lib/model-parsing";
 import {
   BRAND_OPTIONS,
   COLOR_OPTIONS,
@@ -127,6 +127,12 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const modelInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const [startMode, setStartMode] = useState<"choose" | "manual">(project ? "manual" : "choose");
+  const [parsingNew, setParsingNew] = useState(false);
+  const [pendingModelFile, setPendingModelFile] = useState<File | null>(null);
+  const [pendingThumbnail, setPendingThumbnail] = useState<string | null>(null);
+  const newFileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!user) return;
     return subscribeToRolls(user.uid, setExistingRolls);
@@ -191,6 +197,34 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
   }
 
+  async function handleChooseUpload(file: File | undefined) {
+    if (!file) return;
+    setParsingNew(true);
+    setError("");
+    try {
+      const result = await parseModelFile(file, colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0]);
+      if (result.grams !== null) {
+        setColorsNeeded((rows) =>
+          rows.map((row, i) =>
+            i === 0 ? { ...row, gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy } : row,
+          ),
+        );
+      }
+      if (!name.trim()) setName(file.name.replace(/\.(stl|3mf|gcode|gco)$/i, ""));
+      setPendingModelFile(file);
+      if (result.thumbnailDataUrl) setPendingThumbnail(result.thumbnailDataUrl);
+      if (result.grams === null) {
+        setError(result.note ?? "Couldn't read a filament weight from that file — fill it in below.");
+      }
+    } catch (err) {
+      setPendingModelFile(file);
+      setError(err instanceof Error ? err.message : "Couldn't read that file — fill in the details below.");
+    } finally {
+      setParsingNew(false);
+      setStartMode("manual");
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -207,6 +241,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
         router.push("/projects");
       } else {
         const id = await addProject(user.uid, input);
+        if (pendingModelFile) await uploadProjectFile(user.uid, id, pendingModelFile, "model");
+        if (pendingThumbnail) {
+          const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingModelFile?.name ?? "model"}-preview.png`);
+          await uploadProjectFile(user.uid, id, imageFile, "image");
+        }
         router.push(`/projects/${id}/edit`);
       }
     } catch (err) {
@@ -276,11 +315,84 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
   }
 
+  if (startMode === "choose") {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <CloseLink href="/projects" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">How do you want to start?</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Upload a model file to pull in filament needed and a preview photo automatically, or start from a blank form.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            ref={newFileInputRef}
+            type="file"
+            accept=".stl,.3mf,.gcode,.gco"
+            className="hidden"
+            disabled={parsingNew}
+            onChange={(e) => {
+              void handleChooseUpload(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            disabled={parsingNew}
+            onClick={() => newFileInputRef.current?.click()}
+            className="flex flex-col items-start gap-2 rounded-2xl border-2 border-blue-200 bg-blue-50 p-5 text-left transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
+          >
+            <FileIcon />
+            <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+              {parsingNew ? "Reading file…" : "Upload a file"}
+            </span>
+            <span className="text-xs text-blue-700/80 dark:text-blue-300/80">STL / 3MF / G-code — import filament needed</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStartMode("manual")}
+            className="flex flex-col items-start gap-2 rounded-2xl border-2 border-slate-200 bg-white p-5 text-left transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+          >
+            <PlusIcon />
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Enter manually</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Start from a blank form</span>
+          </button>
+        </div>
+
+        {error && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="flex justify-end">
         <CloseLink href="/projects" dirty={isDirty} />
       </div>
+      {pendingModelFile && (
+        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+          {pendingThumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pendingThumbnail} alt={pendingModelFile.name} className="h-12 w-16 rounded-lg object-cover" />
+          ) : (
+            <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-blue-600 dark:bg-white/10">
+              <FileIcon />
+            </span>
+          )}
+          <p className="text-xs text-blue-800 dark:text-blue-200">
+            <span className="font-semibold">{pendingModelFile.name}</span> will be attached once you save this project.
+          </p>
+        </div>
+      )}
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Project name
