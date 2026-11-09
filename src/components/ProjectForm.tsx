@@ -153,6 +153,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [channelId, setChannelId] = useState<SalesChannelId>("etsy");
   const [settings, setSettings] = useState<EstimatorSettings>(DEFAULT_ESTIMATOR_SETTINGS);
 
+  const STEP_LABELS = ["Preview photo", "Name & status", "Nozzle size", "Colors needed", "Print time & cost"];
+  const [step, setStep] = useState(0);
+  const showStep = (n: number) => project !== undefined || step === n;
+
   useEffect(() => {
     if (!user) return;
     return subscribeToRolls(user.uid, setExistingRolls);
@@ -249,6 +253,28 @@ export function ProjectForm({ project }: ProjectFormProps) {
     } finally {
       setParsingNew(false);
     }
+  }
+
+  function goNext() {
+    setError("");
+    if (step === 1 && !name.trim()) {
+      setError("Give this project a name.");
+      return;
+    }
+    if (step === 2 && nozzleSizeMm === null) {
+      setError("Enter a nozzle size — check your slicer for the one you used.");
+      return;
+    }
+    if (step === 3 && colorsNeeded.length === 0) {
+      setError("Add at least one color before continuing.");
+      return;
+    }
+    setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+  }
+
+  function goBack() {
+    setError("");
+    setStep((s) => Math.max(s - 1, 0));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -394,6 +420,22 @@ export function ProjectForm({ project }: ProjectFormProps) {
       </div>
 
       {!project && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
+            Step {step + 1} of {STEP_LABELS.length} — {STEP_LABELS[step]}
+          </p>
+          <div className="flex gap-1">
+            {STEP_LABELS.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-6 rounded-full ${i <= step ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showStep(0) && (
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
             Preview photo <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
@@ -434,62 +476,69 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       )}
 
-      <div>
-        <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Project name
-        </label>
-        <input
-          id="name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Hex planters — craft fair batch"
-          className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
-        />
-      </div>
-
-      <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Status</label>
-        <div className="grid grid-cols-2 gap-2">
-          {PROJECT_STATUSES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatus(s)}
-              className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
-                status === s
-                  ? "bg-blue-600 text-white"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+      {showStep(1) && (
+        <div>
+          <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Project name
+          </label>
+          <input
+            id="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Hex planters — craft fair batch"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          />
         </div>
-      </div>
+      )}
 
-      <div>
-        <label htmlFor="nozzleSize" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Nozzle size (mm){" "}
-          {project && <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>}
-        </label>
-        <input
-          id="nozzleSize"
-          type="number"
-          min={0}
-          step="0.1"
-          value={nozzleSizeMm ?? ""}
-          onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
-          placeholder="0.4"
-          className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
-        />
-        {!project && (
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            Please check your slicer for the exact nozzle size you used.
-          </p>
-        )}
-      </div>
+      {showStep(1) && (
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Status</label>
+          <div className="grid grid-cols-2 gap-2">
+            {PROJECT_STATUSES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatus(s)}
+                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                  status === s
+                    ? "bg-blue-600 text-white"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
+      {showStep(2) && (
+        <div>
+          <label htmlFor="nozzleSize" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Nozzle size (mm){" "}
+            {project && <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>}
+          </label>
+          <input
+            id="nozzleSize"
+            type="number"
+            min={0}
+            step="0.1"
+            value={nozzleSizeMm ?? ""}
+            onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
+            placeholder="0.4"
+            className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          />
+          {!project && (
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              Please check your slicer for the exact nozzle size you used.
+            </p>
+          )}
+        </div>
+      )}
+
+      {showStep(3) && (
       <div>
         <div className="mb-2 flex items-center justify-between">
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Colors needed</label>
@@ -692,8 +741,9 @@ export function ProjectForm({ project }: ProjectFormProps) {
           })}
         </div>
       </div>
+      )}
 
-      {!project && colorsNeeded.length > 0 && (
+      {showStep(4) && !project && colorsNeeded.length > 0 && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -903,13 +953,44 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={saving || !canSubmit}
-        className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {saving ? "Saving…" : project ? "Save changes" : "Create project"}
-      </button>
+      {project ? (
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      ) : (
+        <div className="flex gap-3">
+          {step > 0 && (
+            <button
+              type="button"
+              onClick={goBack}
+              className="h-12 flex-1 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]"
+            >
+              Back
+            </button>
+          )}
+          {step < STEP_LABELS.length - 1 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={saving || !canSubmit}
+              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {saving ? "Saving…" : "Create project"}
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }
