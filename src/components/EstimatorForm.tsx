@@ -109,6 +109,8 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
   const [parsingIndex, setParsingIndex] = useState<number | null>(null);
   const [rowStatus, setRowStatus] = useState<Record<number, { kind: "ok" | "error"; message: string }>>({});
   const [modelPreviews, setModelPreviews] = useState<Record<number, { dataUrl: string; fileName: string }>>({});
+  const [unknownColorRows, setUnknownColorRows] = useState<Set<number>>(new Set());
+  const [colorWarning, setColorWarning] = useState("");
   const [addingRollIndex, setAddingRollIndex] = useState<number | null>(null);
   const [newRoll, setNewRoll] = useState({ brand: BRAND_OPTIONS[0] as string, sizeGrams: SIZE_OPTIONS_GRAMS[1] as number, price: 0 });
   const [savingRoll, setSavingRoll] = useState(false);
@@ -155,11 +157,29 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
 
   function removeColorUsageRow(index: number) {
     setColorsUsed((rows) => rows.filter((_, i) => i !== index));
+    setUnknownColorRows((s) => {
+      const next = new Set<number>();
+      for (const i of s) {
+        if (i === index) continue;
+        next.add(i > index ? i - 1 : i);
+      }
+      return next;
+    });
+  }
+
+  function clearUnknownColor(index: number) {
+    setUnknownColorRows((s) => {
+      if (!s.has(index)) return s;
+      const next = new Set(s);
+      next.delete(index);
+      return next;
+    });
   }
 
   async function handleFileUpload(index: number, file: File | undefined) {
     if (!file) return;
     setError("");
+    setColorWarning("");
     setRowStatus((s) => ({ ...s, [index]: { kind: "ok", message: "Reading file…" } }));
     setParsingIndex(index);
     try {
@@ -167,6 +187,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
       const result = await parseModelFile(file, usage.material);
 
       if (result.filaments && result.filaments.length > 1) {
+        const unknownOffsets = result.filaments.flatMap((f, i) => (f.colorName ? [] : [i]));
         setColorsUsed((rows) => {
           const inserted = result.filaments!.map((f) => ({
             material: usage.material,
@@ -179,6 +200,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         });
         setRowStatus({});
         setModelPreviews({});
+        setUnknownColorRows(new Set(unknownOffsets.map((offset) => index + offset)));
       } else {
         setColorsUsed((rows) =>
           rows.map((row, i) => {
@@ -192,8 +214,15 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
             return next;
           }),
         );
+        setUnknownColorRows((s) => {
+          const next = new Set(s);
+          if (result.colorName) next.delete(index);
+          else next.add(index);
+          return next;
+        });
       }
 
+      setColorWarning(result.colorWarning ?? "");
       if (result.printHours !== null) setPrintHours(String(Math.round(result.printHours * 100) / 100));
       if (result.thumbnailDataUrl) {
         setModelPreviews((p) => ({ ...p, [index]: { dataUrl: result.thumbnailDataUrl!, fileName: file.name } }));
@@ -410,6 +439,12 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
         <CloseLink href="/estimator" dirty={isDirty} />
       </div>
 
+      {colorWarning && (
+        <p className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300">
+          ⚠ {colorWarning}
+        </p>
+      )}
+
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Estimate name
@@ -479,13 +514,23 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
                     options={MATERIAL_OPTIONS}
                     customPlaceholder="e.g. HIPS"
                   />
-                  <ComboSelect
-                    label="Color"
-                    value={usage.color}
-                    onChange={(v) => updateColorUsage(index, { color: v, rollId: null })}
-                    options={COLOR_OPTIONS}
-                    customPlaceholder="e.g. Galaxy Purple"
-                  />
+                  <div className={unknownColorRows.has(index) ? "rounded-xl ring-2 ring-rose-400" : ""}>
+                    <ComboSelect
+                      label="Color"
+                      value={usage.color}
+                      onChange={(v) => {
+                        updateColorUsage(index, { color: v, rollId: null });
+                        clearUnknownColor(index);
+                      }}
+                      options={COLOR_OPTIONS}
+                      customPlaceholder="e.g. Galaxy Purple"
+                    />
+                    {unknownColorRows.has(index) && (
+                      <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+                        Not read from the file — pick the real color
+                      </p>
+                    )}
+                  </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Grams</label>
                     <input

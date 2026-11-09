@@ -123,6 +123,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"model" | "image" | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+  const [colorWarning, setColorWarning] = useState("");
+  const [unknownColorRows, setUnknownColorRows] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
   const modelInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -148,6 +150,23 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   function removeColorNeedRow(index: number) {
     setColorsNeeded((rows) => rows.filter((_, i) => i !== index));
+    setUnknownColorRows((s) => {
+      const next = new Set<number>();
+      for (const i of s) {
+        if (i === index) continue;
+        next.add(i > index ? i - 1 : i);
+      }
+      return next;
+    });
+  }
+
+  function clearUnknownColor(index: number) {
+    setUnknownColorRows((s) => {
+      if (!s.has(index)) return s;
+      const next = new Set(s);
+      next.delete(index);
+      return next;
+    });
   }
 
   function toggleRollLink(index: number, rollId: string) {
@@ -201,6 +220,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
     if (!file) return;
     setParsingNew(true);
     setError("");
+    setColorWarning("");
+    setUnknownColorRows(new Set());
     try {
       const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
       const result = await parseModelFile(file, material);
@@ -214,26 +235,31 @@ export function ProjectForm({ project }: ProjectFormProps) {
             rollIds: [],
           })),
         );
-      } else if (result.grams !== null || result.colorName) {
-        setColorsNeeded((rows) =>
-          rows.map((row, i) =>
-            i === 0
-              ? {
-                  ...row,
-                  ...(result.grams !== null
-                    ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
-                    : {}),
-                  ...(result.colorName && result.colorName !== row.color
-                    ? { color: result.colorName, rollIds: [] }
-                    : {}),
-                }
-              : row,
-          ),
-        );
+        setUnknownColorRows(new Set(result.filaments.flatMap((f, i) => (f.colorName ? [] : [i]))));
+      } else {
+        if (result.grams !== null || result.colorName) {
+          setColorsNeeded((rows) =>
+            rows.map((row, i) =>
+              i === 0
+                ? {
+                    ...row,
+                    ...(result.grams !== null
+                      ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                      : {}),
+                    ...(result.colorName && result.colorName !== row.color
+                      ? { color: result.colorName, rollIds: [] }
+                      : {}),
+                  }
+                : row,
+            ),
+          );
+        }
+        setUnknownColorRows(result.colorName ? new Set() : new Set([0]));
       }
       if (!name.trim()) setName(file.name.replace(/\.(stl|3mf|gcode|gco)$/i, ""));
       setPendingModelFile(file);
       if (result.thumbnailDataUrl) setPendingThumbnail(result.thumbnailDataUrl);
+      setColorWarning(result.colorWarning ?? "");
       if (result.grams === null) {
         setError(result.note ?? "Couldn't read a filament weight from that file — fill it in below.");
       }
@@ -282,6 +308,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setUploading(type);
     setError("");
     setUploadStatus(null);
+    if (type === "model") setColorWarning("");
     try {
       const meta = await uploadProjectFile(user.uid, project.id, file, type);
       setFiles((prev) => [...prev, meta]);
@@ -291,6 +318,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           const material = colorsNeeded[0]?.material ?? MATERIAL_OPTIONS[0];
           const result = await parseModelFile(file, material);
           if (result.filaments && result.filaments.length > 1) {
+            const newlyUnknown: number[] = [];
             setColorsNeeded((rows) => {
               const next = [...rows];
               for (const f of result.filaments!) {
@@ -302,6 +330,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     gramsNeeded: Math.round(f.grams * 100) / 100,
                     gramsSource: result.accuracy,
                   };
+                  if (!f.colorName) newlyUnknown.push(existingIndex);
                 } else if (existingIndex < 0) {
                   next.push({
                     material,
@@ -310,28 +339,37 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     gramsSource: result.accuracy,
                     rollIds: [],
                   });
+                  if (!f.colorName) newlyUnknown.push(next.length - 1);
                 }
               }
               const isUntouchedDefault = (r: ProjectColorNeed) =>
                 r.material === MATERIAL_OPTIONS[0] && r.color === COLOR_OPTIONS[0] && r.gramsNeeded === null && r.rollIds.length === 0;
-              return next.length > 1 ? next.filter((r, i) => !(i === 0 && isUntouchedDefault(r))) : next;
+              if (next.length > 1 && isUntouchedDefault(next[0])) {
+                next.shift();
+                for (let i = 0; i < newlyUnknown.length; i++) newlyUnknown[i] -= 1;
+              }
+              return next;
             });
-          } else if (result.grams !== null || result.colorName) {
-            setColorsNeeded((rows) =>
-              rows.map((row, i) =>
-                i === 0
-                  ? {
-                      ...row,
-                      ...(result.grams !== null && row.gramsNeeded === null
-                        ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
-                        : {}),
-                      ...(result.colorName && result.colorName !== row.color
-                        ? { color: result.colorName, rollIds: [] }
-                        : {}),
-                    }
-                  : row,
-              ),
-            );
+            setUnknownColorRows((s) => new Set([...s, ...newlyUnknown.filter((i) => i >= 0)]));
+          } else {
+            if (result.grams !== null || result.colorName) {
+              setColorsNeeded((rows) =>
+                rows.map((row, i) =>
+                  i === 0
+                    ? {
+                        ...row,
+                        ...(result.grams !== null && row.gramsNeeded === null
+                          ? { gramsNeeded: Math.round(result.grams! * 100) / 100, gramsSource: result.accuracy }
+                          : {}),
+                        ...(result.colorName && result.colorName !== row.color
+                          ? { color: result.colorName, rollIds: [] }
+                          : {}),
+                      }
+                    : row,
+                ),
+              );
+            }
+            if (!result.colorName) setUnknownColorRows((s) => new Set([...s, 0]));
           }
           if (result.thumbnailDataUrl) {
             const res = await fetch(result.thumbnailDataUrl);
@@ -340,6 +378,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             const imageMeta = await uploadProjectFile(user.uid, project.id, imageFile, "image");
             setFiles((prev) => [...prev, imageMeta]);
           }
+          setColorWarning(result.colorWarning ?? "");
           setUploadStatus({
             kind: result.grams !== null ? "ok" : "error",
             message:
@@ -451,6 +490,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
           </p>
         </div>
       )}
+      {colorWarning && (
+        <p className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300">
+          ⚠ {colorWarning}
+        </p>
+      )}
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
           Project name
@@ -515,13 +559,23 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     options={MATERIAL_OPTIONS}
                     customPlaceholder="e.g. HIPS"
                   />
+                  <div className={unknownColorRows.has(index) ? "rounded-xl ring-2 ring-rose-400" : ""}>
                   <ComboSelect
                     label="Color"
                     value={need.color}
-                    onChange={(v) => updateColorNeed(index, { color: v })}
+                    onChange={(v) => {
+                      updateColorNeed(index, { color: v });
+                      clearUnknownColor(index);
+                    }}
                     options={COLOR_OPTIONS}
                     customPlaceholder="e.g. Galaxy Purple"
                   />
+                  {unknownColorRows.has(index) && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+                      Not read from the file — pick the real color
+                    </p>
+                  )}
+                  </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Grams needed <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>

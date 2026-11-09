@@ -30,6 +30,8 @@ export type ModelParseResult = {
   colorName?: string | null;
   /** Per-color breakdown when a 3MF has multiple objects, each assigned its own base-material color — one entry per color/part instead of one lumped total. */
   filaments?: { grams: number; colorName: string | null }[];
+  /** Set whenever color couldn't be read reliably — callers should flag that the default color is a guess, not leave it looking like a real import. */
+  colorWarning?: string;
 };
 
 /** Representative RGB for each color in COLOR_OPTIONS, used to map a filament hex color to the nearest named option. */
@@ -149,7 +151,13 @@ async function parseStl(file: File, material: string): Promise<ModelParseResult>
   const volumeCm3 = signedVolumeMm3(positions) / 1000;
   const grams = volumeCm3 * densityFor(material);
   const thumbnailDataUrl = await renderMeshThumbnail(geometry);
-  return { grams, printHours: null, accuracy: "estimated", thumbnailDataUrl };
+  return {
+    grams,
+    printHours: null,
+    accuracy: "estimated",
+    thumbnailDataUrl,
+    colorWarning: "STL files don't carry color data — this color couldn't be imported and needs to be set manually.",
+  };
 }
 
 /** Looks for the weight/time comments slicers (PrusaSlicer/SuperSlicer, Cura, Bambu/OrcaSlicer) write into G-code. */
@@ -210,13 +218,17 @@ function extractGcodeThumbnail(text: string): string | null {
 async function parseGcode(file: File): Promise<ModelParseResult> {
   const text = await file.text();
   const { grams, printHours } = parseSlicerText(text);
+  const colorName = extractColorName(text);
   return {
     grams,
     printHours,
     accuracy: "exact",
     note: grams === null ? "Couldn't find a filament weight in this file — enter grams manually." : undefined,
     thumbnailDataUrl: extractGcodeThumbnail(text),
-    colorName: extractColorName(text),
+    colorName,
+    colorWarning: colorName
+      ? undefined
+      : "Couldn't read a filament color from this file — the color shown wasn't imported and needs to be set manually.",
   };
 }
 
@@ -302,6 +314,7 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
   let accuracy: "estimated" | "exact" = "exact";
   let note: string | undefined;
   let filaments: { grams: number; colorName: string | null }[] | undefined;
+  let colorWarning: string | undefined;
 
   if (grams === null && modelXmls.length > 0) {
     try {
@@ -318,6 +331,11 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
             .filter((o) => o.colorHex)
             .map((o) => ({ grams: (o.volumeMm3 / 1000) * densityFor(material), colorName: nearestColorName(o.colorHex!) }));
           note = `Split into ${filaments.length} colors using the model's own material colors — grams per color are estimated from geometry.`;
+          if (filaments.length < objects.length) {
+            colorWarning = `${objects.length - filaments.length} of ${objects.length} parts in this file had no color data and were left out of the split — add any missing colors manually instead of guessing from what was imported.`;
+          }
+        } else if (objects.length > 1) {
+          colorWarning = `This file has ${objects.length} separate parts, but none carried color data that could be read — add each part's color manually instead of using the single default shown.`;
         }
       }
     } catch {
@@ -325,8 +343,11 @@ async function parse3mf(file: File, material: string): Promise<ModelParseResult>
     }
   }
   if (grams === null) note = "Couldn't find or estimate a filament weight in this file — enter grams manually.";
+  if (!colorWarning && !colorName && !filaments) {
+    colorWarning = "Couldn't read a filament color from this file — the color shown wasn't imported and needs to be set manually.";
+  }
 
-  return { grams, printHours, accuracy, note, thumbnailDataUrl, colorName, filaments };
+  return { grams, printHours, accuracy, note, thumbnailDataUrl, colorName, filaments, colorWarning };
 }
 
 export async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
