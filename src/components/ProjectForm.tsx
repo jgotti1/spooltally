@@ -1042,7 +1042,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                 Suggested sale price per unit
               </label>
               <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-                Starts at 3× the complete per-unit production cost, then accounts for each channel&rsquo;s fixed and
+                Starts at 2.5× the complete per-unit production cost, then accounts for each channel&rsquo;s fixed and
                 percentage fees.
               </p>
               <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">

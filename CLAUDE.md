@@ -44,6 +44,6 @@ Web app for 3D print sellers: price estimation, filament inventory, and project 
 - Project previews in both grid and list views show total and per-unit cost, suggested per-unit sale price, filament grams, color count, nozzle, print time, and batch quantity without becoming a second edit form.
 - Model uploads may generate a preview image for thumbnails. Treat that image as a supporting asset: do not count or display it as a second user upload, and remove it with its source model.
 - Supported sales channels are Etsy, eBay, Amazon Handmade, own site, Facebook Marketplace, and in person. Do not expose the legacy Custom channel.
-- Suggested prices use a floor of 3× the complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(3 × cost, configured markup price) + fixed fees) / (1 - fee %)`. The configured markup may raise, but never lower, that floor.
+- Suggested prices use a floor of 2.5× the complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(2.5 × cost, configured markup price) + fixed fees) / (1 - fee %)`. The configured markup may raise, but never lower, that floor.
 - Treat STL-derived weights as estimates ("Estimated from model"); sliced-file-derived weights as exact ("Exact from slicer"). Surface this distinction in the UI, don't blur it.
 - No screenshot-reading (Claude API) or Etsy integration in v1 — those are explicitly deferred (see spec's "Later" section).

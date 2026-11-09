@@ -105,10 +105,10 @@ export function calcCostBreakdown(
   };
 }
 
-/** Suggested prices start at 3× complete production cost, then add fixed fees and gross up for percentage fees. A configured markup above 200% can raise that floor. */
+/** Suggested prices start at 2.5× complete production cost, then add fixed fees and gross up for percentage fees. A configured markup above 150% can raise that floor. */
 export function calcSuggestedPrice(costPerUnit: number, targetProfitPercent: number, channel: ChannelFeeProfile): number {
   const configuredPriceBase = costPerUnit * (1 + targetProfitPercent / 100);
-  const priceBase = Math.max(costPerUnit * 3, configuredPriceBase);
+  const priceBase = Math.max(costPerUnit * 2.5, configuredPriceBase);
   const fixedFees = channel.fixedFee + channel.processingFixed;
   const feePercent = channel.percentFee + channel.processingPercent;
   const denom = 1 - feePercent / 100;

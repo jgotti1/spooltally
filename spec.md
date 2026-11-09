@@ -43,7 +43,7 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 - In person: no platform fee; optional card reader fee and booth fee.
 - Compare prices across channels side by side.
 - Cost = filament + machine time x rate + electricity + ~10% failure buffer + labor + packaging + optional shipping.
-- Suggested-price formula: start at 3× complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(3 × cost, configured markup price) + fixed fees) / (1 - fee %)`. A configured markup may raise, but not lower, the 3× floor.
+- Suggested-price formula: start at 2.5× complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(2.5 × cost, configured markup price) + fixed fees) / (1 - fee %)`. A configured markup may raise, but not lower, the 2.5× floor.
 - User settings: machine hourly rate, electricity cost, labor rate, margin, selected channels.
 
 ## Contact support

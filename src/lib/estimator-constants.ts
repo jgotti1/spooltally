@@ -30,5 +30,5 @@ export const DEFAULT_CHANNELS: ChannelFeeProfile[] = [
 ];
 
 export const DEFAULT_FAILURE_BUFFER_PERCENT = 10;
-/** A 200% markup makes the sale-price base 3× the complete production cost. */
-export const DEFAULT_TARGET_PROFIT_PERCENT = 200;
+/** A 150% markup makes the sale-price base 2.5× the complete production cost. */
+export const DEFAULT_TARGET_PROFIT_PERCENT = 150;
