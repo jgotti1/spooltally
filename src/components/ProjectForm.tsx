@@ -471,6 +471,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                     <input
                       type="number"
                       min={0}
+                      step="any"
                       value={need.gramsNeeded ?? ""}
                       onChange={(e) =>
                         updateColorNeed(index, {

@@ -468,6 +468,7 @@ export function EstimatorForm({ estimate, initialProjectId }: EstimatorFormProps
                     <input
                       type="number"
                       min={0}
+                      step="any"
                       value={usage.grams}
                       onChange={(e) => updateColorUsage(index, { grams: Number(e.target.value), gramsSource: undefined })}
                       className="h-12 w-24 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
