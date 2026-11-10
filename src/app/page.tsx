@@ -50,7 +50,7 @@ export default function LoginPage() {
           <h1 className={`${styles.headline} max-w-[720px] leading-[1] font-semibold tracking-[-0.055em] text-balance`}>
             Track every roll.
             <br />
-            <span className={styles.gradientText}>Price every project.</span>
+            <span className={styles.gradientText}>Manage every project.</span>
             <br />
             Keep your printers running smooth.
           </h1>
