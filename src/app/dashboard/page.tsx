@@ -10,6 +10,7 @@ import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySetting
 import { groupLowRolls } from "@/lib/inventory-status";
 import { subscribeToProjects, type Project } from "@/lib/projects";
 import { describeShortage, projectStock } from "@/lib/project-stock";
+import { ProfilePrompt } from "@/components/ProfilePrompt";
 import { getShopSettings } from "@/lib/shop-settings";
 import { costPerGram, isUsingDefaultRollCost } from "@/lib/estimator-pricing";
 import {
@@ -73,11 +74,14 @@ const money = (value: number) =>
   value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, viewingAs } = useAuth();
   const router = useRouter();
   const [rolls, setRolls] = useState<Roll[]>([]);
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
   const [shopName, setShopName] = useState("");
+  /** null until the settings doc has loaded, so the first-login prompt never flashes for returning users. */
+  const [promptDone, setPromptDone] = useState<boolean | null>(null);
+  const [nameOverride, setNameOverride] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
 
@@ -95,7 +99,9 @@ export default function DashboardPage() {
     });
     getShopSettings(user.uid)
       .then((next) => {
-        if (active) setShopName(next.shopName);
+        if (!active) return;
+        setShopName(next.shopName);
+        setPromptDone(next.profilePromptDone);
       })
       .catch(() => {});
     return () => {
@@ -118,6 +124,8 @@ export default function DashboardPage() {
     return subscribeToPrinters(user.uid, setPrinters);
   }, [user]);
 
+  /** A full-roll entry can hold several identical spools (`quantity`), so count spools, not entries. */
+  const spoolCount = useMemo(() => rolls.reduce((sum, r) => sum + Math.max(1, r.quantity || 1), 0), [rolls]);
   const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
   /** What the filament on the shelf is worth at the price paid; rolls with no price use the $20 default. */
   const stockValue = useMemo(() => {
@@ -163,13 +171,29 @@ export default function DashboardPage() {
     );
   }
 
-  const name = user.displayName?.split(" ")[0] ?? user.email?.split("@")[0] ?? "there";
+  const fullName = nameOverride || user.displayName || "";
+  const name = fullName.split(" ")[0] || user.email?.split("@")[0] || "there";
+  const needsName = !fullName;
+  const needsShopName = !shopName;
+  const showProfilePrompt = !viewingAs && promptDone === false && (needsName || needsShopName);
   const attentionCount = lowGroups.length + shortProjects.length + maintenanceDuePrinters.length;
 
   return (
     <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-10 sm:px-10">
+        {showProfilePrompt && (
+          <ProfilePrompt
+            user={user}
+            needsName={needsName}
+            needsShopName={needsShopName}
+            onDone={(result) => {
+              if (result.name) setNameOverride(result.name);
+              if (result.shopName) setShopName(result.shopName);
+              setPromptDone(true);
+            }}
+          />
+        )}
         <div
           className="relative overflow-hidden rounded-3xl px-6 py-10 text-white shadow-lg sm:px-10 sm:py-12"
           style={{
@@ -286,7 +310,7 @@ export default function DashboardPage() {
                   <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-amber-700 dark:text-amber-300">
                     {lowGroups.slice(0, 4).map((group) => (
                       <li key={group.key} className="truncate">
-                        {group.brand} {group.color} {group.material} · ~{Math.round(group.totalGrams)} g
+                        {group.brand} {group.color} {group.material} · Approx. {Math.round(group.totalGrams)} g
                       </li>
                     ))}
                     {lowGroups.length > 4 && <li>+{lowGroups.length - 4} more</li>}
@@ -322,18 +346,18 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">At a glance</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">{rolls.length}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Rolls tracked</p>
+              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">{spoolCount}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Rolls on hand</p>
             </div>
             <div>
               <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
                 {(totalGrams / 1000).toFixed(1)} kg
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Filament on hand</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Total filament on hand</p>
             </div>
             <div>
               <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
-                {stockValue.estimated ? "~" : ""}
+                {stockValue.estimated ? "Approx. " : ""}
                 {money(stockValue.value)}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth-context";
+import { saveShopSettings } from "@/lib/shop-settings";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { Logo } from "@/components/Logo";
 import styles from "@/app/page.module.css";
@@ -53,6 +54,7 @@ export function LoginForm() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
+  const [shopName, setShopName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -83,7 +85,11 @@ export function LoginForm() {
       if (mode === "signin") {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(name, email, password);
+        const uid = await signUpWithEmail(name, email, password);
+        if (uid) {
+          // Best effort: a failed shop-name save must not block the new account; the dashboard will ask again.
+          await saveShopSettings(uid, { shopName, profilePromptDone: true }).catch(() => {});
+        }
       }
       router.push("/dashboard");
     } catch (err) {
@@ -161,6 +167,24 @@ export function LoginForm() {
                 className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
               />
             </div>
+          </div>
+        )}
+        {mode === "signup" && (
+          <div>
+            <label htmlFor="shopName" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Shop name <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+            </label>
+            <input
+              id="shopName"
+              name="shopName"
+              type="text"
+              autoComplete="organization"
+              placeholder="North Shore Prints"
+              value={shopName}
+              onChange={(e) => setShopName(e.target.value)}
+              className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
+            />
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">You can add or change this anytime in Settings.</p>
           </div>
         )}
         <div>

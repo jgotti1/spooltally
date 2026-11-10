@@ -28,10 +28,15 @@ export function gramsOnHandByColor(rolls: Roll[]): Map<string, number> {
   return totals;
 }
 
-function colorStock(need: ProjectColorNeed, quantity: number, onHand: Map<string, number>): ColorStock {
+function colorStock(need: ProjectColorNeed, quantity: number, onHand: Map<string, number>, rolls: Roll[]): ColorStock {
   const perUnit = need.gramsNeeded ?? 0;
   const gramsNeeded = perUnit * Math.max(1, quantity);
-  const gramsOnHand = onHand.get(stockKey(need.material, need.color)) ?? 0;
+  const key = stockKey(need.material, need.color);
+  let gramsOnHand = onHand.get(key) ?? 0;
+  // Rolls the user linked to this color always count, even if their material/color text differs (e.g. "Black" vs "Jet Black").
+  for (const roll of rolls) {
+    if (need.rollIds.includes(roll.id) && stockKey(roll.material, roll.color) !== key) gramsOnHand += roll.remainingGrams;
+  }
   return {
     material: need.material,
     color: need.color,
@@ -53,7 +58,7 @@ export type ProjectStock = {
 /** Checks a project's colors against current stock: what may run short, and how many more units the shop can print. */
 export function projectStock(project: Pick<Project, "colorsNeeded" | "quantity">, rolls: Roll[]): ProjectStock {
   const onHand = gramsOnHandByColor(rolls);
-  const colors = project.colorsNeeded.map((need) => colorStock(need, project.quantity, onHand));
+  const colors = project.colorsNeeded.map((need) => colorStock(need, project.quantity, onHand, rolls));
   const known = colors.map((c) => c.unitsPossible).filter((units): units is number => units !== null);
   return {
     colors,
@@ -66,6 +71,6 @@ export function projectStock(project: Pick<Project, "colorsNeeded" | "quantity">
 export function describeShortage(stock: ProjectStock): string {
   return stock.colors
     .filter((c) => c.short)
-    .map((c) => `${c.color} ${c.material}: need ${Math.round(c.gramsNeeded)} g, ~${Math.round(c.gramsOnHand)} g on hand`)
+    .map((c) => `${c.color} ${c.material}: need ${Math.round(c.gramsNeeded)} g, ${Math.round(c.gramsOnHand)} g on hand`)
     .join(" · ");
 }

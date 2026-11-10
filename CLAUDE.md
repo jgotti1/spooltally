@@ -51,6 +51,15 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - "Mark complete" is the one place the two actions combine, and only because the user explicitly asks for it: it takes a completed date and required notes plus an optional next date, then writes the `maintenanceRecords` entry and replaces the printer's `nextDueDate` (with the new date, or `""` if left blank) in a single Firestore batch via `completeScheduledMaintenance`. Due status is still read only from `nextDueDate`.
 - Keep the printer model list current with each brand's active lineup (e.g. Bambu Lab's X1/P1/P2/A1 series plus its H2D/H2S/H2C line) — revisit periodically rather than letting it go stale.
 
+## Admin (owner tools)
+
+- Routes: `/admin` (user list) and `/admin/users/[uid]` (details), shown in the header only when the signed-in token carries the `admin` custom claim. The real gates are server-side: every `/api/admin/*` route calls `requireAdmin` in [src/lib/admin/server.ts](src/lib/admin/server.ts), and Firestore/Storage rules allow admin *reads* only.
+- Server code uses the Firebase Admin SDK with `FIREBASE_SERVICE_ACCOUNT_JSON` (server-only env var, never `NEXT_PUBLIC_`, never committed). No Cloud Functions needed for this: Next route handlers do it.
+- Custom claims: `admin` (can use the admin pages) and `owner` (the only account that can grant/remove `admin`, and can't be frozen). The owner gets both automatically on first sign-in when the server env var `OWNER_EMAIL` matches their verified email (`/api/session`); `scripts/set-admin-claim.mjs` does the same by hand.
+- `users/{uid}` is read-only to clients (rules: `write: false`). It is created/updated only by `/api/session` (trial = Auth signup date + 14 days, `lastLogin`) and `/api/admin/*` (comp, freeze, trial extension, notes). Never let the client write trial/plan/comp fields.
+- Account status is computed in [src/lib/account-status.ts](src/lib/account-status.ts) (`accountStatus`): disabled → comped → active/trialing subscription → past_due/unpaid → trial → expired. `subscriptionStatus` stays empty until the Stripe step fills it in.
+- "View as" is read-only by construction: the auth context swaps in the customer's uid so pages work unchanged, but rules reject every write that isn't the owner's own, and a persistent banner shows who is being viewed. Freezing disables the Auth account and revokes its tokens; data is kept.
+
 ## Conventions
 
 - Keep filament-level math in grams internally; fractions (Full/3/4/1/2/1/4/Empty) are a UI layer over the underlying gram value.

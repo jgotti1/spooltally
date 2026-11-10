@@ -2,37 +2,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // The owner's `admin` custom claim (set with scripts/set-admin-claim.mjs). Admins may READ any user's data to
+    // troubleshoot ("view as"); every write below is still owner-only, so view-as can never change a customer's data.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('admin', false) == true;
+    }
+
     match /rolls/{rollId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
 
     match /projects/{projectId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
 
     match /printers/{printerId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
 
     match /maintenanceRecords/{recordId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
 
     match /settings/{ownerId} {
-      allow read, write: if request.auth != null && request.auth.uid == ownerId;
+      allow read: if request.auth != null && (request.auth.uid == ownerId || isAdmin());
+      allow write: if request.auth != null && request.auth.uid == ownerId;
     }
 
+    // Trial dates, plan, comp and freeze flags live here. Clients can read their own doc but never write it:
+    // only the server (Admin SDK, via /api/session and /api/admin/*) creates or changes it.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if false;
     }
 
     match /supportMessages/{messageId} {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-      allow read: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
     }
   }
 }

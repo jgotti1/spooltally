@@ -23,7 +23,7 @@ export type EstimatorSettings = {
 };
 
 export const DEFAULT_ESTIMATOR_SETTINGS: EstimatorSettings = {
-  machineRatePerHour: 1,
+  machineRatePerHour: 0.75,
   electricityRatePerHour: 0.25,
   laborRatePerHour: 0,
   failureBufferPercent: DEFAULT_FAILURE_BUFFER_PERCENT,
