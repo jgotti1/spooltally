@@ -34,8 +34,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/supp
       const from = process.env.RESEND_FROM;
       if (!apiKey || !from) {
         // Resend's shared test sender only delivers to the Resend account's own address, so replies need a real domain.
+        const missing = [!apiKey && "RESEND_API_KEY", !from && "RESEND_FROM"].filter(Boolean).join(" and ");
         return NextResponse.json(
-          { error: "Replies need RESEND_API_KEY and RESEND_FROM (an address on a domain verified in Resend). Add them and redeploy." },
+          { error: `This server is missing ${missing}. Add ${missing.includes("and") ? "them" : "it"} in Vercel (Production) and redeploy.` },
           { status: 503 },
         );
       }
@@ -59,9 +60,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/supp
     update.updatedAt = FieldValue.serverTimestamp();
     await ref.update(update);
 
-    if (reply) await audit(guard.token, "support_reply", current.ownerId, { messageId: id });
+    if (reply) await audit(guard.token, "support_reply", current.ownerId || null, { messageId: id });
     else if (update.status !== current.status) {
-      await audit(guard.token, update.status === "resolved" ? "support_resolved" : "support_reopened", current.ownerId, { messageId: id });
+      await audit(guard.token, update.status === "resolved" ? "support_resolved" : "support_reopened", current.ownerId || null, { messageId: id });
     }
     const fresh = await ref.get();
     return NextResponse.json({ message: toSupportMessage(id, fresh.data()!) });

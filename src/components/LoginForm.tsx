@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth-context";
 import { saveShopSettings } from "@/lib/shop-settings";
@@ -25,11 +26,13 @@ function ArrowIcon() {
   return <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" /></svg>;
 }
 
+const FROZEN_MESSAGE = "This account has been frozen.";
+
 function friendlyAuthError(error: unknown): string {
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case "auth/user-disabled":
-        return "This account has been frozen. Email support if you think that's a mistake.";
+        return FROZEN_MESSAGE;
       case "auth/invalid-email":
         return "That email address doesn't look right.";
       case "auth/user-not-found":
@@ -54,6 +57,8 @@ function friendlyAuthError(error: unknown): string {
 export function LoginForm() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const router = useRouter();
+  // AccessGate sends a signed-in account here with ?frozen=1 the moment an admin freezes it.
+  const frozenRedirect = useSearchParams().get("frozen") === "1";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [shopName, setShopName] = useState("");
@@ -238,8 +243,19 @@ export function LoginForm() {
           </div>
         </div>
 
-        {error && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>
+        {(error || frozenRedirect) && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+            {error || FROZEN_MESSAGE}
+            {(error === FROZEN_MESSAGE || (!error && frozenRedirect)) && (
+              <>
+                {" "}
+                <Link href="/contact?reason=frozen" className="font-semibold underline underline-offset-2">
+                  Email support
+                </Link>{" "}
+                if you think that&rsquo;s a mistake.
+              </>
+            )}
+          </p>
         )}
         {notice && (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{notice}</p>

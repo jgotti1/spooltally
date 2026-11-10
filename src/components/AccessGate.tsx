@@ -25,7 +25,7 @@ export function AccessGate() {
   const onOpenPath = pathname === "/" || OPEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
   useEffect(() => {
-    if (frozen) void signOut();
+    if (frozen) void signOut().then(() => router.replace("/?frozen=1"));
     else if (locked && !onOpenPath) router.replace("/subscribe");
   }, [frozen, locked, onOpenPath, router, signOut]);
 

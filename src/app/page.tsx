@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -84,7 +85,9 @@ export default function LoginPage() {
             <p className="text-xs text-slate-400 dark:text-slate-500">No credit card required</p>
           </div>
 
-          <LoginForm />
+          <Suspense fallback={null}>
+                <LoginForm />
+              </Suspense>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-emerald-500" />Secure sign-in</span>

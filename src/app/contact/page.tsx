@@ -1,26 +1,23 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
+import { LogoMark } from "@/components/Logo";
 
-export default function ContactPage() {
+function ContactPageInner() {
   const { user, loading, getIdToken, viewingAs } = useAuth();
-  const router = useRouter();
+  const frozen = useSearchParams().get("reason") === "frozen";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => (frozen ? "My account is frozen. Can you take a look?" : ""));
+  const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState("");
   const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/");
-    }
-  }, [loading, user, router]);
 
   if (user && prefilledFor !== user.uid) {
     setPrefilledFor(user.uid);
@@ -28,7 +25,7 @@ export default function ContactPage() {
     setEmail(user.email ?? "");
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
@@ -45,7 +42,7 @@ export default function ContactPage() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, website }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -63,13 +60,31 @@ export default function ContactPage() {
 
   return (
     <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
-      <Header />
+      {user ? (
+        <Header />
+      ) : (
+        <header className="border-b border-slate-200 bg-white/90 dark:border-white/10 dark:bg-[#05080e]/90">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+            <Link href="/" className="flex items-center gap-3" aria-label="SpoolTally sign in">
+              <LogoMark className="h-10 w-10 rounded-xl shadow-sm" />
+              <span className="text-2xl font-bold tracking-[-0.03em] text-slate-950 dark:text-white">
+                Spool<span className="text-blue-600 dark:text-blue-400">Tally</span>
+              </span>
+            </Link>
+            <Link href="/" className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
+              Back to sign in
+            </Link>
+          </div>
+        </header>
+      )}
       <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink />
+        {user && <BackLink />}
         <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Support</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Contact us</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-          Questions, bugs, or feedback — send a note and we&rsquo;ll get back to you.
+          {frozen
+            ? "Your account is frozen. Tell us your email address and what you need, and we'll get back to you."
+            : "Questions, bugs, or feedback — send a note and we’ll get back to you."}
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
@@ -89,6 +104,17 @@ export default function ContactPage() {
             </div>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
+              {/* Honeypot: invisible to people, tempting to bots. */}
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="absolute -left-[9999px] h-0 w-0 opacity-0"
+              />
               <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Name
@@ -152,5 +178,13 @@ export default function ContactPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContactPageInner />
+    </Suspense>
   );
 }
