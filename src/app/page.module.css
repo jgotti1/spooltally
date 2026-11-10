@@ -18,6 +18,14 @@
 .orbOne { top: 11%; right: -110px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(24, 144, 255, 0.25), rgba(24, 144, 255, 0)); animation: drift 9s ease-in-out infinite; }
 .orbTwo { bottom: 12%; left: -150px; width: 360px; height: 360px; background: radial-gradient(circle, rgba(20, 172, 102, 0.17), rgba(20, 172, 102, 0)); animation: drift 11s ease-in-out infinite reverse; }
 
+/* Headline: wraps freely on phones/tablets; from the two-column layout up, each sentence stays on one line and the type scales with the brand panel (~53% of the viewport, minus its side padding) so it never wraps or overflows. 15.2 is the widest line's width in em. */
+.headline { font-size: clamp(2.1rem, 3.4vw, 3.4rem); }
+@media (min-width: 1024px) {
+  .headline { font-size: min(calc((53vw - 96px) / 15.2), 2.75rem); white-space: nowrap; }
+}
+@media (min-width: 1280px) {
+  .headline { font-size: min(calc((53vw - 128px) / 15.2), 2.75rem); }
+}
 .gradientText { color: transparent; background: linear-gradient(92deg, #45a9ff 2%, #28df98 98%); background-clip: text; -webkit-background-clip: text; }
 
 .authPanel { background: linear-gradient(145deg, #f8fbff 0%, #eef5fb 100%); }

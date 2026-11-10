@@ -47,12 +47,12 @@ export default function LoginPage() {
             <span className="h-px w-8 bg-blue-400" />
             Your workshop, finally in sync
           </p>
-          <h1 className="max-w-[720px] text-[clamp(2.1rem,3.4vw,3.4rem)] leading-[1] font-semibold tracking-[-0.055em] text-balance">
+          <h1 className={`${styles.headline} max-w-[720px] leading-[1] font-semibold tracking-[-0.055em] text-balance`}>
             Track every roll.
             <br />
             <span className={styles.gradientText}>Price every project.</span>
             <br />
-            Keep every printer maintained.
+            Keep your printers running smooth.
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
             Track every filament roll, see how each project uses it, and price the job with confidence—plus
