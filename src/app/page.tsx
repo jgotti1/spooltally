@@ -51,6 +51,8 @@ export default function LoginPage() {
             Track every roll.
             <br />
             <span className={styles.gradientText}>Price every project.</span>
+            <br />
+            Keep every printer maintained.
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
             Track every filament roll, see how each project uses it, and price the job with confidence—plus
