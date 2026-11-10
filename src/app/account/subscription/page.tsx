@@ -6,10 +6,13 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
+import { useAccountStatus } from "@/lib/use-account";
+import { planBadge } from "@/lib/account-status";
 
 export default function SubscriptionInfoPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const badge = planBadge(useAccountStatus().info);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,12 +41,18 @@ export default function SubscriptionInfoPage() {
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Current plan</p>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-              Free trial
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                badge.warn
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              }`}
+            >
+              {badge.label}
             </span>
           </div>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            You&rsquo;re on the 14-day free trial. No credit card on file — nothing will be charged automatically.
+            {badge.detail}
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">

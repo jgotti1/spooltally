@@ -2,51 +2,88 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // The owner's `admin` custom claim (set with scripts/set-admin-claim.mjs). Admins may READ any user's data to
-    // troubleshoot ("view as"); every write below is still owner-only, so view-as can never change a customer's data.
+    // The `admin` custom claim. Admins may READ any user's data to troubleshoot ("view as"); every write below is still
+    // owner-only, so view-as can never change a customer's data.
     function isAdmin() {
       return request.auth != null && request.auth.token.get('admin', false) == true;
     }
 
+    // The signed-in user's server-managed account record (trial, comp, freeze, subscription). Clients can't write it.
+    function accountPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // Frozen by an admin: blocks reads and writes right away, even from a session that was already open.
+    function frozen() {
+      return exists(accountPath()) && get(accountPath()).data.get('disabled', false) == true;
+    }
+
+    // Same access rule as accountStatus() in src/lib/account-status.ts: comped, or a live subscription
+    // (past due still has access), or an unexpired trial. Never when frozen.
+    function accountAllowsWrites(account) {
+      return account.get('disabled', false) != true && (
+        account.get('isComped', false) == true ||
+        account.get('subscriptionStatus', '') in ['active', 'trialing', 'past_due', 'unpaid'] ||
+        account.get('trialEndsAt', timestamp.value(0)) > request.time
+      );
+    }
+
+    // A locked account (trial over, no subscription) keeps its data and can still read it, but can't change anything.
+    // An account with no record yet is a brand-new signup whose trial has just started.
+    function canWrite() {
+      return isAdmin() || !exists(accountPath()) || accountAllowsWrites(get(accountPath()).data);
+    }
+
+    function ownsExisting() {
+      return request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+
+    function ownsNew() {
+      return request.auth != null && request.auth.uid == request.resource.data.ownerId;
+    }
+
     match /rolls/{rollId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+      allow read: if isAdmin() || (ownsExisting() && !frozen());
+      allow update, delete: if ownsExisting() && canWrite();
+      allow create: if ownsNew() && canWrite();
     }
 
     match /projects/{projectId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+      allow read: if isAdmin() || (ownsExisting() && !frozen());
+      allow update, delete: if ownsExisting() && canWrite();
+      allow create: if ownsNew() && canWrite();
     }
 
     match /printers/{printerId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+      allow read: if isAdmin() || (ownsExisting() && !frozen());
+      allow update, delete: if ownsExisting() && canWrite();
+      allow create: if ownsNew() && canWrite();
     }
 
     match /maintenanceRecords/{recordId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+      allow read: if isAdmin() || (ownsExisting() && !frozen());
+      allow update, delete: if ownsExisting() && canWrite();
+      allow create: if ownsNew() && canWrite();
     }
 
     match /settings/{ownerId} {
-      allow read: if request.auth != null && (request.auth.uid == ownerId || isAdmin());
-      allow write: if request.auth != null && request.auth.uid == ownerId;
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == ownerId && !frozen());
+      allow write: if request.auth != null && request.auth.uid == ownerId && canWrite();
     }
 
-    // Trial dates, plan, comp and freeze flags live here. Clients can read their own doc but never write it:
-    // only the server (Admin SDK, via /api/session and /api/admin/*) creates or changes it.
+    // Trial dates, plan, comp and freeze flags live here. Clients can read their own doc (that's how the app knows it's
+    // locked or frozen) but never write it: only the server (Admin SDK) creates or changes it.
     match /users/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow write: if false;
     }
 
+    // Support messages are written by the server (/api/contact) and read by admins through the server.
     match /supportMessages/{messageId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || isAdmin());
+      allow create: if false;
+      allow read: if isAdmin() || ownsExisting();
     }
+
+    // adminPrivate and adminAudit have no rules on purpose: with no match, every client read and write is denied.
   }
 }

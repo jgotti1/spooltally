@@ -6,6 +6,7 @@ import {
   DEFAULT_TARGET_PROFIT_PERCENT,
   type ChannelFeeProfile,
 } from "@/lib/estimator-constants";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -57,6 +58,7 @@ export async function getEstimatorSettings(ownerId: string): Promise<EstimatorSe
 }
 
 export async function saveEstimatorSettings(ownerId: string, settings: EstimatorSettings) {
+  assertWritable();
   if (!db) throw configError;
   await setDoc(settingsDoc(ownerId), settings, { merge: true });
 }

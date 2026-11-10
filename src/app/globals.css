@@ -30,3 +30,13 @@ body {
   background: rgba(69, 169, 255, 0.3);
   color: #f0f7ff;
 }
+
+/* "View as" is read-only: hide the links that start something new and disable save buttons on the customer's pages. */
+html[data-view-as] a[href$="/new"] {
+  display: none !important;
+}
+
+html[data-view-as] button[type="submit"] {
+  pointer-events: none;
+  opacity: 0.4;
+}

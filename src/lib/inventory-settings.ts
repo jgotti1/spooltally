@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -32,6 +33,7 @@ export async function getInventorySettings(ownerId: string): Promise<InventorySe
 }
 
 export async function saveInventorySettings(ownerId: string, settings: InventorySettings) {
+  assertWritable();
   if (!db) throw configError;
   await setDoc(settingsDoc(ownerId), settings, { merge: true });
 }

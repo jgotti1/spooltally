@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -32,6 +33,7 @@ export async function getShopSettings(ownerId: string): Promise<ShopSettings> {
 }
 
 export async function saveShopSettings(ownerId: string, settings: Partial<ShopSettings>) {
+  assertWritable();
   if (!db) throw configError;
   const data: Partial<ShopSettings> = {};
   if (settings.shopName !== undefined) data.shopName = settings.shopName.trim();

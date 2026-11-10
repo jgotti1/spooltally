@@ -65,6 +65,14 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Password reset and verification emails from admin go through Firebase's own mailer (Identity Toolkit REST in [src/lib/admin/firebase-email.ts](src/lib/admin/firebase-email.ts)), using the templates in Firebase Console → Authentication → Templates. Signups are not sent a verification email and nothing in the app requires one; admins can send one or mark an email verified by hand.
 - "View as" is read-only by construction: the auth context swaps in the customer's uid so pages work unchanged, but rules reject every write that isn't the owner's own, and a persistent banner shows who is being viewed. Freezing disables the Auth account and revokes its tokens; data is kept.
 
+## Trial lock and read-only mode
+
+- The access rule lives in two places that must stay in step: `accountStatus()` in [src/lib/account-status.ts](src/lib/account-status.ts) and `canWrite()` / `frozen()` in [firestore.rules](firestore.rules). A locked account (trial over, no subscription) can still read its data but can't write; a frozen account can't read or write. Admins are exempt, and an account with no `users` doc yet counts as a fresh trial.
+- Client side: `useAccountStatus()` ([src/lib/use-account.ts](src/lib/use-account.ts)) listens to the user's own `users` doc; `AccessGate` ([src/components/AccessGate.tsx](src/components/AccessGate.tsx), mounted in the root layout) sends locked accounts to `/subscribe` and signs frozen ones out. Use `planBadge()` for any customer-facing plan label instead of hard-coding "Free trial".
+- View-as is read-only in the UI too: `assertWritable()` ([src/lib/read-only.ts](src/lib/read-only.ts)) is the first line of every write function in `src/lib`, and `html[data-view-as]` in globals.css hides `/new` links and disables submit buttons. Add `assertWritable()` to any new write function.
+- There is no Firebase CLI config in this repo: rules changes are published by pasting [firestore.rules](firestore.rules) / [storage.rules](storage.rules) into the Firebase Console.
+- Users with a password change it at `/account/password` (current password required); Google-only accounts are told to use Google.
+
 ## Billing rules (build with step 6, Stripe)
 
 - Subscribing requires a verified email. The trial and the rest of the app stay open to unverified accounts; only checkout is gated. Google sign-in accounts are already verified, so this only affects email/password signups.

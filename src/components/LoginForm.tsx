@@ -28,6 +28,8 @@ function ArrowIcon() {
 function friendlyAuthError(error: unknown): string {
   if (error instanceof FirebaseError) {
     switch (error.code) {
+      case "auth/user-disabled":
+        return "This account has been frozen. Email support if you think that's a mistake.";
       case "auth/invalid-email":
         return "That email address doesn't look right.";
       case "auth/user-not-found":

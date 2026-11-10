@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useAccountStatus } from "@/lib/use-account";
+import { planBadge } from "@/lib/account-status";
 
 function MessageIcon() {
   return (
@@ -47,7 +49,8 @@ function SignOutIcon() {
 
 /** Account dropdown: profile info pulled from the signed-in provider, plus billing placeholders. */
 export function UserMenu() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, viewingAs } = useAuth();
+  const { info } = useAccountStatus();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +71,8 @@ export function UserMenu() {
   const email = user.email ?? "";
   const initial = name.charAt(0).toUpperCase();
   const provider = user.providerData[0]?.providerId === "google.com" ? "Google account" : "Email & password";
+  const hasPassword = !viewingAs && user.providerData.some((p) => p.providerId === "password");
+  const badge = planBadge(info);
 
   return (
     <div className="relative" ref={rootRef}>
@@ -107,8 +112,14 @@ export function UserMenu() {
           <div className="space-y-3 px-4 py-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Plan</span>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                Free trial
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  badge.warn
+                    ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                }`}
+              >
+                {badge.label}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -141,6 +152,16 @@ export function UserMenu() {
               <MessageIcon />
               Contact support
             </Link>
+            {hasPassword && (
+              <Link
+                href="/account/password"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+              >
+                <GearIcon />
+                Change password
+              </Link>
+            )}
           </div>
 
           <div className="border-t border-slate-100 px-2 py-2 dark:border-white/10">

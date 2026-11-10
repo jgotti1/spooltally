@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
+import { useAccountStatus } from "@/lib/use-account";
 
 const plans = [
   {
@@ -36,6 +37,8 @@ const plans = [
 export default function SubscribePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { info } = useAccountStatus();
+  const locked = info?.locked === true;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,14 +61,17 @@ export default function SubscribePage() {
         <BackLink />
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">
-            Your trial has ended
+            {locked ? (info?.status === "canceled" ? "Your subscription ended" : "Your trial has ended") : "Plans"}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">
-            Pick a plan to keep going
+            {locked ? "Pick a plan to keep going" : "Choose your plan"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Your rolls and projects are saved and waiting — they&rsquo;re locked, not deleted. Choose a plan
-            below to pick up right where you left off.
+            {locked
+              ? "Your rolls and projects are saved and waiting — they're locked, not deleted. Choose a plan below to pick up right where you left off."
+              : info?.status === "trial"
+                ? `Your free trial has ${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"} left. Subscribe any time to keep everything going without a break.`
+                : "Subscribe to keep using SpoolTally after your free trial."}
           </p>
         </div>
 

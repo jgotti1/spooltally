@@ -20,6 +20,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "@/lib/firebase";
+import { setReadOnlyMode } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local (see .env.local.example) and restart the dev server.",
@@ -131,6 +132,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // View-as only ever applies to a verified admin; anyone else with a stale sessionStorage entry is ignored.
   const viewingAs = isAdmin && realUser && viewAsTarget && viewAsTarget.uid !== realUser.uid ? viewAsTarget : null;
+
+  // While viewing a customer, writes are refused up front and the page is marked so save/add controls are hidden (globals.css).
+  const readOnly = Boolean(viewingAs);
+  useEffect(() => {
+    setReadOnlyMode(readOnly);
+    document.documentElement.toggleAttribute("data-view-as", readOnly);
+  }, [readOnly]);
 
   // The customer's identity, shaped like a Firebase user so every page works unchanged. It carries no credentials:
   // Firestore rules let an admin read their data but reject every write, so this mode is read-only by construction.

@@ -129,7 +129,7 @@ export function accountFromDoc(data: FirebaseFirestore.DocumentData | undefined)
     email: typeof d.email === "string" ? d.email : "",
     createdAt: iso(d.createdAt),
     trialEndsAt: iso(d.trialEndsAt),
-    plan: d.plan === "weekly" || d.plan === "quarterly" || d.plan === "yearly" ? d.plan : "trial",
+    plan: d.plan === "monthly" || d.plan === "quarterly" || d.plan === "yearly" ? d.plan : "trial",
     lastLogin: iso(d.lastLogin),
     isComped: d.isComped === true,
     compNote: typeof d.compNote === "string" ? d.compNote : "",

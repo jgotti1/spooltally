@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { gramsForLevel, type RollLevel } from "@/lib/inventory-constants";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -142,6 +143,7 @@ export async function getRoll(rollId: string): Promise<Roll | null> {
 }
 
 export async function addRoll(ownerId: string, input: RollInput): Promise<string> {
+  assertWritable();
   if (!db) throw configError;
   const remainingGrams = gramsForLevel(input.level, input.sizeGrams, input.quantity);
   const ref = await addDoc(rollsCollection(), {
@@ -163,6 +165,7 @@ export async function addRoll(ownerId: string, input: RollInput): Promise<string
 }
 
 export async function updateRoll(rollId: string, input: RollInput) {
+  assertWritable();
   if (!db) throw configError;
   const remainingGrams = gramsForLevel(input.level, input.sizeGrams, input.quantity);
   await updateDoc(doc(rollsCollection(), rollId), {
@@ -181,6 +184,7 @@ export async function updateRoll(rollId: string, input: RollInput) {
 }
 
 export async function setRollReorderExclusion(rollId: string, excludeFromReorder: boolean) {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(rollsCollection(), rollId), {
     excludeFromReorder,
@@ -189,6 +193,7 @@ export async function setRollReorderExclusion(rollId: string, excludeFromReorder
 }
 
 export async function incrementRollQuantity(rollId: string, addQuantity: number, sizeGrams: number) {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(rollsCollection(), rollId), {
     quantity: increment(addQuantity),
@@ -198,6 +203,7 @@ export async function incrementRollQuantity(rollId: string, addQuantity: number,
 }
 
 export async function deleteRoll(rollId: string) {
+  assertWritable();
   if (!db) throw configError;
   await deleteDoc(doc(rollsCollection(), rollId));
 }

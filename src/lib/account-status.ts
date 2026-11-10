@@ -2,7 +2,7 @@
 
 export const TRIAL_DAYS = 14;
 
-export type AccountPlan = "trial" | "weekly" | "quarterly" | "yearly";
+export type AccountPlan = "trial" | "monthly" | "quarterly" | "yearly";
 
 /** The stored `users/{uid}` document, as the admin API returns it. Billing fields are filled in by the Stripe step later. */
 export type AccountRecord = {
@@ -51,6 +51,31 @@ export function accountStatus(
   }
   if (sub === "canceled") return { status: "canceled", label: "Canceled · locked", locked: true, daysLeft: null, tone: "bad" };
   return { status: "trial_expired", label: "Trial ended · locked (no payment)", locked: true, daysLeft: null, tone: "bad" };
+}
+
+/** Short plan label for the customer-facing menu and subscription page. Null info = record not created yet (new signup). */
+export function planBadge(info: AccountStatusInfo | null): { label: string; warn: boolean; detail: string } {
+  if (!info) return { label: "Free trial", warn: false, detail: `You're on the ${TRIAL_DAYS}-day free trial. No credit card on file — nothing will be charged automatically.` };
+  switch (info.status) {
+    case "comped":
+      return { label: "Free account", warn: false, detail: "Your account is free. No payment is needed." };
+    case "subscribed":
+      return { label: "Subscribed", warn: false, detail: "Your subscription is active." };
+    case "past_due":
+      return { label: "Payment due", warn: true, detail: "Your last payment didn't go through. Update your payment details to keep your access." };
+    case "trial":
+      return {
+        label: `Free trial · ${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"} left`,
+        warn: (info.daysLeft ?? 99) <= 3,
+        detail: `Your free trial has ${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"} left. No credit card on file — nothing will be charged automatically.`,
+      };
+    case "disabled":
+      return { label: "Frozen", warn: true, detail: "This account has been frozen. Contact support if you think that's a mistake." };
+    case "canceled":
+      return { label: "Canceled", warn: true, detail: "Your subscription was canceled. Your data is saved; subscribe again to unlock it." };
+    default:
+      return { label: "Trial ended", warn: true, detail: "Your free trial has ended. Your data is saved; pick a plan to unlock it." };
+  }
 }
 
 export type AdminUserSummary = {

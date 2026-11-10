@@ -13,6 +13,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -170,6 +171,7 @@ export async function addPrinter(
   ownerId: string,
   input: { name: string; model: string; nextDueDate?: string },
 ): Promise<string> {
+  assertWritable();
   if (!db) throw configError;
   const printerRef = await addDoc(printersCollection(), {
     ownerId,
@@ -184,6 +186,7 @@ export async function addPrinter(
 
 /** Schedules (or clears, with "") a printer's next due date — independent of logging any completed maintenance. */
 export async function updatePrinterNextDueDate(printerId: string, nextDueDate: string): Promise<void> {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(printersCollection(), printerId), {
     nextDueDate,
@@ -195,6 +198,7 @@ export async function addMaintenanceRecord(
   ownerId: string,
   input: { printerId: string; completedDate: string; notes: string },
 ): Promise<string> {
+  assertWritable();
   if (!db) throw configError;
   const recordRef = await addDoc(maintenanceRecordsCollection(), {
     ownerId,
@@ -208,6 +212,7 @@ export async function addMaintenanceRecord(
 
 /** Renames a printer or changes its model; the due date and history are untouched. */
 export async function updatePrinterDetails(printerId: string, input: { name: string; model: string }): Promise<void> {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(printersCollection(), printerId), {
     name: input.name.trim(),
@@ -218,6 +223,7 @@ export async function updatePrinterDetails(printerId: string, input: { name: str
 
 /** Deletes a printer together with every maintenance record that belongs to it. */
 export async function deletePrinter(ownerId: string, printerId: string): Promise<void> {
+  assertWritable();
   if (!db) throw configError;
   const records = await getDocs(
     query(maintenanceRecordsCollection(), where("ownerId", "==", ownerId), where("printerId", "==", printerId)),
@@ -232,6 +238,7 @@ export async function updateMaintenanceRecord(
   recordId: string,
   input: { completedDate: string; notes: string },
 ): Promise<void> {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(maintenanceRecordsCollection(), recordId), {
     completedDate: input.completedDate,
@@ -240,6 +247,7 @@ export async function updateMaintenanceRecord(
 }
 
 export async function deleteMaintenanceRecord(recordId: string): Promise<void> {
+  assertWritable();
   if (!db) throw configError;
   await deleteDoc(doc(maintenanceRecordsCollection(), recordId));
 }
@@ -253,6 +261,7 @@ export async function completeScheduledMaintenance(
   ownerId: string,
   input: { printerId: string; completedDate: string; notes: string; nextDueDate?: string },
 ): Promise<string> {
+  assertWritable();
   if (!db) throw configError;
   const batch = writeBatch(db);
   const recordRef = doc(maintenanceRecordsCollection());

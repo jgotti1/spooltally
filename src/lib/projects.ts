@@ -19,6 +19,7 @@ import { db, storage } from "@/lib/firebase";
 import type { ProjectStatus } from "@/lib/inventory-constants";
 import { deleteRoll, getRoll } from "@/lib/rolls";
 import type { SalesChannelId } from "@/lib/estimator-constants";
+import { assertWritable } from "@/lib/read-only";
 
 const configError = new Error(
   "Firebase isn't configured yet. Add your project's keys to .env.local and restart the dev server.",
@@ -147,6 +148,7 @@ function stripUndefined<T>(value: T): T {
 }
 
 export async function addProject(ownerId: string, input: ProjectInput): Promise<string> {
+  assertWritable();
   if (!db) throw configError;
   const ref = await addDoc(projectsCollection(), {
     ownerId,
@@ -166,6 +168,7 @@ export async function addProject(ownerId: string, input: ProjectInput): Promise<
 }
 
 export async function updateProject(projectId: string, input: ProjectInput) {
+  assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(projectsCollection(), projectId), {
     name: input.name,
@@ -182,6 +185,7 @@ export async function updateProject(projectId: string, input: ProjectInput) {
 
 /** Deletes a project, and with it any 0g placeholder rolls that only existed because this project needed them. */
 export async function deleteProject(projectId: string) {
+  assertWritable();
   if (!db) throw configError;
   const projectRef = doc(projectsCollection(), projectId);
   const snap = await getDoc(projectRef);
@@ -220,6 +224,7 @@ export async function uploadProjectFile(
   type: ProjectFileType,
   generatedPreviewFor?: string,
 ): Promise<ProjectFile> {
+  assertWritable();
   if (!storage || !db) throw configError;
   const path = `projects/${ownerId}/${projectId}/${Date.now()}-${file.name}`;
   const storageRef = ref(storage, path);
@@ -242,6 +247,7 @@ export async function uploadProjectFile(
 }
 
 export async function deleteProjectFile(projectId: string, file: ProjectFile) {
+  assertWritable();
   if (!storage || !db) throw configError;
   await deleteObject(ref(storage, file.path)).catch(() => {});
   await updateDoc(doc(projectsCollection(), projectId), {

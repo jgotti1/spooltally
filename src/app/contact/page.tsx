@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 
 export default function ContactPage() {
-  const { user, loading, getIdToken } = useAuth();
+  const { user, loading, getIdToken, viewingAs } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -141,7 +141,8 @@ export default function ContactPage() {
 
               <button
                 type="submit"
-                disabled={status === "sending"}
+                disabled={status === "sending" || !!viewingAs}
+                title={viewingAs ? "You're viewing a customer's account. Exit view-as to send a message." : undefined}
                 className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "sending" ? "Sending…" : "Send message"}
