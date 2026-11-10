@@ -19,11 +19,40 @@ function adminApp(): App {
   if (!raw) {
     throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON isn't set. Add the service-account key to .env.local and restart the server.");
   }
-  try {
-    return initializeApp({ credential: cert(JSON.parse(raw)), projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
-  } catch {
-    throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON isn't valid JSON for a service account.");
+  const account = parseServiceAccount(raw);
+  if (!account) {
+    throw new AdminConfigError(
+      "FIREBASE_SERVICE_ACCOUNT_JSON isn't valid JSON for a service account. Paste the downloaded key file's contents as-is (starting with { and ending with }), with no name= prefix, then redeploy.",
+    );
   }
+  try {
+    return initializeApp({ credential: cert(account), projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
+  } catch {
+    throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON parsed, but isn't a usable service-account key. Download a fresh key from Firebase.");
+  }
+}
+
+/**
+ * Forgiving parse for the key as pasted into Vercel or .env: tolerates wrapping quotes, a leading `NAME=`, and a private_key
+ * whose newlines were turned into real line breaks (which strict JSON rejects).
+ */
+function parseServiceAccount(raw: string): Record<string, unknown> | null {
+  let text = raw.trim().replace(/^FIREBASE_SERVICE_ACCOUNT_JSON\s*=\s*/, "");
+  if (/^(['"`])[\s\S]*\1$/.test(text) && !text.startsWith('{"')) text = text.slice(1, -1);
+  const attempts = [
+    text,
+    text.replace(/("private_key"\s*:\s*")([\s\S]*?)(")/, (_m, open: string, key: string, close: string) => open + key.replace(/\r?\n/g, "\\n") + close),
+  ];
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt);
+      if (parsed && typeof parsed === "object" && typeof parsed.private_key === "string") {
+        parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+        return parsed;
+      }
+    } catch {}
+  }
+  return null;
 }
 
 export function adminAuth() {
