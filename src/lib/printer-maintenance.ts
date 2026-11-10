@@ -1,9 +1,11 @@
 import {
   addDoc,
   collection,
+  doc,
   onSnapshot,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   type Timestamp,
 } from "firebase/firestore";
@@ -23,12 +25,12 @@ export const PRINTER_MODEL_GROUPS = [
       "Bambu Lab A1",
       "Bambu Lab P1P",
       "Bambu Lab P1S",
+      "Bambu Lab P2S",
       "Bambu Lab X1 Carbon",
       "Bambu Lab X1E",
       "Bambu Lab H2D",
       "Bambu Lab H2S",
       "Bambu Lab H2C",
-      "Bambu Lab H3",
     ],
   },
   {
@@ -70,17 +72,19 @@ export type Printer = {
   ownerId: string;
   name: string;
   model: string;
+  /** The printer's own next-due date — set independently of logging completed maintenance. "" means unscheduled. */
+  nextDueDate: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
 
+/** A log entry for work actually performed — it has no due-date field of its own; scheduling lives on the printer, not on history. */
 export type MaintenanceRecord = {
   id: string;
   ownerId: string;
   printerId: string;
   completedDate: string;
   notes: string;
-  nextDueDate: string;
   createdAt: Timestamp | null;
 };
 
@@ -113,6 +117,7 @@ export function subscribeToPrinters(
           ownerId: data.ownerId,
           name: data.name,
           model: data.model,
+          nextDueDate: data.nextDueDate ?? "",
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
         } satisfies Printer;
@@ -144,7 +149,6 @@ export function subscribeToMaintenanceRecords(
           printerId: data.printerId,
           completedDate: data.completedDate,
           notes: data.notes,
-          nextDueDate: data.nextDueDate,
           createdAt: data.createdAt ?? null,
         } satisfies MaintenanceRecord;
       });
@@ -159,21 +163,34 @@ export function subscribeToMaintenanceRecords(
   );
 }
 
-export async function addPrinter(ownerId: string, input: { name: string; model: string }): Promise<string> {
+export async function addPrinter(
+  ownerId: string,
+  input: { name: string; model: string; nextDueDate?: string },
+): Promise<string> {
   if (!db) throw configError;
   const printerRef = await addDoc(printersCollection(), {
     ownerId,
     name: input.name.trim(),
     model: input.model.trim(),
+    nextDueDate: input.nextDueDate ?? "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   return printerRef.id;
 }
 
+/** Schedules (or clears, with "") a printer's next due date — independent of logging any completed maintenance. */
+export async function updatePrinterNextDueDate(printerId: string, nextDueDate: string): Promise<void> {
+  if (!db) throw configError;
+  await updateDoc(doc(printersCollection(), printerId), {
+    nextDueDate,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function addMaintenanceRecord(
   ownerId: string,
-  input: { printerId: string; completedDate: string; notes: string; nextDueDate: string },
+  input: { printerId: string; completedDate: string; notes: string },
 ): Promise<string> {
   if (!db) throw configError;
   const recordRef = await addDoc(maintenanceRecordsCollection(), {
@@ -181,7 +198,6 @@ export async function addMaintenanceRecord(
     printerId: input.printerId,
     completedDate: input.completedDate,
     notes: input.notes.trim(),
-    nextDueDate: input.nextDueDate,
     createdAt: serverTimestamp(),
   });
   return recordRef.id;
@@ -211,13 +227,24 @@ export function latestMaintenanceByPrinter(records: MaintenanceRecord[]): Map<st
   return latest;
 }
 
-export function maintenanceDueStatus(
-  record: MaintenanceRecord | undefined,
-  today = localDateString(),
-): "overdue" | "due" | "scheduled" | "unscheduled" {
-  if (!record?.nextDueDate) return "unscheduled";
-  if (record.nextDueDate < today) return "overdue";
-  if (record.nextDueDate === today) return "due";
+/** Printers due within this many days are called out separately from ones with plenty of runway. */
+export const MAINTENANCE_UPCOMING_WINDOW_DAYS = 30;
+
+export type MaintenanceDueStatus = "overdue" | "due" | "upcoming" | "scheduled" | "unscheduled";
+
+export function maintenanceDueStatus(nextDueDate: string | undefined, today = localDateString()): MaintenanceDueStatus {
+  if (!nextDueDate) return "unscheduled";
+  if (nextDueDate < today) return "overdue";
+  if (nextDueDate === today) return "due";
+  const todayDate = new Date(`${today}T12:00:00`);
+  const dueDate = new Date(`${nextDueDate}T12:00:00`);
+  const daysUntilDue = Math.round((dueDate.getTime() - todayDate.getTime()) / 86_400_000);
+  if (daysUntilDue <= MAINTENANCE_UPCOMING_WINDOW_DAYS) return "upcoming";
   return "scheduled";
+}
+
+/** True for anything that needs attention soon — overdue, due today, or due within the upcoming window. */
+export function isMaintenanceSoon(status: MaintenanceDueStatus): boolean {
+  return status === "overdue" || status === "due" || status === "upcoming";
 }
 

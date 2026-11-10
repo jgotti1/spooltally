@@ -46,7 +46,7 @@ SpoolTally has three primary areas: Inventory, Projects, and Printer Maintenance
 - Project grid and list previews summarize cost, filament, colors, nozzle, print time, quantity, channel, and uploaded-file count.
 - Generated model thumbnails support previews but are not displayed or counted as separate user uploads.
 - Sales channels: Etsy, eBay, Amazon Handmade, own site, Facebook Marketplace, and in person.
-- Printer Maintenance supports custom printer names, a common-model dropdown with an Other/custom choice, dated service notes, a next-due date, and due reminders on both the dashboard and maintenance page. The printer list has block and list views; double-clicking a printer opens its full service history.
+- Printer Maintenance supports custom printer names and a common-model dropdown with an Other/custom choice. Logging finished work and scheduling the next due date are independent actions — a printer's due date can be set or changed any time without requiring a completed-maintenance entry. Due reminders appear on both the dashboard and maintenance page. The printer list has block and list views; double-clicking a printer opens a detail panel with its full service history and due-date editor.
 
 ## Build order
 

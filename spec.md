@@ -55,11 +55,11 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 
 ## Section 3: Printer maintenance
 - Add printers with a custom display name and choose from common 3D printer models, with an Other/custom model option.
-- Each maintenance record stores the date completed, notes describing the work, and the next maintenance due date.
-- The newest maintenance record determines each printer's current due date.
-- Show due and overdue reminders on both the authenticated dashboard and Printer Maintenance page.
-- The printer list offers block and list views (same toggle as Projects), each showing a per-printer summary only.
-- Double-clicking a printer opens its full maintenance log in a detail view, rather than showing full history inline in the list.
+- Each printer owns its own next maintenance due date directly, independent of its maintenance history. It can be set or changed any time, including from the printer's detail view, without logging a completed-maintenance entry.
+- Logging finished work and scheduling the next due date are separate actions: recording finished maintenance requires the printer, a completed date, and notes describing the work; scheduling the next date requires only the printer and a date, with no notes.
+- Show due and overdue reminders on both the authenticated dashboard and Printer Maintenance page, based on each printer's own next-due date.
+- The printer list offers block and list views (same toggle as Projects), each showing a per-printer summary including its last-serviced date.
+- Double-clicking a printer opens its full maintenance log and a due-date editor in a detail view, rather than showing full history inline in the list.
 
 ## User profile
 - Collected at signup: `name` (from Google displayName, or entered manually for email/password signup), `email` (from Firebase Auth).

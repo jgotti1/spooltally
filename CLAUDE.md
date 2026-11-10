@@ -39,16 +39,16 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 
 - The authenticated route is `/maintenance`, implemented by [src/app/maintenance/page.tsx](src/app/maintenance/page.tsx) and [src/components/PrinterMaintenance.tsx](src/components/PrinterMaintenance.tsx).
 - Users give every printer a custom display name and select its model from the grouped common-model list in [src/lib/printer-maintenance.ts](src/lib/printer-maintenance.ts). Always retain the `Other / custom model` option so an unlisted printer can be entered manually.
-- Printer documents live in the `printers` collection with `ownerId`, `name`, `model`, `createdAt`, and `updatedAt`.
-- Service entries live in the separate `maintenanceRecords` collection with `ownerId`, `printerId`, `completedDate`, `notes`, `nextDueDate`, and `createdAt`.
-- A maintenance entry requires the printer, completed date, notes describing the work, and the next due date. Dates are stored as local `YYYY-MM-DD` strings to avoid timezone changes to the selected calendar day.
-- The latest maintenance record for a printer is the source of truth for its next due date. Due today and overdue printers must appear in the reminder on both `/dashboard` and `/maintenance`.
-- A printer with no maintenance history is labeled as unscheduled; it is not considered overdue until a next due date exists.
+- Printer documents live in the `printers` collection with `ownerId`, `name`, `model`, `nextDueDate`, `createdAt`, and `updatedAt`. The printer owns its own next-due date directly — scheduling it does not require logging any completed maintenance.
+- Service entries live in the separate `maintenanceRecords` collection with `ownerId`, `printerId`, `completedDate`, `notes`, and `createdAt` — records carry no due-date field of their own.
+- Logging work and scheduling the next date are two independent actions, each with its own form and validation: "Record finished maintenance" requires the printer, a completed date, and notes describing the work; "Schedule next maintenance" requires only the printer and a date, with no notes. Dates are stored as local `YYYY-MM-DD` strings to avoid timezone changes to the selected calendar day.
+- A printer's `nextDueDate` field is the sole source of truth for its due status — never derived from maintenance history. It can be set or changed independently from the printer's detail panel at any time. Due today and overdue printers must appear in the reminder on both `/dashboard` and `/maintenance`.
+- A printer with no `nextDueDate` set is labeled as unscheduled; it is not considered overdue until a next due date exists.
 - Keep the model list, subscriptions, date formatting, and due-status calculation centralized in `src/lib/printer-maintenance.ts` rather than duplicating that logic in pages.
 - Firestore rules must keep both collections owner-scoped, matching `request.auth.uid` to each document's `ownerId`.
 - The printer list supports block (card grid) and list (compact row) views via the same toggle pattern as the Projects list. Both views show a summary only — name, model, status, last service date, and record count — never the full history inline.
 - Double-clicking a printer (or its "View full log" button, for discoverability on touch devices) opens a detail panel with that printer's complete chronological maintenance history. Closing it does not navigate away from `/maintenance`.
-- Keep the printer model list current with each brand's active lineup (e.g. Bambu Lab's X1/P1/A1 series plus its H2D/H2S/H2C/H3 line) — revisit periodically rather than letting it go stale.
+- Keep the printer model list current with each brand's active lineup (e.g. Bambu Lab's X1/P1/P2/A1 series plus its H2D/H2S/H2C line) — revisit periodically rather than letting it go stale.
 
 ## Conventions
 
@@ -60,6 +60,6 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Model uploads may generate a preview image for thumbnails. Treat that image as a supporting asset: do not count or display it as a second user upload, and remove it with its source model.
 - Supported sales channels are Etsy, eBay, Amazon Handmade, own site, Facebook Marketplace, and in person. Do not expose the legacy Custom channel.
 - Suggested prices use a floor of 2.5× the complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(2.5 × cost, configured markup price) + fixed fees) / (1 - fee %)`. The configured markup may raise, but never lower, that floor.
-- Printers are stored separately from maintenance history. The newest maintenance record for each printer controls its next-due status and dashboard reminder.
+- Printers are stored separately from maintenance history. Each printer's own `nextDueDate` field controls its due status and dashboard reminder, set independently of logging completed maintenance.
 - Treat STL-derived weights as estimates ("Estimated from model"); sliced-file-derived weights as exact ("Exact from slicer"). Surface this distinction in the UI, don't blur it.
 - No screenshot-reading (Claude API) or Etsy integration in v1 — those are explicitly deferred (see spec's "Later" section).

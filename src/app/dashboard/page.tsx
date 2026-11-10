@@ -10,11 +10,11 @@ import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySetting
 import { groupLowRolls } from "@/lib/inventory-status";
 import { subscribeToProjects, type Project } from "@/lib/projects";
 import {
-  latestMaintenanceByPrinter,
+  formatMaintenanceDate,
+  isMaintenanceSoon,
   maintenanceDueStatus,
-  subscribeToMaintenanceRecords,
+  MAINTENANCE_UPCOMING_WINDOW_DAYS,
   subscribeToPrinters,
-  type MaintenanceRecord,
   type Printer,
 } from "@/lib/printer-maintenance";
 
@@ -73,7 +73,6 @@ export default function DashboardPage() {
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
   const [projects, setProjects] = useState<Project[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,12 +103,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    const unsubscribePrinters = subscribeToPrinters(user.uid, setPrinters);
-    const unsubscribeRecords = subscribeToMaintenanceRecords(user.uid, setMaintenanceRecords);
-    return () => {
-      unsubscribePrinters();
-      unsubscribeRecords();
-    };
+    return subscribeToPrinters(user.uid, setPrinters);
   }, [user]);
 
   const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
@@ -121,13 +115,21 @@ export default function DashboardPage() {
       p.colorsNeeded.some((need) => need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0)),
     ).length;
   }, [projects, rolls]);
-  const maintenanceDuePrinters = useMemo(() => {
-    const latestByPrinter = latestMaintenanceByPrinter(maintenanceRecords);
-    return printers.filter((printer) => {
-      const status = maintenanceDueStatus(latestByPrinter.get(printer.id));
-      return status === "overdue" || status === "due";
-    });
-  }, [maintenanceRecords, printers]);
+  const maintenanceDuePrinters = useMemo(
+    () => printers.filter((printer) => isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
+    [printers],
+  );
+  const maintenanceUrgentPrinters = useMemo(
+    () =>
+      printers.filter((printer) => {
+        const status = maintenanceDueStatus(printer.nextDueDate);
+        return status === "overdue" || status === "due";
+      }),
+    [printers],
+  );
+  function printerDueLabel(printer: Printer): string {
+    return printer.nextDueDate ? `${printer.name} (${formatMaintenanceDate(printer.nextDueDate)})` : printer.name;
+  }
 
   if (loading || !user) {
     return (
@@ -166,22 +168,40 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {maintenanceDuePrinters.length > 0 && (
-          <Link
-            href="/maintenance"
-            className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 transition-colors hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
-          >
-            <div>
-              <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">
-                Printer maintenance is due
-              </p>
-              <p className="mt-1 text-xs leading-5 text-rose-700 dark:text-rose-300">
-                {maintenanceDuePrinters.map((printer) => printer.name).join(", ")}
-              </p>
-            </div>
-            <span className="shrink-0 text-xs font-semibold text-rose-700 dark:text-rose-300">View →</span>
-          </Link>
-        )}
+        {maintenanceDuePrinters.length > 0 &&
+          (maintenanceUrgentPrinters.length > 0 ? (
+            <Link
+              href="/maintenance"
+              className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 transition-colors hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
+            >
+              <div>
+                <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">Printer maintenance is overdue</p>
+                <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-rose-700 dark:text-rose-300">
+                  {maintenanceUrgentPrinters.map((printer) => (
+                    <li key={printer.id}>{printerDueLabel(printer)}</li>
+                  ))}
+                </ul>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-rose-700 dark:text-rose-300">View →</span>
+            </Link>
+          ) : (
+            <Link
+              href="/maintenance"
+              className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-blue-300 bg-blue-50 p-4 transition-colors hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
+            >
+              <div>
+                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  Printer maintenance coming up within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days
+                </p>
+                <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-blue-700 dark:text-blue-300">
+                  {maintenanceDuePrinters.map((printer) => (
+                    <li key={printer.id}>{printerDueLabel(printer)}</li>
+                  ))}
+                </ul>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-blue-700 dark:text-blue-300">View →</span>
+            </Link>
+          ))}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {sections.map((item) => {
@@ -259,14 +279,18 @@ export default function DashboardPage() {
             <div>
               <p
                 className={`text-2xl font-semibold tracking-[-0.02em] ${
-                  maintenanceDuePrinters.length > 0
+                  maintenanceUrgentPrinters.length > 0
                     ? "text-rose-600 dark:text-rose-400"
-                    : "text-slate-950 dark:text-white"
+                    : maintenanceDuePrinters.length > 0
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-slate-950 dark:text-white"
                 }`}
               >
                 {maintenanceDuePrinters.length}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Printers due for maintenance</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Printers needing service within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days
+              </p>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">

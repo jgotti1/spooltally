@@ -13,6 +13,7 @@ const benefits = [
   { value: "Accurate", label: "job pricing" },
   { value: "Real-time", label: "roll tracking" },
   { value: "Confident", label: "reorder planning" },
+  { value: "On-schedule", label: "printer upkeep" },
 ];
 
 function CheckIcon() {
@@ -25,48 +26,20 @@ const reorderPreviewRows = [
   { label: "Bambu Lab Red PLA", detail: "~1.00 rolls (1000 g)", status: "warn" as const },
 ];
 
-const rollCardPreviews = [
-  { color: "Sky Blue", meta: "eSun · PETG", stock: "1000 g on hand", price: "$12.99 paid", status: "warn" as const },
-  { color: "Yellow", meta: "Bambu Lab · PLA", stock: "250 g on hand", price: "$12.99 paid", status: "reorder" as const },
+const projectDetailFields = [
+  { label: "Nozzle", value: "0.4 mm" },
+  { label: "Print time", value: "3.5 hr" },
+  { label: "Quantity", value: "12 units" },
+  { label: "Channel", value: "Etsy" },
+  { label: "Colors", value: "Sky Blue PETG, Yellow PLA" },
+  { label: "Slicer cost override", value: "$8.40 / batch" },
 ];
 
-const projectPreviewCards = [
-  {
-    name: "Hex planter batch",
-    status: "Active",
-    statusClass: "bg-blue-100 text-blue-700",
-    colors: ["Sky Blue PETG", "Yellow PLA — order now"],
-    flagged: true,
-    thumb: "image" as const,
-  },
-  {
-    name: "Keychain samples",
-    status: "Archived",
-    statusClass: "bg-emerald-100 text-emerald-700",
-    colors: ["Red PLA — 40g"],
-    flagged: false,
-    thumb: "model" as const,
-  },
+const projectDetailCosts = [
+  { label: "Total cost", value: "$14.20" },
+  { label: "Per-unit cost", value: "$1.18" },
+  { label: "Suggested price", value: "$4.25", highlight: true },
 ];
-
-function CubeIconPreview() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
-      <path d="M10 2.5 17 6.5v7L10 17.5 3 13.5v-7L10 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M3 6.5 10 10.5l7-4M10 10.5v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ImageIconPreview() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
-      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="7.25" cy="8" r="1.25" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M3.5 13.5 7.5 10l2.5 2.3 2.5-2.8 4 3.8" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function MiniProjects() {
   return (
@@ -74,33 +47,82 @@ function MiniProjects() {
       <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
         <div>
           <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Projects</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">Active &amp; queued</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">Hex planter batch — pricing</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[9px] font-semibold text-blue-700">Active</span>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl border border-slate-100 p-3">
+          {projectDetailFields.map((field) => (
+            <div key={field.label} className="min-w-0">
+              <p className="text-[8px] font-bold tracking-[0.1em] text-slate-400 uppercase">{field.label}</p>
+              <p className="truncate text-[10px] font-semibold text-slate-800">{field.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3">
+          {projectDetailCosts.map((cost) => (
+            <div key={cost.label} className="min-w-0 text-center">
+              <p className="truncate text-[8px] font-bold tracking-[0.08em] text-slate-400 uppercase">{cost.label}</p>
+              <p className={`mt-0.5 truncate text-xs font-semibold ${cost.highlight ? "text-blue-600" : "text-slate-900"}`}>
+                {cost.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const maintenancePreviewRows = [
+  { name: "Shop P1S", model: "Bambu Lab P1S", status: "Overdue · Nov 2", statusClass: "bg-rose-100 text-rose-700" },
+  { name: "Garage H2D", model: "Bambu Lab H2D", status: "Due today", statusClass: "bg-amber-100 text-amber-700" },
+  { name: "Bench K1C", model: "Creality K1C", status: "Scheduled · Dec 14", statusClass: "bg-emerald-100 text-emerald-700" },
+];
+
+function WrenchIconPreview() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M14.5 6.5a4.5 4.5 0 0 0-5.8 5.8L3.5 17.5a2.1 2.1 0 0 0 3 3l5.2-5.2a4.5 4.5 0 0 0 5.8-5.8l-2.7 2.7-3-3 2.7-2.7Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MiniMaintenance() {
+  return (
+    <div className={`${styles.dashboard} relative w-full`}>
+      <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Maintenance</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">Printer upkeep</p>
         </div>
         <div className="flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />1 needs reorder
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />2 need service
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-4">
-        {projectPreviewCards.map((project) => (
-          <div
-            key={project.name}
-            className={`rounded-2xl border bg-white p-3 ${project.flagged ? "border-rose-300" : "border-slate-200"}`}
-          >
-            <div className="flex h-14 w-full items-center justify-center rounded-lg bg-slate-100 text-slate-400">
-              {project.thumb === "image" ? <ImageIconPreview /> : <CubeIconPreview />}
+      <div className="mx-4 mt-4 mb-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100">
+        {maintenancePreviewRows.map((printer) => (
+          <div key={printer.name} className="flex items-center gap-3 px-3 py-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <WrenchIconPreview />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-900">{printer.name}</p>
+              <p className="truncate text-[9px] text-slate-500">{printer.model}</p>
             </div>
-            <div className="mt-2 flex items-start justify-between gap-1">
-              <p className="text-xs font-semibold text-slate-900">{project.name}</p>
-              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${project.statusClass}`}>
-                {project.status}
-              </span>
-            </div>
-            <ul className="mt-1.5 space-y-0.5 text-[9px] text-slate-500">
-              {project.colors.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${printer.statusClass}`}>
+              {printer.status}
+            </span>
           </div>
         ))}
       </div>
@@ -122,48 +144,20 @@ function MiniDashboard() {
         </div>
       </div>
 
-      <div className="space-y-1.5 p-4">
-        {reorderPreviewRows.map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-xs"
-          >
-            <span className="text-slate-700">
-              {row.label}
-              <span className="ml-2 text-[10px] text-slate-400">{row.detail}</span>
-            </span>
+      <div className="mx-3 mt-3 mb-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100">
+        {reorderPreviewRows.slice(0, 3).map((row) => (
+          <div key={row.label} className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-800">{row.label}</p>
+              <p className="truncate text-[9px] text-slate-400">{row.detail}</p>
+            </div>
             <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                 row.status === "reorder" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
               }`}
             >
-              {row.status === "reorder" ? "Reorder now" : "Low — order soon"}
+              {row.status === "reorder" ? "Reorder" : "Low"}
             </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-        {rollCardPreviews.map((roll) => (
-          <div
-            key={roll.color}
-            className={`rounded-2xl border bg-white p-3 ${
-              roll.status === "reorder" ? "border-rose-300" : "border-amber-300"
-            }`}
-          >
-            <p className="text-xs font-semibold text-slate-900">{roll.color}</p>
-            <p className="text-[10px] text-slate-500">{roll.meta}</p>
-            <span
-              className={`mt-2 inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ${
-                roll.status === "reorder" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {roll.status === "reorder" ? "Order soon" : "Last roll"}
-            </span>
-            <div className="mt-2 flex items-center justify-between text-[9px] text-slate-500">
-              <span>{roll.stock}</span>
-              <span>{roll.price}</span>
-            </div>
           </div>
         ))}
       </div>
@@ -174,7 +168,7 @@ function MiniDashboard() {
 export default function LoginPage() {
   return (
     <main className={`${styles.shell} min-h-svh lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(480px,.92fr)]`}>
-      <section className={`${styles.brandPanel} relative overflow-hidden px-6 pb-12 pt-6 text-white sm:px-10 lg:flex lg:min-h-svh lg:flex-col lg:px-12 lg:py-10 xl:px-16`}>
+      <section className={`${styles.brandPanel} relative overflow-hidden px-6 pb-12 pt-6 text-white sm:px-10 lg:flex lg:min-h-svh lg:flex-col lg:px-12 lg:py-6 xl:px-16`}>
         <div className={styles.gridPattern} aria-hidden="true" />
         <div className={`${styles.orb} ${styles.orbOne}`} aria-hidden="true" />
         <div className={`${styles.orb} ${styles.orbTwo}`} aria-hidden="true" />
@@ -192,33 +186,35 @@ export default function LoginPage() {
           </span>
         </header>
 
-        <div className="relative z-10 mx-auto mt-14 w-full max-w-2xl lg:my-auto lg:py-10">
-          <p className="mb-5 flex items-center gap-3 text-xs font-bold tracking-[0.2em] text-blue-300 uppercase">
+        <div className="relative z-10 mx-auto mt-8 w-full max-w-2xl lg:mt-6">
+          <p className="mb-3 flex items-center gap-3 text-xs font-bold tracking-[0.2em] text-blue-300 uppercase">
             <span className="h-px w-8 bg-blue-400" />
             Your workshop, finally in sync
           </p>
-          <h1 className="max-w-[720px] text-[clamp(2.65rem,4.6vw,4.85rem)] leading-[.95] font-semibold tracking-[-0.065em] text-balance">
+          <h1 className="max-w-[720px] text-[clamp(2.1rem,3.4vw,3.4rem)] leading-[1] font-semibold tracking-[-0.055em] text-balance">
             Track every roll.
             <br />
             <span className={styles.gradientText}>Price every project.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-            Turn filament, print time, and platform fees into prices you can trust—then keep every roll and project moving.
+          <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
+            Track every filament roll, see how each project uses it, and price the job with confidence—plus
+            maintenance alerts that keep every printer on schedule.
           </p>
 
-          <div className="mt-8 grid max-w-xl grid-cols-3 gap-4 border-y border-white/10 py-5">
+          <div className="mt-5 grid max-w-xl grid-cols-4 gap-4 border-y border-white/10 py-3">
             {benefits.map((benefit) => (
               <div key={benefit.value}>
-                <p className="text-sm font-semibold text-white sm:text-base">{benefit.value}</p>
-                <p className="mt-1 text-[10px] leading-4 text-slate-400 sm:text-xs">{benefit.label}</p>
+                <p className="text-sm font-semibold text-white">{benefit.value}</p>
+                <p className="mt-1 text-[10px] leading-4 text-slate-400">{benefit.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 mt-10 hidden gap-4 lg:grid lg:grid-cols-1 xl:grid-cols-2">
+        <div className="relative z-10 mt-6 hidden flex-1 gap-4 lg:grid lg:grid-cols-3">
           <MiniDashboard />
           <MiniProjects />
+          <MiniMaintenance />
         </div>
       </section>
 
