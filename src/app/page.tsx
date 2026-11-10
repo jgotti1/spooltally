@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LoginForm } from "@/components/LoginForm";
+import { ScreenshotShowcase } from "@/components/ScreenshotShowcase";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -18,151 +19,6 @@ const benefits = [
 
 function CheckIcon() {
   return <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4.5 10.5 3.2 3.2 7.8-8" /></svg>;
-}
-
-const reorderPreviewRows = [
-  { label: "Bambu Lab Yellow PLA", detail: "~0.25 rolls (250 g)", status: "reorder" as const },
-  { label: "eSun Sky Blue PETG", detail: "~1.00 rolls (1000 g)", status: "warn" as const },
-  { label: "Bambu Lab Red PLA", detail: "~1.00 rolls (1000 g)", status: "warn" as const },
-];
-
-const projectDetailFields = [
-  { label: "Nozzle", value: "0.4 mm" },
-  { label: "Print time", value: "3.5 hr" },
-  { label: "Quantity", value: "12 units" },
-  { label: "Channel", value: "Etsy" },
-  { label: "Colors", value: "Sky Blue PETG, Yellow PLA" },
-  { label: "Slicer cost override", value: "$8.40 / batch" },
-];
-
-const projectDetailCosts = [
-  { label: "Total cost", value: "$14.20" },
-  { label: "Per-unit cost", value: "$1.18" },
-  { label: "Suggested price", value: "$4.25", highlight: true },
-];
-
-function MiniProjects() {
-  return (
-    <div className={`${styles.dashboard} relative w-full`}>
-      <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Projects</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">Hex planter batch — pricing</p>
-        </div>
-        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[9px] font-semibold text-blue-700">Active</span>
-      </div>
-
-      <div className="space-y-3 p-4">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl border border-slate-100 p-3">
-          {projectDetailFields.map((field) => (
-            <div key={field.label} className="min-w-0">
-              <p className="text-[8px] font-bold tracking-[0.1em] text-slate-400 uppercase">{field.label}</p>
-              <p className="truncate text-[10px] font-semibold text-slate-800">{field.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3">
-          {projectDetailCosts.map((cost) => (
-            <div key={cost.label} className="min-w-0 text-center">
-              <p className="truncate text-[8px] font-bold tracking-[0.08em] text-slate-400 uppercase">{cost.label}</p>
-              <p className={`mt-0.5 truncate text-xs font-semibold ${cost.highlight ? "text-blue-600" : "text-slate-900"}`}>
-                {cost.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const maintenancePreviewRows = [
-  { name: "Shop P1S", model: "Bambu Lab P1S", status: "Overdue · Nov 2", statusClass: "bg-rose-100 text-rose-700" },
-  { name: "Garage H2D", model: "Bambu Lab H2D", status: "Due today", statusClass: "bg-amber-100 text-amber-700" },
-  { name: "Bench K1C", model: "Creality K1C", status: "Scheduled · Dec 14", statusClass: "bg-emerald-100 text-emerald-700" },
-];
-
-function WrenchIconPreview() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
-      <path
-        d="M14.5 6.5a4.5 4.5 0 0 0-5.8 5.8L3.5 17.5a2.1 2.1 0 0 0 3 3l5.2-5.2a4.5 4.5 0 0 0 5.8-5.8l-2.7 2.7-3-3 2.7-2.7Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MiniMaintenance() {
-  return (
-    <div className={`${styles.dashboard} relative w-full`}>
-      <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Maintenance</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">Printer upkeep</p>
-        </div>
-        <div className="flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />2 need service
-        </div>
-      </div>
-
-      <div className="mx-4 mt-4 mb-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100">
-        {maintenancePreviewRows.map((printer) => (
-          <div key={printer.name} className="flex items-center gap-3 px-3 py-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <WrenchIconPreview />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate-900">{printer.name}</p>
-              <p className="truncate text-[9px] text-slate-500">{printer.model}</p>
-            </div>
-            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${printer.statusClass}`}>
-              {printer.status}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MiniDashboard() {
-  return (
-    <div className={`${styles.dashboard} relative w-full`}>
-      <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400 uppercase">Filament rolls</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">Reorder report</p>
-        </div>
-        <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700">
-          <span className={`${styles.liveDot} h-1.5 w-1.5 rounded-full bg-emerald-500`} />
-          All synced
-        </div>
-      </div>
-
-      <div className="mx-3 mt-3 mb-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100">
-        {reorderPreviewRows.slice(0, 3).map((row) => (
-          <div key={row.label} className="flex items-center gap-3 px-3 py-2.5">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate-800">{row.label}</p>
-              <p className="truncate text-[9px] text-slate-400">{row.detail}</p>
-            </div>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
-                row.status === "reorder" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {row.status === "reorder" ? "Reorder" : "Low"}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function LoginPage() {
@@ -211,11 +67,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-6 hidden flex-1 gap-4 lg:grid lg:grid-cols-3">
-          <MiniDashboard />
-          <MiniProjects />
-          <MiniMaintenance />
-        </div>
+        <ScreenshotShowcase className="relative z-10 mt-6 hidden min-h-[400px] flex-1 lg:flex" />
       </section>
 
       <section className={`${styles.authPanel} relative flex items-center justify-center px-5 py-10 sm:px-10 lg:min-h-svh lg:px-12`}>

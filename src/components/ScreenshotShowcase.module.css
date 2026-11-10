@@ -1,0 +1,36 @@
+.window {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: #f5f8fc;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+}
+
+.viewport {
+  background: #f5f8fc;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
+}
+
+.screen { animation: screenIn 320ms ease-out; }
+
+.thumb {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #f5f8fc;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.thumb:hover { border-color: rgba(255, 255, 255, 0.36); }
+.thumbSelected,
+.thumbSelected:hover {
+  border-color: #45a9ff;
+  box-shadow: 0 0 0 2px rgba(69, 169, 255, 0.55), 0 14px 34px rgba(0, 0, 0, 0.26);
+}
+
+@keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen { animation: none; }
+  .thumb { transition: none; }
+}
