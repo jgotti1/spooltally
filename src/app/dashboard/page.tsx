@@ -9,6 +9,14 @@ import { subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { groupLowRolls } from "@/lib/inventory-status";
 import { subscribeToProjects, type Project } from "@/lib/projects";
+import {
+  latestMaintenanceByPrinter,
+  maintenanceDueStatus,
+  subscribeToMaintenanceRecords,
+  subscribeToPrinters,
+  type MaintenanceRecord,
+  type Printer,
+} from "@/lib/printer-maintenance";
 
 function SpoolIcon() {
   return (
@@ -30,6 +38,20 @@ function ClipboardIcon() {
   );
 }
 
+function WrenchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5">
+      <path
+        d="M14.5 6.5a4.5 4.5 0 0 0-5.8 5.8L3.5 17.5a2.1 2.1 0 0 0 3 3l5.2-5.2a4.5 4.5 0 0 0 5.8-5.8l-2.7 2.7-3-3 2.7-2.7Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function PlusIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -41,6 +63,7 @@ function PlusIcon() {
 const sections = [
   { label: "Inventory", href: "/inventory", description: "Track rolls, levels, and what to reorder.", icon: SpoolIcon },
   { label: "Projects", href: "/projects", description: "Colors, pricing, and tracking in one place.", icon: ClipboardIcon },
+  { label: "Maintenance", href: "/maintenance", description: "Log printer service and see what is due.", icon: WrenchIcon },
 ];
 
 export default function DashboardPage() {
@@ -49,6 +72,8 @@ export default function DashboardPage() {
   const [rolls, setRolls] = useState<Roll[]>([]);
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -77,6 +102,16 @@ export default function DashboardPage() {
     return subscribeToProjects(user.uid, setProjects);
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribePrinters = subscribeToPrinters(user.uid, setPrinters);
+    const unsubscribeRecords = subscribeToMaintenanceRecords(user.uid, setMaintenanceRecords);
+    return () => {
+      unsubscribePrinters();
+      unsubscribeRecords();
+    };
+  }, [user]);
+
   const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
   const reorderCount = useMemo(() => groupLowRolls(rolls, settings).length, [rolls, settings]);
   const activeProjectCount = useMemo(() => projects.filter((p) => p.status === "Active").length, [projects]);
@@ -86,6 +121,13 @@ export default function DashboardPage() {
       p.colorsNeeded.some((need) => need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0)),
     ).length;
   }, [projects, rolls]);
+  const maintenanceDuePrinters = useMemo(() => {
+    const latestByPrinter = latestMaintenanceByPrinter(maintenanceRecords);
+    return printers.filter((printer) => {
+      const status = maintenanceDueStatus(latestByPrinter.get(printer.id));
+      return status === "overdue" || status === "due";
+    });
+  }, [maintenanceRecords, printers]);
 
   if (loading || !user) {
     return (
@@ -124,7 +166,24 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {maintenanceDuePrinters.length > 0 && (
+          <Link
+            href="/maintenance"
+            className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 transition-colors hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
+          >
+            <div>
+              <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">
+                Printer maintenance is due
+              </p>
+              <p className="mt-1 text-xs leading-5 text-rose-700 dark:text-rose-300">
+                {maintenanceDuePrinters.map((printer) => printer.name).join(", ")}
+              </p>
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-rose-700 dark:text-rose-300">View →</span>
+          </Link>
+        )}
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {sections.map((item) => {
             const Icon = item.icon;
             const content = (
@@ -197,6 +256,18 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Projects missing filament</p>
             </div>
+            <div>
+              <p
+                className={`text-2xl font-semibold tracking-[-0.02em] ${
+                  maintenanceDuePrinters.length > 0
+                    ? "text-rose-600 dark:text-rose-400"
+                    : "text-slate-950 dark:text-white"
+                }`}
+              >
+                {maintenanceDuePrinters.length}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Printers due for maintenance</p>
+            </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
             <Link
@@ -210,6 +281,12 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
             >
               View projects →
+            </Link>
+            <Link
+              href="/maintenance"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              View maintenance →
             </Link>
           </div>
         </div>

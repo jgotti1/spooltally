@@ -5,7 +5,7 @@ Name: SpoolTally (final).
 Domain: spooltally.com (available at $12.03/yr on Vercel as of 2026-11-07; owner buying). Add it to Firebase Auth authorized domains and Stripe checkout URLs. Owner's other domain, margotticode.com, stays at Bluehost.
 Tagline: "Track your filament. Price your prints."
 
-Web app for 3D print sellers with two sections: (1) Filament inventory and (2) Projects. Each project includes its own costing and suggested sale price; estimates are not a separate entity.
+Web app for 3D print sellers with three sections: (1) Filament inventory, (2) Projects, and (3) Printer maintenance. Each project includes its own costing and suggested sale price; estimates are not a separate entity.
 
 ## Goal
 Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a free beta (~10 sellers) before building billing.
@@ -53,6 +53,14 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 - Spam protection: Firebase App Check/reCAPTCHA and per-user rate limit.
 - Admin page shows support messages with a status (new / replied / closed).
 
+## Section 3: Printer maintenance
+- Add printers with a custom display name and choose from common 3D printer models, with an Other/custom model option.
+- Each maintenance record stores the date completed, notes describing the work, and the next maintenance due date.
+- The newest maintenance record determines each printer's current due date.
+- Show due and overdue reminders on both the authenticated dashboard and Printer Maintenance page.
+- The printer list offers block and list views (same toggle as Projects), each showing a per-printer summary only.
+- Double-clicking a printer opens its full maintenance log in a detail view, rather than showing full history inline in the list.
+
 ## User profile
 - Collected at signup: `name` (from Google displayName, or entered manually for email/password signup), `email` (from Firebase Auth).
 - Optional: `shopName` (their Etsy/shop name — used for personalization and future Etsy integration).
@@ -83,7 +91,7 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 ## Tech
 - Next.js frontend (Vercel or Firebase Hosting), Firebase Auth + Firestore.
 - Cloud Functions for Stripe, admin tools, and email (Blaze plan).
-- Firestore collections: `users`, `rolls`, `projects`, `settings`, `channels`, `brands`, `supportMessages`.
+- Firestore collections: `users`, `rolls`, `projects`, `printers`, `maintenanceRecords`, `settings`, `channels`, `brands`, `supportMessages`.
 
 ## Build order
 1. Rolls (brand dropdown, levels, quantity, quick add), projects, low-filament report

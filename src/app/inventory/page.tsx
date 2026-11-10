@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -183,6 +183,12 @@ export default function InventoryPage() {
     } catch (error) {
       setRollsError(error instanceof Error ? error.message : "Couldn't delete that roll. Please try again.");
     }
+  }
+
+  function handleRollDoubleClick(event: MouseEvent<HTMLElement>, rollId: string) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, input, label, select")) return;
+    router.push(`/inventory/${rollId}/edit`);
   }
 
   async function handleToggleReorderExclusion(roll: Roll) {
@@ -452,6 +458,8 @@ export default function InventoryPage() {
                 return (
                   <div
                     key={roll.id}
+                    onDoubleClick={(event) => handleRollDoubleClick(event, roll.id)}
+                    title="Double-click to open roll details"
                     className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${
@@ -566,6 +574,8 @@ export default function InventoryPage() {
                 return (
                 <div
                   key={roll.id}
+                  onDoubleClick={(event) => handleRollDoubleClick(event, roll.id)}
+                  title="Double-click to open roll details"
                   className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
                     selectedRollId === roll.id
                       ? "border-blue-400 ring-1 ring-inset ring-blue-300 dark:border-blue-400/60 dark:ring-blue-400/40"

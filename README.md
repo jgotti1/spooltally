@@ -1,6 +1,6 @@
 # SpoolTally
 
-Web app for 3D print sellers: price estimation, filament inventory, and project tracking.
+Web app for 3D print sellers: price estimation, filament inventory, project tracking, and printer maintenance.
 
 Full product spec: [spec.md](spec.md).
 
@@ -39,13 +39,14 @@ In Firebase Console → Authentication → Sign-in method, enable the **Email/Pa
 
 ## Product model
 
-SpoolTally has two primary areas: Inventory and Projects. Pricing is part of each project; there is no separate Estimate route or Firestore collection.
+SpoolTally has three primary areas: Inventory, Projects, and Printer Maintenance. Pricing is part of each project; there is no separate Estimate route or Firestore collection.
 
 - Every project color must be matched to an inventory roll. A new roll can be added inline when needed.
 - Slicer filament cost is entered as a batch total and overrides filament cost calculated from roll price and size. The app shows total batch cost and cost per unit; suggested sale prices start at 2.5× complete per-unit cost and then account for channel fees.
 - Project grid and list previews summarize cost, filament, colors, nozzle, print time, quantity, channel, and uploaded-file count.
 - Generated model thumbnails support previews but are not displayed or counted as separate user uploads.
 - Sales channels: Etsy, eBay, Amazon Handmade, own site, Facebook Marketplace, and in person.
+- Printer Maintenance supports custom printer names, a common-model dropdown with an Other/custom choice, dated service notes, a next-due date, and due reminders on both the dashboard and maintenance page. The printer list has block and list views; double-clicking a printer opens its full service history.
 
 ## Build order
 
