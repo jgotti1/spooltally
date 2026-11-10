@@ -5,6 +5,8 @@ import {
   addMaintenanceRecord,
   addPrinter,
   completeScheduledMaintenance,
+  deleteMaintenanceRecord,
+  deletePrinter,
   formatMaintenanceDate,
   isMaintenanceSoon,
   latestMaintenanceByPrinter,
@@ -15,6 +17,8 @@ import {
   PRINTER_MODEL_GROUPS,
   subscribeToMaintenanceRecords,
   subscribeToPrinters,
+  updateMaintenanceRecord,
+  updatePrinterDetails,
   updatePrinterNextDueDate,
   type MaintenanceRecord,
   type Printer,
@@ -113,6 +117,19 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [completeError, setCompleteError] = useState("");
   const [savingComplete, setSavingComplete] = useState(false);
 
+  // Rename / re-model / delete the printer from its panel.
+  const [editingPrinter, setEditingPrinter] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editModel, setEditModel] = useState("");
+  const [editCustomModel, setEditCustomModel] = useState("");
+  const [savingPrinter_, setSavingPrinter_] = useState(false);
+
+  // Fix a typo in a finished entry, or remove one logged by mistake.
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [editRecordDate, setEditRecordDate] = useState("");
+  const [editRecordNotes, setEditRecordNotes] = useState("");
+  const [savingRecordEdit, setSavingRecordEdit] = useState(false);
+
   useEffect(() => {
     const unsubscribePrinters = subscribeToPrinters(
       ownerId,
@@ -188,8 +205,98 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompleting(false);
     setCompleteError("");
+    setEditingPrinter(false);
+    setEditingRecordId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailPrinterId]);
+
+  const knownModels = PRINTER_MODEL_GROUPS.flatMap((group) => group.models as readonly string[]);
+
+  function startEditingPrinter() {
+    if (!detailPrinter) return;
+    setEditName(detailPrinter.name);
+    if (knownModels.includes(detailPrinter.model)) {
+      setEditModel(detailPrinter.model);
+      setEditCustomModel("");
+    } else {
+      setEditModel(OTHER_PRINTER_MODEL);
+      setEditCustomModel(detailPrinter.model);
+    }
+    setEditingPrinter(true);
+  }
+
+  async function handleSavePrinterDetails(event: FormEvent) {
+    event.preventDefault();
+    if (!detailPrinter) return;
+    const model = editModel === OTHER_PRINTER_MODEL ? editCustomModel.trim() : editModel;
+    if (!editName.trim() || !model) return;
+    setSavingPrinter_(true);
+    setError("");
+    try {
+      await updatePrinterDetails(detailPrinter.id, { name: editName, model });
+      setEditingPrinter(false);
+      setNotice("Printer updated.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Couldn't update that printer.");
+    } finally {
+      setSavingPrinter_(false);
+    }
+  }
+
+  async function handleDeletePrinter() {
+    if (!detailPrinter) return;
+    const count = (recordsByPrinter.get(detailPrinter.id) ?? []).length;
+    const warning =
+      count > 0
+        ? `Delete ${detailPrinter.name} and its ${count} maintenance record${count === 1 ? "" : "s"}? This can't be undone.`
+        : `Delete ${detailPrinter.name}? This can't be undone.`;
+    if (!window.confirm(warning)) return;
+    setSavingPrinter_(true);
+    setError("");
+    try {
+      await deletePrinter(ownerId, detailPrinter.id);
+      setDetailPrinterId(null);
+      setNotice("Printer deleted.");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Couldn't delete that printer.");
+    } finally {
+      setSavingPrinter_(false);
+    }
+  }
+
+  function startEditingRecord(record: MaintenanceRecord) {
+    setEditingRecordId(record.id);
+    setEditRecordDate(record.completedDate);
+    setEditRecordNotes(record.notes);
+  }
+
+  async function handleSaveRecordEdit(event: FormEvent) {
+    event.preventDefault();
+    if (!editingRecordId || !editRecordDate || !editRecordNotes.trim()) return;
+    setSavingRecordEdit(true);
+    setError("");
+    try {
+      await updateMaintenanceRecord(editingRecordId, { completedDate: editRecordDate, notes: editRecordNotes });
+      setEditingRecordId(null);
+      setNotice("Maintenance record updated.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Couldn't update that record.");
+    } finally {
+      setSavingRecordEdit(false);
+    }
+  }
+
+  async function handleDeleteRecord(record: MaintenanceRecord) {
+    if (!window.confirm(`Remove the entry from ${formatMaintenanceDate(record.completedDate)}? This can't be undone.`)) return;
+    setError("");
+    try {
+      await deleteMaintenanceRecord(record.id);
+      if (editingRecordId === record.id) setEditingRecordId(null);
+      setNotice("Maintenance record removed.");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Couldn't remove that record.");
+    }
+  }
 
   function startCompleting() {
     setCompleteDate(localDateString());
@@ -619,8 +726,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-semibold text-slate-950 dark:text-white">{printer.name}</h3>
-                      <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{printer.model}</p>
+                      <h3 className="text-base font-semibold break-words text-slate-950 dark:text-white">{printer.name}</h3>
+                      <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{printer.model}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}>
                       {statusLabel(status, printer.nextDueDate)}
@@ -659,8 +766,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{printer.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-sm font-semibold break-words text-slate-950 dark:text-white">{printer.name}</p>
+                    <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">
                       {printer.model} ·{" "}
                       {history.length === 0
                         ? "No service yet"
@@ -700,13 +807,24 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   <WrenchIcon />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="truncate text-lg font-semibold text-slate-950 dark:text-white">{detailPrinter.name}</h3>
-                  <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{detailPrinter.model}</p>
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
-                  >
-                    {statusLabel(maintenanceDueStatus(detailPrinter.nextDueDate), detailPrinter.nextDueDate)}
-                  </span>
+                  <h3 className="text-lg font-semibold break-words text-slate-950 dark:text-white">{detailPrinter.name}</h3>
+                  <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{detailPrinter.model}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
+                    >
+                      {statusLabel(maintenanceDueStatus(detailPrinter.nextDueDate), detailPrinter.nextDueDate)}
+                    </span>
+                    {!editingPrinter && (
+                      <button
+                        type="button"
+                        onClick={startEditingPrinter}
+                        className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Edit printer
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
@@ -718,6 +836,91 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 <XIcon />
               </button>
             </div>
+
+            {editingPrinter && (
+              <form
+                onSubmit={handleSavePrinterDetails}
+                className="space-y-3 border-b border-slate-100 bg-blue-50/40 p-5 dark:border-white/10 dark:bg-blue-500/[0.06]"
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="editPrinterName" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Printer name
+                    </label>
+                    <input
+                      id="editPrinterName"
+                      required
+                      autoFocus
+                      value={editName}
+                      onChange={(event) => setEditName(event.target.value)}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editPrinterModel" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Model
+                    </label>
+                    <select
+                      id="editPrinterModel"
+                      value={editModel}
+                      onChange={(event) => setEditModel(event.target.value)}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    >
+                      {PRINTER_MODEL_GROUPS.map((group) => (
+                        <optgroup key={group.brand} label={group.brand}>
+                          {group.models.map((model) => (
+                            <option key={model} value={model}>
+                              {model}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                      <option value={OTHER_PRINTER_MODEL}>{OTHER_PRINTER_MODEL}</option>
+                    </select>
+                  </div>
+                </div>
+                {editModel === OTHER_PRINTER_MODEL && (
+                  <div>
+                    <label htmlFor="editCustomModel" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Custom model
+                    </label>
+                    <input
+                      id="editCustomModel"
+                      required
+                      value={editCustomModel}
+                      onChange={(event) => setEditCustomModel(event.target.value)}
+                      placeholder="Manufacturer and model"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    disabled={savingPrinter_}
+                    className="h-10 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                  >
+                    {savingPrinter_ ? "Saving…" : "Save printer"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingPrinter_}
+                    onClick={() => setEditingPrinter(false)}
+                    className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingPrinter_}
+                    onClick={handleDeletePrinter}
+                    className="ml-auto h-10 rounded-xl border border-rose-200 px-4 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                  >
+                    Delete printer
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="overflow-y-auto">
               <section className="border-b border-slate-100 bg-slate-50/60 p-5 dark:border-white/10 dark:bg-white/[0.02]">
@@ -870,14 +1073,83 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   </p>
                 ) : (
                   <ol className="space-y-4">
-                    {(recordsByPrinter.get(detailPrinter.id) ?? []).map((record) => (
-                      <li key={record.id} className="rounded-xl border border-slate-100 p-3 text-xs dark:border-white/10">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          Completed {formatMaintenanceDate(record.completedDate)}
-                        </span>
-                        <p className="mt-2 whitespace-pre-wrap leading-5 text-slate-600 dark:text-slate-400">{record.notes}</p>
-                      </li>
-                    ))}
+                    {(recordsByPrinter.get(detailPrinter.id) ?? []).map((record) =>
+                      editingRecordId === record.id ? (
+                        <li key={record.id} className="rounded-xl border border-blue-200 p-3 text-xs dark:border-blue-400/30">
+                          <form onSubmit={handleSaveRecordEdit} className="space-y-3">
+                            <div>
+                              <label htmlFor="editRecordDate" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Completed on
+                              </label>
+                              <input
+                                id="editRecordDate"
+                                type="date"
+                                required
+                                value={editRecordDate}
+                                onChange={(event) => setEditRecordDate(event.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="editRecordNotes" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                What was done
+                              </label>
+                              <textarea
+                                id="editRecordNotes"
+                                required
+                                autoFocus
+                                rows={3}
+                                value={editRecordNotes}
+                                onChange={(event) => setEditRecordNotes(event.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="submit"
+                                disabled={savingRecordEdit}
+                                className="h-9 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                              >
+                                {savingRecordEdit ? "Saving…" : "Save changes"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={savingRecordEdit}
+                                onClick={() => setEditingRecordId(null)}
+                                className="h-9 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        </li>
+                      ) : (
+                        <li key={record.id} className="rounded-xl border border-slate-100 p-3 text-xs dark:border-white/10">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              Completed {formatMaintenanceDate(record.completedDate)}
+                            </span>
+                            <span className="flex shrink-0 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => startEditingRecord(record)}
+                                className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRecord(record)}
+                                className="text-[11px] font-semibold text-rose-600 hover:underline dark:text-rose-400"
+                              >
+                                Delete
+                              </button>
+                            </span>
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap leading-5 text-slate-600 dark:text-slate-400">{record.notes}</p>
+                        </li>
+                      ),
+                    )}
                   </ol>
                 )}
               </section>

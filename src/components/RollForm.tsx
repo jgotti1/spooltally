@@ -37,6 +37,7 @@ export function RollForm({ roll }: RollFormProps) {
   const [level, setLevel] = useState<RollLevel>(roll?.level ?? "full");
   const [quantity, setQuantity] = useState(roll?.quantity ?? 1);
   const [excludeFromReorder, setExcludeFromReorder] = useState(roll?.excludeFromReorder ?? false);
+  const [notes, setNotes] = useState(roll?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [existingRolls, setExistingRolls] = useState<Roll[]>([]);
@@ -51,6 +52,7 @@ export function RollForm({ roll }: RollFormProps) {
     level: roll?.level ?? "full",
     quantity: roll?.quantity ?? 1,
     excludeFromReorder: roll?.excludeFromReorder ?? false,
+    notes: roll?.notes ?? "",
   }));
 
   const isDirty =
@@ -61,7 +63,8 @@ export function RollForm({ roll }: RollFormProps) {
     price !== initial.price ||
     level !== initial.level ||
     quantity !== initial.quantity ||
-    excludeFromReorder !== initial.excludeFromReorder;
+    excludeFromReorder !== initial.excludeFromReorder ||
+    notes !== initial.notes;
 
   useEffect(() => {
     if (roll || !user) return;
@@ -84,6 +87,7 @@ export function RollForm({ roll }: RollFormProps) {
     setLevel("full");
     setQuantity(1);
     setExcludeFromReorder(false);
+    setNotes("");
   }
 
   async function performSave() {
@@ -99,6 +103,7 @@ export function RollForm({ roll }: RollFormProps) {
         level,
         quantity: level === "full" ? Math.max(1, quantity) : 1,
         excludeFromReorder,
+        notes,
       };
       if (roll) {
         await updateRoll(roll.id, input);
@@ -172,6 +177,7 @@ export function RollForm({ roll }: RollFormProps) {
         level,
         quantity: Math.max(1, quantity),
         excludeFromReorder,
+        notes,
       });
       setSaving(false);
       setDuplicateMatch(null);
@@ -287,6 +293,20 @@ export function RollForm({ roll }: RollFormProps) {
           />
         </div>
       )}
+
+      <div>
+        <label htmlFor="rollNotes" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Notes <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+        </label>
+        <textarea
+          id="rollNotes"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Lot number, where you bought it, temps that worked, runs stringy…"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+        />
+      </div>
 
       <label className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
         <input

@@ -17,6 +17,20 @@ function MessageIcon() {
   );
 }
 
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M10 3v1.6M10 15.4V17M3 10h1.6M15.4 10H17M5.1 5.1l1.1 1.1M13.8 13.8l1.1 1.1M14.9 5.1l-1.1 1.1M6.2 13.8l-1.1 1.1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function SignOutIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -111,6 +125,14 @@ export function UserMenu() {
           </div>
 
           <div className="border-t border-slate-100 px-2 py-2 dark:border-white/10">
+            <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+            >
+              <GearIcon />
+              Settings
+            </Link>
             <Link
               href="/contact"
               onClick={() => setOpen(false)}

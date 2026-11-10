@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { Roll } from "@/lib/rolls";
-import { saveInventorySettings, type InventorySettings } from "@/lib/inventory-settings";
+import type { InventorySettings } from "@/lib/inventory-settings";
 import { groupLowRolls, type StockStatus } from "@/lib/inventory-status";
 import { exportReorderReportToExcel } from "@/lib/inventory-export";
 
@@ -55,18 +56,12 @@ function GearIcon() {
 }
 
 type InventoryReportProps = {
-  ownerId: string;
   rolls: Roll[];
   settings: InventorySettings;
-  onSettingsChange: (settings: InventorySettings) => void;
 };
 
 /** Low-filament report: flags material/color groups below the user's reorder/warn thresholds. */
-export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: InventoryReportProps) {
-  const [editingSettings, setEditingSettings] = useState(false);
-  const [reorderBelowRolls, setReorderBelowRolls] = useState(settings.reorderBelowRolls);
-  const [warnAtRolls, setWarnAtRolls] = useState(settings.warnAtRolls);
-  const [savingSettings, setSavingSettings] = useState(false);
+export function InventoryReport({ rolls, settings }: InventoryReportProps) {
   const [filter, setFilter] = useState<ReportFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -75,21 +70,6 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
     () => (filter === "all" ? groups : groups.filter((g) => g.status === filter)),
     [groups, filter],
   );
-
-  async function handleSaveSettings() {
-    setSavingSettings(true);
-    const next: InventorySettings = {
-      reorderBelowRolls: Math.max(0, reorderBelowRolls),
-      warnAtRolls: Math.max(0, warnAtRolls),
-    };
-    try {
-      await saveInventorySettings(ownerId, next);
-      onSettingsChange(next);
-      setEditingSettings(false);
-    } finally {
-      setSavingSettings(false);
-    }
-  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
@@ -136,57 +116,15 @@ export function InventoryReport({ ownerId, rolls, settings, onSettingsChange }: 
             <DownloadIcon />
             Export to Excel
           </button>
-          <button
-            type="button"
-            onClick={() => setEditingSettings((v) => !v)}
+          <Link
+            href="/settings?tab=inventory"
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             <GearIcon />
             Thresholds
-          </button>
+          </Link>
         </div>
       </div>
-
-      {editingSettings && (
-        <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-2 dark:border-white/10 dark:bg-white/[0.02]">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-              Flag &ldquo;Reorder now&rdquo; when below (rolls)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.1"
-              value={reorderBelowRolls}
-              onChange={(e) => setReorderBelowRolls(Number(e.target.value))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-              Warn &ldquo;Low&rdquo; when at or below (rolls)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.1"
-              value={warnAtRolls}
-              onChange={(e) => setWarnAtRolls(Number(e.target.value))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <button
-              type="button"
-              disabled={savingSettings}
-              onClick={handleSaveSettings}
-              className="h-9 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {savingSettings ? "Saving…" : "Save thresholds"}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="mt-4">
         {groups.length === 0 ? (

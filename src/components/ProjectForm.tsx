@@ -348,18 +348,19 @@ export function ProjectForm({ project }: ProjectFormProps) {
         channelId,
         slicerFilamentCost: slicerFilamentCost.trim() ? Number(slicerFilamentCost) : null,
       };
+      const id = project ? project.id : await addProject(user.uid, input);
+      if (project) await updateProject(project.id, input);
+      // The preview picked at the top of the form is attached on save, for new and existing projects alike.
+      if (pendingAttachment && pendingAttachmentType) {
+        await uploadProjectFile(user.uid, id, pendingAttachment, pendingAttachmentType);
+        if (pendingAttachmentType === "model" && pendingThumbnail) {
+          const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingAttachment.name}-preview.png`);
+          await uploadProjectFile(user.uid, id, imageFile, "image", pendingAttachment.name);
+        }
+      }
       if (project) {
-        await updateProject(project.id, input);
         router.push("/projects");
       } else {
-        const id = await addProject(user.uid, input);
-        if (pendingAttachment && pendingAttachmentType) {
-          await uploadProjectFile(user.uid, id, pendingAttachment, pendingAttachmentType);
-          if (pendingAttachmentType === "model" && pendingThumbnail) {
-            const imageFile = await dataUrlToFile(pendingThumbnail, `${pendingAttachment.name}-preview.png`);
-            await uploadProjectFile(user.uid, id, imageFile, "image", pendingAttachment.name);
-          }
-        }
         router.replace(`/projects/${id}/edit`);
       }
     } catch (err) {

@@ -251,6 +251,7 @@ export default function InventoryPage() {
             level: "full",
             quantity: 1,
             excludeFromReorder: roll.excludeFromReorder,
+            notes: roll.notes,
           });
         }
       } else {
@@ -339,7 +340,7 @@ export default function InventoryPage() {
         </div>
 
         <div className="mt-6">
-          <InventoryReport ownerId={user.uid} rolls={rolls} settings={settings} onSettingsChange={setSettings} />
+          <InventoryReport rolls={rolls} settings={settings} />
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -492,6 +493,11 @@ export default function InventoryPage() {
                         {roll.color} {roll.material}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{roll.brand}</p>
+                      {roll.notes && (
+                        <p className="mt-0.5 text-[11px] text-slate-400 italic dark:text-slate-500" title={roll.notes}>
+                          {roll.notes}
+                        </p>
+                      )}
                       {(projectsByRollId.get(roll.id)?.length ?? 0) > 0 && (
                         <p className="text-[11px] text-blue-600 dark:text-blue-400">
                           Used in:{" "}
@@ -608,6 +614,11 @@ export default function InventoryPage() {
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {roll.brand} · {roll.material}
                         </p>
+                        {roll.notes && (
+                          <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-400 italic dark:text-slate-500" title={roll.notes}>
+                            {roll.notes}
+                          </p>
+                        )}
                         {(projectsByRollId.get(roll.id)?.length ?? 0) > 0 && (
                           <p className="text-[11px] text-blue-600 dark:text-blue-400">
                             Used in:{" "}

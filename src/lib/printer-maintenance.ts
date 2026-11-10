@@ -5,6 +5,8 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  deleteDoc,
+  getDocs,
   updateDoc,
   where,
   writeBatch,
@@ -202,6 +204,44 @@ export async function addMaintenanceRecord(
     createdAt: serverTimestamp(),
   });
   return recordRef.id;
+}
+
+/** Renames a printer or changes its model; the due date and history are untouched. */
+export async function updatePrinterDetails(printerId: string, input: { name: string; model: string }): Promise<void> {
+  if (!db) throw configError;
+  await updateDoc(doc(printersCollection(), printerId), {
+    name: input.name.trim(),
+    model: input.model.trim(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Deletes a printer together with every maintenance record that belongs to it. */
+export async function deletePrinter(ownerId: string, printerId: string): Promise<void> {
+  if (!db) throw configError;
+  const records = await getDocs(
+    query(maintenanceRecordsCollection(), where("ownerId", "==", ownerId), where("printerId", "==", printerId)),
+  );
+  const batch = writeBatch(db);
+  for (const record of records.docs) batch.delete(record.ref);
+  batch.delete(doc(printersCollection(), printerId));
+  await batch.commit();
+}
+
+export async function updateMaintenanceRecord(
+  recordId: string,
+  input: { completedDate: string; notes: string },
+): Promise<void> {
+  if (!db) throw configError;
+  await updateDoc(doc(maintenanceRecordsCollection(), recordId), {
+    completedDate: input.completedDate,
+    notes: input.notes.trim(),
+  });
+}
+
+export async function deleteMaintenanceRecord(recordId: string): Promise<void> {
+  if (!db) throw configError;
+  await deleteDoc(doc(maintenanceRecordsCollection(), recordId));
 }
 
 /**

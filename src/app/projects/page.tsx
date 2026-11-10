@@ -9,6 +9,7 @@ import { BackLink } from "@/components/BackLink";
 import { PROJECT_STATUSES, type ProjectStatus } from "@/lib/inventory-constants";
 import { deleteProject, subscribeToProjects, visibleProjectFiles, type Project } from "@/lib/projects";
 import { subscribeToRolls, type Roll } from "@/lib/rolls";
+import { describeShortage, projectStock } from "@/lib/project-stock";
 import { PROJECT_SORT_OPTIONS, sortProjects, type ProjectSortOption } from "@/lib/project-sort";
 import {
   DEFAULT_ESTIMATOR_SETTINGS,
@@ -222,12 +223,13 @@ export default function ProjectsPage() {
     [projects, rollsById, pricingSettings],
   );
 
+  const stockByProject = useMemo(
+    () => new Map(projects.map((project) => [project.id, projectStock(project, rolls)] as const)),
+    [projects, rolls],
+  );
   const needsReorder = useMemo(
-    () => (project: Project) =>
-      project.colorsNeeded.some((need) =>
-        need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0),
-      ),
-    [rollsById],
+    () => (project: Project) => stockByProject.get(project.id)?.short ?? false,
+    [stockByProject],
   );
 
   const filtered = useMemo(() => {
@@ -321,7 +323,7 @@ export default function ProjectsPage() {
                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
             }`}
           >
-            Needs reorder only
+            May run short only
           </button>
           <select
             value={sortBy}
@@ -422,10 +424,19 @@ export default function ProjectsPage() {
                         {metrics?.visibleFileCount} file{metrics?.visibleFileCount === 1 ? "" : "s"}
                       </span>
                     )}
-                    {flagged && (
-                      <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                        Order now
+                    {flagged ? (
+                      <span
+                        className="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                        title={describeShortage(stockByProject.get(project.id)!)}
+                      >
+                        May run short
                       </span>
+                    ) : (
+                      stockByProject.get(project.id)?.unitsPossible !== null && (
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                          Can make {stockByProject.get(project.id)?.unitsPossible} more
+                        </span>
+                      )
                     )}
                     <div className="ml-auto flex shrink-0 gap-2">
                       <Link
@@ -471,10 +482,20 @@ export default function ProjectsPage() {
                       </span>
                     </div>
 
-                    {flagged && (
-                      <span className="mt-3 inline-flex w-fit items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                        Order now — missing filament
-                      </span>
+                    {flagged ? (
+                      <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-500/30 dark:bg-rose-500/10">
+                        <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">May run short — order soon</p>
+                        <p className="mt-0.5 text-[11px] leading-4 text-rose-700/80 dark:text-rose-300/80">
+                          {describeShortage(stockByProject.get(project.id)!)}
+                        </p>
+                      </div>
+                    ) : (
+                      stockByProject.get(project.id)?.unitsPossible !== null && (
+                        <span className="mt-3 inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                          Can make {stockByProject.get(project.id)?.unitsPossible} more unit
+                          {stockByProject.get(project.id)?.unitsPossible === 1 ? "" : "s"} from stock
+                        </span>
+                      )
                     )}
 
                     <div className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs dark:bg-white/[0.03]">

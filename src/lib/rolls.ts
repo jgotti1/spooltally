@@ -32,6 +32,8 @@ export type Roll = {
   quantity: number;
   remainingGrams: number;
   excludeFromReorder: boolean;
+  /** Free-form note: lot number, where it was bought, print settings that worked… */
+  notes: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -45,6 +47,7 @@ export type RollInput = {
   level: RollLevel;
   quantity: number;
   excludeFromReorder: boolean;
+  notes?: string;
 };
 
 function rollsCollection() {
@@ -79,6 +82,7 @@ export function subscribeToRolls(
           quantity: data.quantity,
           remainingGrams: data.remainingGrams,
           excludeFromReorder: data.excludeFromReorder ?? false,
+      notes: typeof data.notes === "string" ? data.notes : "",
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
         } satisfies Roll;
@@ -107,6 +111,7 @@ export async function listRolls(ownerId: string): Promise<Roll[]> {
       quantity: data.quantity,
       remainingGrams: data.remainingGrams,
       excludeFromReorder: data.excludeFromReorder ?? false,
+      notes: typeof data.notes === "string" ? data.notes : "",
       createdAt: data.createdAt ?? null,
       updatedAt: data.updatedAt ?? null,
     } satisfies Roll;
@@ -130,6 +135,7 @@ export async function getRoll(rollId: string): Promise<Roll | null> {
     quantity: data.quantity,
     remainingGrams: data.remainingGrams,
     excludeFromReorder: data.excludeFromReorder ?? false,
+      notes: typeof data.notes === "string" ? data.notes : "",
     createdAt: data.createdAt ?? null,
     updatedAt: data.updatedAt ?? null,
   };
@@ -149,6 +155,7 @@ export async function addRoll(ownerId: string, input: RollInput): Promise<string
     quantity: input.level === "full" ? input.quantity : 1,
     remainingGrams,
     excludeFromReorder: input.excludeFromReorder,
+    notes: (input.notes ?? "").trim(),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -168,6 +175,7 @@ export async function updateRoll(rollId: string, input: RollInput) {
     quantity: input.level === "full" ? input.quantity : 1,
     remainingGrams,
     excludeFromReorder: input.excludeFromReorder,
+    notes: (input.notes ?? "").trim(),
     updatedAt: serverTimestamp(),
   });
 }

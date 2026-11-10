@@ -33,7 +33,7 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Logo: a spool-of-filament icon whose unwinding strand resolves into a checkmark (tracking + pricing confidence). Canonical source: [src/components/Logo.tsx](src/components/Logo.tsx) — `Logo` (icon + wordmark) and `LogoMark` (icon only), both driven by `currentColor`/Tailwind text-color classes so they adapt to light or dark backgrounds. Reuse these components on every new page instead of redrawing the mark.
 - `Header` ([src/components/Header.tsx](src/components/Header.tsx)) is the shared top nav for authenticated app pages (Inventory/Projects/Maintenance) and already includes the logo — drop it into new page layouts rather than building a one-off header.
 - Favicon: [src/app/icon.svg](src/app/icon.svg) (Next.js App Router auto-detects this). Apple touch icon: [src/app/apple-icon.png](src/app/apple-icon.png) (also auto-detected).
-- Raster export for contexts that can't render React/SVG (emails, docs): [public/logo-mark.png](public/logo-mark.png) — dark mark on transparent background, for use on light surfaces.
+- Raster export for contexts that can't render React/SVG (emails, docs): [public/logo-icon.png](public/logo-icon.png) (mark only) and [public/logo-full.png](public/logo-full.png) (mark + wordmark).
 
 ## Printer maintenance
 
@@ -63,4 +63,8 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Suggested prices use a floor of 2.5× the complete per-unit production cost, then add fixed channel fees and gross up for percentage fees: `price = (max(2.5 × cost, configured markup price) + fixed fees) / (1 - fee %)`. The configured markup may raise, but never lower, that floor.
 - Printers are stored separately from maintenance history. Each printer's own `nextDueDate` field controls its due status and dashboard reminder, set independently of logging completed maintenance.
 - Treat STL-derived weights as estimates ("Estimated from model"); sliced-file-derived weights as exact ("Exact from slicer"). Surface this distinction in the UI, don't blur it.
+- Pricing rates, sales-channel fees, reorder thresholds, and the shop name are all edited on `/settings` ([src/app/settings/page.tsx](src/app/settings/page.tsx), tabs via `?tab=shop|pricing|channels|inventory`), reached from the user menu. Every value lives on the owner-scoped `settings/{uid}` doc (`shopName` included, until a `users` doc exists). Don't add one-off settings editors inside feature pages — link to the matching tab instead.
+- "May run short" and "Can make N more units" come from `src/lib/project-stock.ts`: a color's need is `gramsNeeded × batch quantity`, checked against the grams on hand across every roll of the same material + color (not just the linked roll). Use it for the dashboard counts and project badges rather than checking `remainingGrams === 0`.
+- Rolls carry an optional free-text `notes` field (lot number, where bought, settings that worked); show it as a secondary line, never as a filter key.
+- Printers can be renamed, re-modeled, and deleted (with their records, in one batch) from the detail panel; finished maintenance entries can be edited and deleted there too.
 - No screenshot-reading (Claude API) or Etsy integration in v1 — those are explicitly deferred (see spec's "Later" section).

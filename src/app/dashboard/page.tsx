@@ -9,6 +9,9 @@ import { subscribeToRolls, type Roll } from "@/lib/rolls";
 import { getInventorySettings, DEFAULT_INVENTORY_SETTINGS, type InventorySettings } from "@/lib/inventory-settings";
 import { groupLowRolls } from "@/lib/inventory-status";
 import { subscribeToProjects, type Project } from "@/lib/projects";
+import { describeShortage, projectStock } from "@/lib/project-stock";
+import { getShopSettings } from "@/lib/shop-settings";
+import { costPerGram, isUsingDefaultRollCost } from "@/lib/estimator-pricing";
 import {
   formatMaintenanceDate,
   isMaintenanceSoon,
@@ -66,11 +69,15 @@ const sections = [
   { label: "Maintenance", href: "/maintenance", description: "Log printer service and see what is due.", icon: WrenchIcon },
 ];
 
+const money = (value: number) =>
+  value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [rolls, setRolls] = useState<Roll[]>([]);
   const [settings, setSettings] = useState<InventorySettings>(DEFAULT_INVENTORY_SETTINGS);
+  const [shopName, setShopName] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
 
@@ -86,6 +93,11 @@ export default function DashboardPage() {
     getInventorySettings(user.uid).then((next) => {
       if (active) setSettings(next);
     });
+    getShopSettings(user.uid)
+      .then((next) => {
+        if (active) setShopName(next.shopName);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -107,14 +119,26 @@ export default function DashboardPage() {
   }, [user]);
 
   const totalGrams = useMemo(() => rolls.reduce((sum, r) => sum + r.remainingGrams, 0), [rolls]);
-  const reorderCount = useMemo(() => groupLowRolls(rolls, settings).length, [rolls, settings]);
-  const activeProjectCount = useMemo(() => projects.filter((p) => p.status === "Active").length, [projects]);
-  const projectsNeedingReorderCount = useMemo(() => {
-    const rollsById = new Map(rolls.map((r) => [r.id, r]));
-    return projects.filter((p) =>
-      p.colorsNeeded.some((need) => need.rollIds.some((id) => rollsById.get(id)?.remainingGrams === 0)),
-    ).length;
-  }, [projects, rolls]);
+  /** What the filament on the shelf is worth at the price paid; rolls with no price use the $20 default. */
+  const stockValue = useMemo(() => {
+    let value = 0;
+    let estimated = false;
+    for (const roll of rolls) {
+      value += roll.remainingGrams * costPerGram(roll);
+      if (roll.remainingGrams > 0 && isUsingDefaultRollCost(roll)) estimated = true;
+    }
+    return { value, estimated };
+  }, [rolls]);
+  const lowGroups = useMemo(() => groupLowRolls(rolls, settings), [rolls, settings]);
+  const activeProjects = useMemo(() => projects.filter((p) => p.status === "Active"), [projects]);
+  /** Active projects whose colors may run short for one full batch, with what's missing. */
+  const shortProjects = useMemo(
+    () =>
+      activeProjects
+        .map((project) => ({ project, stock: projectStock(project, rolls) }))
+        .filter(({ stock }) => stock.short),
+    [activeProjects, rolls],
+  );
   const maintenanceDuePrinters = useMemo(
     () => printers.filter((printer) => isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
     [printers],
@@ -140,6 +164,7 @@ export default function DashboardPage() {
   }
 
   const name = user.displayName?.split(" ")[0] ?? user.email?.split("@")[0] ?? "there";
+  const attentionCount = lowGroups.length + shortProjects.length + maintenanceDuePrinters.length;
 
   return (
     <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
@@ -152,87 +177,143 @@ export default function DashboardPage() {
               "radial-gradient(circle at 16% 20%, rgba(21, 137, 255, 0.22), transparent 32%), radial-gradient(circle at 88% 82%, rgba(20, 223, 152, 0.14), transparent 32%), linear-gradient(145deg, #061725 0%, #0b2235 52%, #071a29 100%)",
           }}
         >
-          <p className="text-xs font-bold tracking-[0.16em] text-blue-300 uppercase">Your workshop</p>
+          <p className="text-xs font-bold tracking-[0.16em] text-blue-300 uppercase">{shopName || "Your workshop"}</p>
           <h1 className="mt-2 max-w-xl text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             Welcome back, {name}.
           </h1>
           <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
-            Track your filament and price your prints — inventory is up first.
+            {attentionCount === 0
+              ? "Stock, projects and printers are all in good shape."
+              : `${attentionCount} thing${attentionCount === 1 ? "" : "s"} could use a look today.`}
           </p>
-          <Link
-            href="/inventory/new"
-            className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100"
-          >
-            <PlusIcon />
-            Add a roll
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/projects/new"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100"
+            >
+              <PlusIcon />
+              New project
+            </Link>
+            <Link
+              href="/inventory/new"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+            >
+              <PlusIcon />
+              Add a roll
+            </Link>
+            <Link
+              href="/maintenance"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+            >
+              <WrenchIcon />
+              Log maintenance
+            </Link>
+          </div>
         </div>
 
-        {maintenanceDuePrinters.length > 0 &&
-          (maintenanceUrgentPrinters.length > 0 ? (
-            <Link
-              href="/maintenance"
-              className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 transition-colors hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
-            >
-              <div>
-                <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">Printer maintenance is overdue</p>
-                <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-rose-700 dark:text-rose-300">
-                  {maintenanceUrgentPrinters.map((printer) => (
-                    <li key={printer.id}>{printerDueLabel(printer)}</li>
-                  ))}
-                </ul>
-              </div>
-              <span className="shrink-0 text-xs font-semibold text-rose-700 dark:text-rose-300">View →</span>
-            </Link>
-          ) : (
-            <Link
-              href="/maintenance"
-              className="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-blue-300 bg-blue-50 p-4 transition-colors hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
-            >
-              <div>
-                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                  Printer maintenance coming up within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days
-                </p>
-                <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-blue-700 dark:text-blue-300">
-                  {maintenanceDuePrinters.map((printer) => (
-                    <li key={printer.id}>{printerDueLabel(printer)}</li>
-                  ))}
-                </ul>
-              </div>
-              <span className="shrink-0 text-xs font-semibold text-blue-700 dark:text-blue-300">View →</span>
-            </Link>
-          ))}
+        {(maintenanceDuePrinters.length > 0 || shortProjects.length > 0 || lowGroups.length > 0) && (
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {maintenanceDuePrinters.length > 0 && (
+              <Link
+                href="/maintenance"
+                className={`flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors ${
+                  maintenanceUrgentPrinters.length > 0
+                    ? "border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
+                    : "border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p
+                    className={`text-sm font-semibold ${
+                      maintenanceUrgentPrinters.length > 0
+                        ? "text-rose-800 dark:text-rose-200"
+                        : "text-blue-800 dark:text-blue-200"
+                    }`}
+                  >
+                    {maintenanceUrgentPrinters.length > 0
+                      ? "Printer maintenance is overdue"
+                      : `Maintenance due within ${MAINTENANCE_UPCOMING_WINDOW_DAYS} days`}
+                  </p>
+                  <ul
+                    className={`mt-1.5 space-y-0.5 text-xs leading-5 ${
+                      maintenanceUrgentPrinters.length > 0
+                        ? "text-rose-700 dark:text-rose-300"
+                        : "text-blue-700 dark:text-blue-300"
+                    }`}
+                  >
+                    {(maintenanceUrgentPrinters.length > 0 ? maintenanceUrgentPrinters : maintenanceDuePrinters).map(
+                      (printer) => (
+                        <li key={printer.id}>{printerDueLabel(printer)}</li>
+                      ),
+                    )}
+                  </ul>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-300">View →</span>
+              </Link>
+            )}
+
+            {shortProjects.length > 0 && (
+              <Link
+                href="/projects"
+                className="flex items-start justify-between gap-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 transition-colors hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">
+                    {shortProjects.length} project{shortProjects.length === 1 ? "" : "s"} may run short on filament
+                  </p>
+                  <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-rose-700 dark:text-rose-300">
+                    {shortProjects.slice(0, 4).map(({ project, stock }) => (
+                      <li key={project.id} className="truncate" title={describeShortage(stock)}>
+                        {project.name}
+                      </li>
+                    ))}
+                    {shortProjects.length > 4 && <li>+{shortProjects.length - 4} more</li>}
+                  </ul>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-300">View →</span>
+              </Link>
+            )}
+
+            {lowGroups.length > 0 && (
+              <Link
+                href="/inventory"
+                className="flex items-start justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    {lowGroups.length} color{lowGroups.length === 1 ? "" : "s"} to reorder
+                  </p>
+                  <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-amber-700 dark:text-amber-300">
+                    {lowGroups.slice(0, 4).map((group) => (
+                      <li key={group.key} className="truncate">
+                        {group.brand} {group.color} {group.material} · ~{Math.round(group.totalGrams)} g
+                      </li>
+                    ))}
+                    {lowGroups.length > 4 && <li>+{lowGroups.length - 4} more</li>}
+                  </ul>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-300">View →</span>
+              </Link>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {sections.map((item) => {
             const Icon = item.icon;
-            const content = (
-              <>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
-                  <Icon />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500">{item.description}</p>
-                <p className="mt-3 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                  {item.href ? "Open →" : "Coming soon"}
-                </p>
-              </>
-            );
-            return item.href ? (
+            return (
               <Link
                 key={item.label}
                 href={item.href}
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-blue-400/40"
               >
-                {content}
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                  <Icon />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500">{item.description}</p>
+                <p className="mt-3 text-xs font-semibold text-blue-600 dark:text-blue-400">Open →</p>
               </Link>
-            ) : (
-              <div
-                key={item.label}
-                className="rounded-2xl border border-slate-200 bg-white p-5 opacity-80 shadow-sm dark:border-white/10 dark:bg-white/[0.03]"
-              >
-                {content}
-              </div>
             );
           })}
         </div>
@@ -251,30 +332,39 @@ export default function DashboardPage() {
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Filament on hand</p>
             </div>
             <div>
+              <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
+                {stockValue.estimated ? "~" : ""}
+                {money(stockValue.value)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Filament value at price paid{stockValue.estimated ? " (some rolls unpriced)" : ""}
+              </p>
+            </div>
+            <div>
               <p
                 className={`text-2xl font-semibold tracking-[-0.02em] ${
-                  reorderCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-950 dark:text-white"
+                  lowGroups.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-950 dark:text-white"
                 }`}
               >
-                {reorderCount}
+                {lowGroups.length}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Rolls needing reorder</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Colors to reorder</p>
             </div>
             <div>
               <p className="text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
-                {activeProjectCount}
+                {activeProjects.length}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Active projects</p>
             </div>
             <div>
               <p
                 className={`text-2xl font-semibold tracking-[-0.02em] ${
-                  projectsNeedingReorderCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-950 dark:text-white"
+                  shortProjects.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-950 dark:text-white"
                 }`}
               >
-                {projectsNeedingReorderCount}
+                {shortProjects.length}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Projects missing filament</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Projects that may run short</p>
             </div>
             <div>
               <p
@@ -289,7 +379,7 @@ export default function DashboardPage() {
                 {maintenanceDuePrinters.length}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Printers needing service within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days
+                Printers due for service within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days
               </p>
             </div>
           </div>
@@ -311,6 +401,12 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
             >
               View maintenance →
+            </Link>
+            <Link
+              href="/settings?tab=pricing"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Pricing settings →
             </Link>
           </div>
         </div>
