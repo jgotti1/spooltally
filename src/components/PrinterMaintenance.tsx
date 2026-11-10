@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   addMaintenanceRecord,
   addPrinter,
+  completeScheduledMaintenance,
   formatMaintenanceDate,
   isMaintenanceSoon,
   latestMaintenanceByPrinter,
@@ -104,6 +105,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [detailDueDate, setDetailDueDate] = useState("");
   const [savingDueDate, setSavingDueDate] = useState(false);
 
+  // "Mark complete" form for the printer's scheduled job, inside the detail panel.
+  const [completing, setCompleting] = useState(false);
+  const [completeDate, setCompleteDate] = useState(() => localDateString());
+  const [completeNotes, setCompleteNotes] = useState("");
+  const [completeNextDate, setCompleteNextDate] = useState("");
+  const [completeError, setCompleteError] = useState("");
+  const [savingComplete, setSavingComplete] = useState(false);
+
   useEffect(() => {
     const unsubscribePrinters = subscribeToPrinters(
       ownerId,
@@ -176,8 +185,46 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     const current = printers.find((printer) => printer.id === detailPrinterId);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDetailDueDate(current?.nextDueDate ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCompleting(false);
+    setCompleteError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailPrinterId]);
+
+  function startCompleting() {
+    setCompleteDate(localDateString());
+    setCompleteNotes("");
+    setCompleteNextDate("");
+    setCompleteError("");
+    setCompleting(true);
+  }
+
+  async function handleCompleteScheduled(event: FormEvent) {
+    event.preventDefault();
+    if (!detailPrinter || !completeDate || !completeNotes.trim()) return;
+    setSavingComplete(true);
+    setCompleteError("");
+    setError("");
+    try {
+      await completeScheduledMaintenance(ownerId, {
+        printerId: detailPrinter.id,
+        completedDate: completeDate,
+        notes: completeNotes,
+        nextDueDate: completeNextDate,
+      });
+      setDetailDueDate(completeNextDate);
+      setCompleting(false);
+      setNotice(
+        completeNextDate
+          ? `Maintenance logged and the next one scheduled for ${formatMaintenanceDate(completeNextDate)}.`
+          : "Maintenance logged. This printer has no next date set.",
+      );
+    } catch (saveError) {
+      setCompleteError(saveError instanceof Error ? saveError.message : "Couldn't save that maintenance record.");
+    } finally {
+      setSavingComplete(false);
+    }
+  }
 
   async function handleUpdateDetailDueDate(event: FormEvent) {
     event.preventDefault();
@@ -672,49 +719,168 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
               </button>
             </div>
 
-            <form
-              onSubmit={handleUpdateDetailDueDate}
-              className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/60 p-5 dark:border-white/10 dark:bg-white/[0.02]"
-            >
-              <div className="flex-1">
-                <label htmlFor="detailDueDate" className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Next maintenance due
-                </label>
-                <input
-                  id="detailDueDate"
-                  type="date"
-                  value={detailDueDate}
-                  onChange={(event) => setDetailDueDate(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={savingDueDate}
-                className="h-11 shrink-0 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
-              >
-                {savingDueDate ? "Saving…" : "Save date"}
-              </button>
-            </form>
+            <div className="overflow-y-auto">
+              <section className="border-b border-slate-100 bg-slate-50/60 p-5 dark:border-white/10 dark:bg-white/[0.02]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Scheduled maintenance</p>
+                    {detailPrinter.nextDueDate ? (
+                      <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                        {formatMaintenanceDate(detailPrinter.nextDueDate)}
+                        <span
+                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 align-middle text-[11px] font-semibold ${STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
+                        >
+                          {maintenanceDueStatus(detailPrinter.nextDueDate) === "overdue"
+                            ? "Overdue"
+                            : maintenanceDueStatus(detailPrinter.nextDueDate) === "due"
+                              ? "Due today"
+                              : maintenanceDueStatus(detailPrinter.nextDueDate) === "upcoming"
+                                ? "Due soon"
+                                : "Scheduled"}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Nothing scheduled. Set a date below.
+                      </p>
+                    )}
+                  </div>
+                  {detailPrinter.nextDueDate && !completing && (
+                    <button
+                      type="button"
+                      onClick={startCompleting}
+                      className="h-10 shrink-0 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white"
+                    >
+                      Mark complete
+                    </button>
+                  )}
+                </div>
 
-            <div className="overflow-y-auto p-5">
-              <p className="mb-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Maintenance history</p>
-              {(recordsByPrinter.get(detailPrinter.id) ?? []).length === 0 ? (
-                <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
-                  No maintenance recorded yet.
+                {completing && detailPrinter.nextDueDate && (
+                  <form
+                    onSubmit={handleCompleteScheduled}
+                    className="mt-4 space-y-3 rounded-xl border border-blue-200 bg-white p-4 dark:border-blue-400/30 dark:bg-white/[0.03]"
+                  >
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Log the work for the job scheduled {formatMaintenanceDate(detailPrinter.nextDueDate)}. It moves to
+                      finished maintenance below.
+                    </p>
+                    <div>
+                      <label htmlFor="completeDate" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Completed on
+                      </label>
+                      <input
+                        id="completeDate"
+                        type="date"
+                        required
+                        value={completeDate}
+                        onChange={(event) => setCompleteDate(event.target.value)}
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="completeNotes" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        What was done
+                      </label>
+                      <textarea
+                        id="completeNotes"
+                        required
+                        autoFocus
+                        rows={3}
+                        value={completeNotes}
+                        onChange={(event) => setCompleteNotes(event.target.value)}
+                        placeholder="Cleaned build plate, lubricated rails, checked belts…"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="completeNextDate" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Schedule the next one <span className="font-normal text-slate-400">(optional)</span>
+                      </label>
+                      <input
+                        id="completeNextDate"
+                        type="date"
+                        value={completeNextDate}
+                        onChange={(event) => setCompleteNextDate(event.target.value)}
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        Leave blank and this printer will have no next date set.
+                      </p>
+                    </div>
+                    {completeError && (
+                      <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+                        {completeError}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={savingComplete}
+                        className="h-10 flex-1 rounded-xl bg-blue-600 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {savingComplete ? "Saving…" : "Save as complete"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCompleting(false)}
+                        disabled={savingComplete}
+                        className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {!completing && (
+                  <form onSubmit={handleUpdateDetailDueDate} className="mt-4 flex flex-wrap items-end gap-3">
+                    <div className="flex-1">
+                      <label htmlFor="detailDueDate" className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {detailPrinter.nextDueDate ? "Change next maintenance date" : "Next maintenance due"}
+                      </label>
+                      <input
+                        id="detailDueDate"
+                        type="date"
+                        value={detailDueDate}
+                        onChange={(event) => setDetailDueDate(event.target.value)}
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={savingDueDate}
+                      className="h-11 shrink-0 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                    >
+                      {savingDueDate ? "Saving…" : "Save date"}
+                    </button>
+                  </form>
+                )}
+              </section>
+
+              <section className="p-5">
+                <p className="mb-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Finished maintenance
+                  {(recordsByPrinter.get(detailPrinter.id) ?? []).length > 0 &&
+                    ` (${(recordsByPrinter.get(detailPrinter.id) ?? []).length})`}
                 </p>
-              ) : (
-                <ol className="space-y-4">
-                  {(recordsByPrinter.get(detailPrinter.id) ?? []).map((record) => (
-                    <li key={record.id} className="rounded-xl border border-slate-100 p-3 text-xs dark:border-white/10">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        Completed {formatMaintenanceDate(record.completedDate)}
-                      </span>
-                      <p className="mt-2 whitespace-pre-wrap leading-5 text-slate-600 dark:text-slate-400">{record.notes}</p>
-                    </li>
-                  ))}
-                </ol>
-              )}
+                {(recordsByPrinter.get(detailPrinter.id) ?? []).length === 0 ? (
+                  <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
+                    No maintenance recorded yet.
+                  </p>
+                ) : (
+                  <ol className="space-y-4">
+                    {(recordsByPrinter.get(detailPrinter.id) ?? []).map((record) => (
+                      <li key={record.id} className="rounded-xl border border-slate-100 p-3 text-xs dark:border-white/10">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          Completed {formatMaintenanceDate(record.completedDate)}
+                        </span>
+                        <p className="mt-2 whitespace-pre-wrap leading-5 text-slate-600 dark:text-slate-400">{record.notes}</p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </section>
             </div>
           </div>
         </div>

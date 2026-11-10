@@ -47,7 +47,8 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Keep the model list, subscriptions, date formatting, and due-status calculation centralized in `src/lib/printer-maintenance.ts` rather than duplicating that logic in pages.
 - Firestore rules must keep both collections owner-scoped, matching `request.auth.uid` to each document's `ownerId`.
 - The printer list supports block (card grid) and list (compact row) views via the same toggle pattern as the Projects list. Both views show a summary only — name, model, status, last service date, and record count — never the full history inline.
-- Double-clicking a printer (or its "View full log" button, for discoverability on touch devices) opens a detail panel with that printer's complete chronological maintenance history. Closing it does not navigate away from `/maintenance`.
+- Double-clicking a printer (or its "View full log" button, for discoverability on touch devices) opens a detail panel with two sections: **Scheduled maintenance** (the printer's `nextDueDate`, with a "Mark complete" button and a date editor) and **Finished maintenance** (the complete chronological history). Closing it does not navigate away from `/maintenance`.
+- "Mark complete" is the one place the two actions combine, and only because the user explicitly asks for it: it takes a completed date and required notes plus an optional next date, then writes the `maintenanceRecords` entry and replaces the printer's `nextDueDate` (with the new date, or `""` if left blank) in a single Firestore batch via `completeScheduledMaintenance`. Due status is still read only from `nextDueDate`.
 - Keep the printer model list current with each brand's active lineup (e.g. Bambu Lab's X1/P1/P2/A1 series plus its H2D/H2S/H2C line) — revisit periodically rather than letting it go stale.
 
 ## Conventions

@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -200,6 +201,33 @@ export async function addMaintenanceRecord(
     notes: input.notes.trim(),
     createdAt: serverTimestamp(),
   });
+  return recordRef.id;
+}
+
+/**
+ * Marks a printer's scheduled job as done: logs the finished work and, in the same batch, replaces the printer's
+ * next-due date (with `nextDueDate`, or "" to leave it unscheduled). It's one explicit action by the user — due
+ * status is still read only from the printer's own `nextDueDate`, never derived from history.
+ */
+export async function completeScheduledMaintenance(
+  ownerId: string,
+  input: { printerId: string; completedDate: string; notes: string; nextDueDate?: string },
+): Promise<string> {
+  if (!db) throw configError;
+  const batch = writeBatch(db);
+  const recordRef = doc(maintenanceRecordsCollection());
+  batch.set(recordRef, {
+    ownerId,
+    printerId: input.printerId,
+    completedDate: input.completedDate,
+    notes: input.notes.trim(),
+    createdAt: serverTimestamp(),
+  });
+  batch.update(doc(printersCollection(), input.printerId), {
+    nextDueDate: input.nextDueDate ?? "",
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
   return recordRef.id;
 }
 

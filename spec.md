@@ -59,7 +59,7 @@ Side income of ~$500/month (roughly 55-70 paying subscribers). Validate with a f
 - Logging finished work and scheduling the next due date are separate actions: recording finished maintenance requires the printer, a completed date, and notes describing the work; scheduling the next date requires only the printer and a date, with no notes.
 - Show due and overdue reminders on both the authenticated dashboard and Printer Maintenance page, based on each printer's own next-due date.
 - The printer list offers block and list views (same toggle as Projects), each showing a per-printer summary including its last-serviced date.
-- Double-clicking a printer opens its full maintenance log and a due-date editor in a detail view, rather than showing full history inline in the list.
+- Double-clicking a printer opens a detail view, rather than showing full history inline in the list. It lists the scheduled maintenance (the printer's next due date, with a due-date editor) and the finished maintenance log. A scheduled job can be marked complete from there: the user enters the completed date and notes, optionally sets the next due date, and the job moves into the finished log in one step.
 
 ## User profile
 - Collected at signup: `name` (from Google displayName, or entered manually for email/password signup), `email` (from Firebase Auth).
