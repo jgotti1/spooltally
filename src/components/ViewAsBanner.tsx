@@ -15,7 +15,7 @@ export function ViewAsBanner() {
       className="fixed bottom-4 left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-300 bg-amber-50 py-2 pr-2 pl-4 text-sm text-amber-950 shadow-xl dark:border-amber-400/40 dark:bg-amber-950 dark:text-amber-100"
     >
       <span className="min-w-0 truncate">
-        <span className="font-semibold">Viewing as {viewingAs.name || viewingAs.email}</span>
+        <span className="font-semibold">Viewing as {viewingAs.name || viewingAs.email || "this user"}</span>
         <span className="hidden sm:inline"> · read-only</span>
       </span>
       <button

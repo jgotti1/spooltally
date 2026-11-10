@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
+import { adminDb, requireUser } from "@/lib/admin/server";
 
+// Server-only: never sent to the browser.
 const SUPPORT_EMAIL = "jgotti711@gmail.com";
 
+/**
+ * Saves the message to `supportMessages` (the admin support inbox) and emails a copy to the owner.
+ * The inbox copy is the record; the email is a notification, so a failed email doesn't lose the message.
+ */
 export async function POST(request: Request) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Support email isn't configured yet. Add RESEND_API_KEY to .env.local and restart the server." },
-      { status: 503 },
-    );
-  }
+  const guard = await requireUser(request);
+  if (!guard.ok) return guard.response;
 
   let body: { name?: string; email?: string; message?: string };
   try {
@@ -19,9 +21,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const name = body.name?.trim() ?? "";
-  const email = body.email?.trim() ?? "";
-  const message = body.message?.trim() ?? "";
+  const name = body.name?.trim().slice(0, 200) ?? "";
+  const email = body.email?.trim().slice(0, 320) ?? "";
+  const message = body.message?.trim().slice(0, 5000) ?? "";
 
   if (!name || !email || !message) {
     return NextResponse.json({ error: "Name, email, and message are all required." }, { status: 400 });
@@ -30,19 +32,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That email address doesn't look right." }, { status: 400 });
   }
 
-  const resend = new Resend(apiKey);
+  try {
+    await adminDb().collection("supportMessages").add({
+      ownerId: guard.token.uid,
+      name,
+      email,
+      message,
+      status: "open",
+      replies: [],
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Saving support message failed:", error);
+    return NextResponse.json({ error: "Couldn't send your message. Please try again shortly." }, { status: 500 });
+  }
 
-  const { error } = await resend.emails.send({
-    from: "SpoolTally Support <onboarding@resend.dev>",
-    to: SUPPORT_EMAIL,
-    replyTo: email,
-    subject: `SpoolTally support request from ${name}`,
-    text: `From: ${name} <${email}>\n\n${message}`,
-  });
-
-  if (error) {
-    console.error("Resend error:", error);
-    return NextResponse.json({ error: "Couldn't send your message. Please try again shortly." }, { status: 502 });
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: process.env.RESEND_FROM || "SpoolTally Support <onboarding@resend.dev>",
+      to: SUPPORT_EMAIL,
+      replyTo: email,
+      subject: `SpoolTally support request from ${name}`,
+      text: `From: ${name} <${email}>\n\n${message}\n\nReply from the admin Support inbox in SpoolTally.`,
+    });
+    if (error) console.error("Resend error (message is still saved in the inbox):", error);
   }
 
   return NextResponse.json({ ok: true });

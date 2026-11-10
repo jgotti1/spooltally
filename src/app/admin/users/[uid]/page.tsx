@@ -6,8 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { StatusBadge, formatAdminDate, formatAdminRelative } from "@/components/admin/StatusBadge";
-import { accountStatus, type AdminUserDetail, type AdminUserPatch } from "@/lib/account-status";
-import { fetchAdminUser, updateAdminUser } from "@/lib/admin-api";
+import { accountStatus, type AdminAction, type AdminUserDetail, type AdminUserPatch, type AuditEntry, type SupportMessage } from "@/lib/account-status";
+import { deleteAdminUser, fetchAdminUser, fetchAuditLog, fetchSupportMessages, runAdminAction, updateAdminUser } from "@/lib/admin-api";
+import { AdminNav } from "@/components/admin/AdminNav";
+import { AuditList } from "@/components/admin/AuditList";
+import { SupportThread } from "@/components/admin/SupportThread";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -45,6 +48,11 @@ function AdminUserPageInner() {
   const [saving, setSaving] = useState(false);
   const [compNote, setCompNote] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [trialDate, setTrialDate] = useState("");
+  const [history, setHistory] = useState<AuditEntry[] | null>(null);
+  const [support, setSupport] = useState<SupportMessage[] | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) router.replace(user ? "/dashboard" : "/");
@@ -60,6 +68,12 @@ function AdminUserPageInner() {
       .catch((err: Error) => {
         if (active) setError(err.message);
       });
+    fetchSupportMessages(getIdToken, uid)
+      .then((next) => active && setSupport(next))
+      .catch(() => active && setSupport([]));
+    fetchAuditLog(getIdToken, uid)
+      .then((next) => active && setHistory(next))
+      .catch(() => active && setHistory([]));
     return () => {
       active = false;
     };
@@ -75,10 +89,45 @@ function AdminUserPageInner() {
       setCompNote(null);
       setAdminNotes(null);
       setNotice(message);
+      void refreshHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save that.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function refreshHistory() {
+    try {
+      setHistory(await fetchAuditLog(getIdToken, uid));
+    } catch {}
+  }
+
+  async function act(action: AdminAction, message: string, reload = false) {
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await runAdminAction(getIdToken, uid, action);
+      if (reload) setDetail(await fetchAdminUser(getIdToken, uid));
+      setNotice(message);
+      void refreshHistory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "That didn't work.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteUser() {
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteAdminUser(getIdToken, uid, deleteConfirm);
+      router.replace("/admin");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't delete that account.");
+      setDeleting(false);
     }
   }
 
@@ -99,7 +148,8 @@ function AdminUserPageInner() {
     <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-8">
-        <Link href="/admin" className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
+        <AdminNav />
+        <Link href="/admin" className="mt-5 inline-block text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
           ← All users
         </Link>
 
@@ -115,7 +165,7 @@ function AdminUserPageInner() {
           <>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h1 className="truncate text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">{detail.name || detail.email}</h1>
+                <h1 className="truncate text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">{detail.name || detail.email || "Unnamed user"}</h1>
                 <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
                   {detail.email}
                   {detail.shopName ? ` · ${detail.shopName}` : ""}
@@ -128,6 +178,8 @@ function AdminUserPageInner() {
                 <button
                   type="button"
                   onClick={() => {
+                    // Logged for the activity history; never blocks opening the view.
+                    void runAdminAction(getIdToken, detail.uid, "view_as").catch(() => {});
                     startViewAs({ uid: detail.uid, name: detail.name, email: detail.email });
                     router.push("/dashboard");
                   }}
@@ -243,6 +295,73 @@ function AdminUserPageInner() {
                       </button>
                     ))}
                   </div>
+                  <label htmlFor="trialDate" className="mt-3 block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    Or set an exact end date (can shorten the trial too)
+                  </label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      id="trialDate"
+                      type="date"
+                      value={trialDate}
+                      onChange={(e) => setTrialDate(e.target.value)}
+                      className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      disabled={saving || !trialDate}
+                      onClick={() => {
+                        const [y, m, d] = trialDate.split("-").map(Number);
+                        // End of the chosen day in the admin's local time, so the trial runs through that whole day.
+                        const end = new Date(y, m - 1, d, 23, 59, 59);
+                        void apply({ setTrialEndsAt: end.toISOString() }, `Trial now ends ${end.toLocaleDateString()}.`).then(() => setTrialDate(""));
+                      }}
+                      className={buttonClass}
+                    >
+                      Set
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-slate-100 pt-4 dark:border-white/5">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Account emails</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Sent by Firebase to {detail.email || "their address"}.</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {detail.providers.includes("password") ? (
+                      <button
+                        type="button"
+                        disabled={saving || !detail.email}
+                        onClick={() => void act("password_reset", "Password reset email sent.")}
+                        className={buttonClass}
+                      >
+                        Send password reset
+                      </button>
+                    ) : (
+                      <span className="self-center text-xs text-slate-500 dark:text-slate-400">Signs in with Google, so there&rsquo;s no password to reset.</span>
+                    )}
+                    {!detail.emailVerified && detail.email && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void act("send_verification", "Verification email sent.")}
+                          className={buttonClass}
+                        >
+                          Send verification email
+                        </button>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => {
+                            if (window.confirm(`Mark ${detail.email} as verified without them clicking a link? Only do this if you know the address is theirs.`))
+                              void act("mark_verified", "Email marked as verified.", true);
+                          }}
+                          className={buttonClass}
+                        >
+                          Mark verified
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-5 border-t border-slate-100 pt-4 dark:border-white/5">
@@ -256,7 +375,7 @@ function AdminUserPageInner() {
                         disabled={saving || !isOwner || isSelf}
                         onChange={(e) => {
                           const granting = e.target.checked;
-                          if (granting && !window.confirm(`Give ${detail.name || detail.email} admin rights? They'll see every user's account details and can view as any user.`)) return;
+                          if (granting && !window.confirm(`Give ${detail.name || detail.email || "Unnamed user"} admin rights? They'll see every user's account details and can view as any user.`)) return;
                           void apply({ isAdmin: granting }, granting ? "Admin access granted. They need to sign out and back in." : "Admin access removed.");
                         }}
                         className="mt-0.5 h-5 w-5 rounded border-slate-300"
@@ -286,7 +405,7 @@ function AdminUserPageInner() {
                       disabled={saving}
                       onClick={() => {
                         const freezing = !detail.account.disabled;
-                        if (freezing && !window.confirm(`Freeze ${detail.name || detail.email}? They'll be signed out and blocked from logging in.`)) return;
+                        if (freezing && !window.confirm(`Freeze ${detail.name || detail.email || "Unnamed user"}? They'll be signed out and blocked from logging in.`)) return;
                         void apply({ disabled: freezing }, freezing ? "Account frozen." : "Account unfrozen.");
                       }}
                       className={`mt-3 ${buttonClass}`}
@@ -295,6 +414,68 @@ function AdminUserPageInner() {
                     </button>
                   </div>
                 )}
+              </Card>
+            </div>
+
+            {!isSelf && !detail.isOwner && (isOwner || !detail.isAdmin) && (
+              <section className="mt-4 rounded-2xl border-2 border-rose-300 bg-rose-50/60 p-5 dark:border-rose-500/40 dark:bg-rose-500/5">
+                <h2 className="text-sm font-bold text-rose-800 dark:text-rose-300">Danger zone · Delete this account permanently</h2>
+                <p className="mt-2 text-sm text-rose-900 dark:text-rose-200">
+                  This erases <strong>{detail.name || detail.email}</strong> completely: their login, {detail.counts.rolls} rolls, {detail.counts.projects} projects,{" "}
+                  {detail.counts.printers} printers, {detail.counts.maintenanceRecords} maintenance records, support messages, settings, and every uploaded
+                  file. <strong>This cannot be undone.</strong> If you only want to stop them using the app, freeze the account instead.
+                </p>
+                <label htmlFor="deleteConfirm" className="mt-4 block text-xs font-semibold text-rose-900 dark:text-rose-200">
+                  Type <span className="font-mono">{detail.email || detail.uid}</span> to confirm
+                </label>
+                <input
+                  id="deleteConfirm"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="mt-1 h-10 w-full rounded-xl border border-rose-300 bg-white px-3 text-sm dark:border-rose-500/40 dark:bg-white/5 dark:text-white"
+                />
+                <button
+                  type="button"
+                  disabled={deleting || deleteConfirm.trim().toLowerCase() !== (detail.email || detail.uid).toLowerCase()}
+                  onClick={() => {
+                    if (window.confirm(`Last chance: permanently delete ${detail.name || detail.email} and all of their data?`)) void deleteUser();
+                  }}
+                  className="mt-3 h-10 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {deleting ? "Deleting…" : "Delete account and all data"}
+                </button>
+              </section>
+            )}
+
+            <div className="mt-4">
+              <Card title={`Support messages${support ? ` (${support.length})` : ""}`}>
+                {!support ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+                ) : support.length ? (
+                  <div className="space-y-3">
+                    {support.map((m) => (
+                      <SupportThread
+                        key={m.id}
+                        message={m}
+                        getIdToken={getIdToken}
+                        onChange={(next) => {
+                          setSupport((all) => (all ?? []).map((x) => (x.id === next.id ? next : x)));
+                          void refreshHistory();
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">They haven&rsquo;t contacted support.</p>
+                )}
+              </Card>
+            </div>
+
+            <div className="mt-4">
+              <Card title="Admin history">
+                {history ? <AuditList entries={history} /> : <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
               </Card>
             </div>
 

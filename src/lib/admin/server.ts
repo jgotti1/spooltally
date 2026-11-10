@@ -2,6 +2,7 @@ import "server-only";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { NextResponse } from "next/server";
 import { TRIAL_DAYS, type AccountRecord, type AdminUserSummary } from "@/lib/account-status";
 
@@ -27,6 +28,10 @@ function adminApp(): App {
 
 export function adminAuth() {
   return getAuth(adminApp());
+}
+
+export function adminBucket() {
+  return getStorage(adminApp()).bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
 }
 
 export function adminDb() {
@@ -75,6 +80,12 @@ export async function requireOwner(request: Request): Promise<Guard> {
   }
   return guard;
 }
+
+/**
+ * Owner-only notes (private notes, the reason an account is comped). They live outside `users/{uid}` because a user can
+ * read their own `users` doc; no Firestore rule matches this collection, so only the Admin SDK can reach it.
+ */
+export const ADMIN_PRIVATE_COLLECTION = "adminPrivate";
 
 export function iso(value: unknown): string | null {
   if (value instanceof Timestamp) return value.toDate().toISOString();
@@ -130,7 +141,8 @@ export function summarize(
   const toIso = (value: string) => (value ? new Date(value).toISOString() : null);
   return {
     uid: authUser.uid,
-    name: account.name || authUser.displayName || "",
+    // A name that is just the account's ID (seen on hand-made test accounts) is treated as no name at all.
+    name: [account.name, authUser.displayName ?? ""].map((n) => n.trim()).find((n) => n && n !== authUser.uid) ?? "",
     email: authUser.email ?? account.email,
     shopName,
     createdAt: account.createdAt ?? toIso(authUser.metadata.creationTime),
@@ -147,3 +159,23 @@ export function summarize(
 }
 
 export { Timestamp, TRIAL_DAYS };
+
+/** Server-only log of every admin action. Like adminPrivate, no Firestore rule matches it, so clients can never read it. */
+export const ADMIN_AUDIT_COLLECTION = "adminAudit";
+
+/** Records who did what to which account. Never throws: a logging failure must not undo or block the action itself. */
+export async function audit(actor: DecodedIdToken, action: string, targetUid: string | null, details: Record<string, unknown> = {}) {
+  try {
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await adminDb().collection(ADMIN_AUDIT_COLLECTION).add({
+      actorUid: actor.uid,
+      actorEmail: actor.email ?? "",
+      action,
+      targetUid,
+      details,
+      at: FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("[admin] audit log write failed", error);
+  }
+}

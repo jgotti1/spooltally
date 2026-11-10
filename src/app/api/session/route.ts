@@ -40,10 +40,8 @@ export async function POST(request: Request) {
       trialEndsAt: Timestamp.fromDate(new Date(created.getTime() + TRIAL_DAYS * 86_400_000)),
       plan: "trial",
       isComped: false,
-      compNote: "",
       disabled: false,
       subscriptionStatus: "",
-      adminNotes: "",
       lastLogin: FieldValue.serverTimestamp(),
     });
   } else {

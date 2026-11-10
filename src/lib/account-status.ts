@@ -89,4 +89,55 @@ export type AdminUserPatch = {
   adminNotes?: string;
   /** Grant or remove admin rights. Owner only. */
   isAdmin?: boolean;
+  /** Exact trial end as an ISO timestamp. Can shorten a trial as well as lengthen it. */
+  setTrialEndsAt?: string;
+};
+
+export type AdminAction = "password_reset" | "send_verification" | "mark_verified" | "view_as";
+
+export type AuditEntry = {
+  id: string;
+  actorUid: string;
+  actorEmail: string;
+  action: string;
+  targetUid: string | null;
+  details: Record<string, unknown>;
+  at: string | null;
+};
+
+export type SupportStatus = "open" | "resolved";
+
+export type SupportReply = { message: string; at: string; byEmail: string };
+
+export type SupportMessage = {
+  id: string;
+  ownerId: string;
+  name: string;
+  email: string;
+  message: string;
+  status: SupportStatus;
+  createdAt: string | null;
+  replies: SupportReply[];
+};
+
+/** Plain-English labels for the activity log. */
+export const AUDIT_LABELS: Record<string, string> = {
+  comp_on: "Made account free (comped)",
+  comp_off: "Removed free account",
+  comp_note: "Edited comp note",
+  notes: "Edited private notes",
+  freeze: "Froze account",
+  unfreeze: "Unfroze account",
+  extend_trial: "Extended trial",
+  set_trial: "Set trial end date",
+  grant_admin: "Granted admin",
+  remove_admin: "Removed admin",
+  delete_account: "Deleted account",
+  password_reset: "Sent password reset email",
+  send_verification: "Sent verification email",
+  mark_verified: "Marked email as verified",
+  view_as: "Viewed as user",
+  support_reply: "Replied to support message",
+  support_resolved: "Resolved support message",
+  support_reopened: "Reopened support message",
 };

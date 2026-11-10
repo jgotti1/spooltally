@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { BackLink } from "@/components/BackLink";
 
 export default function ContactPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, getIdToken } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,9 +41,10 @@ export default function ContactPage() {
     setError("");
     setStatus("sending");
     try {
+      const token = await getIdToken();
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ name, email, message }),
       });
       const data = await res.json();

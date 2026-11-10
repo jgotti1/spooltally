@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
+import { AdminNav } from "@/components/admin/AdminNav";
 import { StatusBadge, formatAdminDate, formatAdminRelative } from "@/components/admin/StatusBadge";
 import { accountStatus, type AccountStatus, type AdminUserSummary } from "@/lib/account-status";
 import { fetchAdminUsers } from "@/lib/admin-api";
@@ -97,8 +98,8 @@ export default function AdminUsersPage() {
     <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
-        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Owner</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Users</h1>
+        <AdminNav />
+        <h1 className="mt-6 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Users</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Everyone who has signed up. Select a user to see details, comp them, or view their account.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -160,7 +161,7 @@ export default function AdminUsersPage() {
                   className="grid gap-2 px-5 py-4 transition-colors hover:bg-slate-50 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-4 dark:hover:bg-white/[0.04]"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-950 dark:text-white">{u.name || u.email}
+                    <span className="block truncate text-sm font-semibold text-slate-950 dark:text-white">{u.name || u.email || "Unnamed user"}
                       {u.isAdmin && (
                         <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 align-middle text-[10px] font-bold tracking-wide text-white uppercase dark:bg-white dark:text-slate-950">
                           {u.isOwner ? "Owner" : "Admin"}
