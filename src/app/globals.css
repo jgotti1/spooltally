@@ -193,7 +193,7 @@ html[data-view-as] button[type="submit"] {
 
   /* ---- Typography ---- */
   .st-eyebrow {
-    @apply inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400;
+    @apply flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400;
   }
   .st-title {
     @apply font-display text-[2rem] leading-[1.04] font-semibold tracking-[-0.025em] text-slate-950 sm:text-[2.5rem] dark:text-white;

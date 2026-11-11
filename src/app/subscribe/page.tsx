@@ -60,7 +60,7 @@ export default function SubscribePage() {
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-14 sm:px-10">
         <BackLink />
         <div className="mx-auto max-w-2xl text-center">
-          <p className="st-eyebrow">
+          <p className="st-eyebrow justify-center">
             {locked ? (info?.status === "canceled" ? "Your subscription ended" : "Your trial has ended") : "Plans"}
           </p>
           <h1 className="mt-2 st-title">
