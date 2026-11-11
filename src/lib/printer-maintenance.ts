@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   deleteDoc,
   getDocs,
+  runTransaction,
   updateDoc,
   where,
   writeBatch,
@@ -78,6 +79,8 @@ export type Printer = {
   model: string;
   /** The printer's own next-due date — set independently of logging completed maintenance. "" means unscheduled. */
   nextDueDate: string;
+  /** Optional running total of print hours on the printer. Informational — it never affects due status. */
+  currentHours: number | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -89,6 +92,8 @@ export type MaintenanceRecord = {
   printerId: string;
   completedDate: string;
   notes: string;
+  /** Optional: the printer's total print hours at the time of the service. */
+  printerHours: number | null;
   createdAt: Timestamp | null;
 };
 
@@ -122,6 +127,7 @@ export function subscribeToPrinters(
           name: data.name,
           model: data.model,
           nextDueDate: data.nextDueDate ?? "",
+          currentHours: typeof data.currentHours === "number" ? data.currentHours : null,
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
         } satisfies Printer;
@@ -153,6 +159,7 @@ export function subscribeToMaintenanceRecords(
           printerId: data.printerId,
           completedDate: data.completedDate,
           notes: data.notes,
+          printerHours: typeof data.printerHours === "number" ? data.printerHours : null,
           createdAt: data.createdAt ?? null,
         } satisfies MaintenanceRecord;
       });
@@ -169,7 +176,7 @@ export function subscribeToMaintenanceRecords(
 
 export async function addPrinter(
   ownerId: string,
-  input: { name: string; model: string; nextDueDate?: string },
+  input: { name: string; model: string; nextDueDate?: string; currentHours?: number | null },
 ): Promise<string> {
   assertWritable();
   if (!db) throw configError;
@@ -178,6 +185,7 @@ export async function addPrinter(
     name: input.name.trim(),
     model: input.model.trim(),
     nextDueDate: input.nextDueDate ?? "",
+    currentHours: input.currentHours ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -194,29 +202,75 @@ export async function updatePrinterNextDueDate(printerId: string, nextDueDate: s
   });
 }
 
+/**
+ * Turns the text of an hours field into a reading: blank (or anything that isn't a number of 0 or more) means "not
+ * entered" and is stored as null. One decimal place is kept, which is plenty for a print-hours counter.
+ */
+export function parseHours(value: string): number | null {
+  if (!value.trim()) return null;
+  const hours = Number(value);
+  return Number.isFinite(hours) && hours >= 0 ? Math.round(hours * 10) / 10 : null;
+}
+
+export function formatHours(hours: number): string {
+  return `${hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} h`;
+}
+
+/**
+ * The printer's running total after a new reading: hours only move forward, so logging an older or back-dated service
+ * with a lower reading never rolls the printer's total back (correct it from the printer's Edit panel instead).
+ */
+function advancedHours(existing: unknown, reading: number | null): number | null {
+  const current = typeof existing === "number" ? existing : null;
+  if (reading === null) return current;
+  return current === null ? reading : Math.max(current, reading);
+}
+
 export async function addMaintenanceRecord(
   ownerId: string,
-  input: { printerId: string; completedDate: string; notes: string },
+  input: { printerId: string; completedDate: string; notes: string; printerHours?: number | null },
 ): Promise<string> {
   assertWritable();
   if (!db) throw configError;
-  const recordRef = await addDoc(maintenanceRecordsCollection(), {
-    ownerId,
-    printerId: input.printerId,
-    completedDate: input.completedDate,
-    notes: input.notes.trim(),
-    createdAt: serverTimestamp(),
+  const firestore = db;
+  const recordRef = doc(maintenanceRecordsCollection());
+  const printerRef = doc(printersCollection(), input.printerId);
+  const reading = input.printerHours ?? null;
+  // One transaction so the service entry and the printer's running total can never disagree.
+  await runTransaction(firestore, async (transaction) => {
+    const printerSnap = reading === null ? null : await transaction.get(printerRef);
+    transaction.set(recordRef, {
+      ownerId,
+      printerId: input.printerId,
+      completedDate: input.completedDate,
+      notes: input.notes.trim(),
+      printerHours: reading,
+      createdAt: serverTimestamp(),
+    });
+    if (printerSnap) {
+      transaction.update(printerRef, {
+        currentHours: advancedHours(printerSnap.data()?.currentHours, reading),
+        updatedAt: serverTimestamp(),
+      });
+    }
   });
   return recordRef.id;
 }
 
-/** Renames a printer or changes its model; the due date and history are untouched. */
-export async function updatePrinterDetails(printerId: string, input: { name: string; model: string }): Promise<void> {
+/**
+ * Renames a printer, changes its model, or sets its current print hours (null clears them, undefined leaves them as
+ * they are); the due date and history are untouched.
+ */
+export async function updatePrinterDetails(
+  printerId: string,
+  input: { name: string; model: string; currentHours?: number | null },
+): Promise<void> {
   assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(printersCollection(), printerId), {
     name: input.name.trim(),
     model: input.model.trim(),
+    ...(input.currentHours !== undefined ? { currentHours: input.currentHours } : {}),
     updatedAt: serverTimestamp(),
   });
 }
@@ -236,13 +290,14 @@ export async function deletePrinter(ownerId: string, printerId: string): Promise
 
 export async function updateMaintenanceRecord(
   recordId: string,
-  input: { completedDate: string; notes: string },
+  input: { completedDate: string; notes: string; printerHours?: number | null },
 ): Promise<void> {
   assertWritable();
   if (!db) throw configError;
   await updateDoc(doc(maintenanceRecordsCollection(), recordId), {
     completedDate: input.completedDate,
     notes: input.notes.trim(),
+    ...(input.printerHours !== undefined ? { printerHours: input.printerHours } : {}),
   });
 }
 
@@ -259,24 +314,30 @@ export async function deleteMaintenanceRecord(recordId: string): Promise<void> {
  */
 export async function completeScheduledMaintenance(
   ownerId: string,
-  input: { printerId: string; completedDate: string; notes: string; nextDueDate?: string },
+  input: { printerId: string; completedDate: string; notes: string; nextDueDate?: string; printerHours?: number | null },
 ): Promise<string> {
   assertWritable();
   if (!db) throw configError;
-  const batch = writeBatch(db);
+  const firestore = db;
   const recordRef = doc(maintenanceRecordsCollection());
-  batch.set(recordRef, {
-    ownerId,
-    printerId: input.printerId,
-    completedDate: input.completedDate,
-    notes: input.notes.trim(),
-    createdAt: serverTimestamp(),
+  const printerRef = doc(printersCollection(), input.printerId);
+  const reading = input.printerHours ?? null;
+  await runTransaction(firestore, async (transaction) => {
+    const printerSnap = reading === null ? null : await transaction.get(printerRef);
+    transaction.set(recordRef, {
+      ownerId,
+      printerId: input.printerId,
+      completedDate: input.completedDate,
+      notes: input.notes.trim(),
+      printerHours: reading,
+      createdAt: serverTimestamp(),
+    });
+    transaction.update(printerRef, {
+      nextDueDate: input.nextDueDate ?? "",
+      ...(printerSnap ? { currentHours: advancedHours(printerSnap.data()?.currentHours, reading) } : {}),
+      updatedAt: serverTimestamp(),
+    });
   });
-  batch.update(doc(printersCollection(), input.printerId), {
-    nextDueDate: input.nextDueDate ?? "",
-    updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
   return recordRef.id;
 }
 

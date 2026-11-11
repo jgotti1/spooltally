@@ -7,6 +7,7 @@ import {
   completeScheduledMaintenance,
   deleteMaintenanceRecord,
   deletePrinter,
+  formatHours,
   formatMaintenanceDate,
   isMaintenanceSoon,
   latestMaintenanceByPrinter,
@@ -14,6 +15,7 @@ import {
   maintenanceDueStatus,
   MAINTENANCE_UPCOMING_WINDOW_DAYS,
   OTHER_PRINTER_MODEL,
+  parseHours,
   PRINTER_MODEL_GROUPS,
   subscribeToMaintenanceRecords,
   subscribeToPrinters,
@@ -96,12 +98,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [printerName, setPrinterName] = useState("");
   const [printerModel, setPrinterModel] = useState(PRINTER_MODEL_GROUPS[0].models[0] as string);
   const [customModel, setCustomModel] = useState("");
+  const [printerHours, setPrinterHours] = useState("");
   const [savingPrinter, setSavingPrinter] = useState(false);
 
   const [recordMode, setRecordMode] = useState<"completed" | "schedule">("completed");
   const [selectedPrinterId, setSelectedPrinterId] = useState("");
   const [completedDate, setCompletedDate] = useState(() => localDateString());
   const [notes, setNotes] = useState("");
+  const [recordHours, setRecordHours] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [savingRecord, setSavingRecord] = useState(false);
 
@@ -115,6 +119,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [completeDate, setCompleteDate] = useState(() => localDateString());
   const [completeNotes, setCompleteNotes] = useState("");
   const [completeNextDate, setCompleteNextDate] = useState("");
+  const [completeHours, setCompleteHours] = useState("");
   const [completeError, setCompleteError] = useState("");
   const [savingComplete, setSavingComplete] = useState(false);
 
@@ -123,12 +128,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [editName, setEditName] = useState("");
   const [editModel, setEditModel] = useState("");
   const [editCustomModel, setEditCustomModel] = useState("");
+  const [editHours, setEditHours] = useState("");
   const [savingPrinter_, setSavingPrinter_] = useState(false);
 
   // Fix a typo in a finished entry, or remove one logged by mistake.
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [editRecordDate, setEditRecordDate] = useState("");
   const [editRecordNotes, setEditRecordNotes] = useState("");
+  const [editRecordHours, setEditRecordHours] = useState("");
   const [savingRecordEdit, setSavingRecordEdit] = useState(false);
 
   useEffect(() => {
@@ -158,6 +165,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const maintenancePrinterId = printers.some((printer) => printer.id === selectedPrinterId)
     ? selectedPrinterId
     : (printers[0]?.id ?? "");
+  const maintenancePrinterHours = printers.find((printer) => printer.id === maintenancePrinterId)?.currentHours ?? null;
   const recordsByPrinter = useMemo(() => {
     const grouped = new Map<string, MaintenanceRecord[]>();
     for (const record of records) {
@@ -216,6 +224,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   function startEditingPrinter() {
     if (!detailPrinter) return;
     setEditName(detailPrinter.name);
+    setEditHours(detailPrinter.currentHours === null ? "" : String(detailPrinter.currentHours));
     if (knownModels.includes(detailPrinter.model)) {
       setEditModel(detailPrinter.model);
       setEditCustomModel("");
@@ -234,7 +243,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     setSavingPrinter_(true);
     setError("");
     try {
-      await updatePrinterDetails(detailPrinter.id, { name: editName, model });
+      await updatePrinterDetails(detailPrinter.id, { name: editName, model, currentHours: parseHours(editHours) });
       setEditingPrinter(false);
       setNotice("Printer updated.");
     } catch (saveError) {
@@ -269,6 +278,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     setEditingRecordId(record.id);
     setEditRecordDate(record.completedDate);
     setEditRecordNotes(record.notes);
+    setEditRecordHours(record.printerHours === null ? "" : String(record.printerHours));
   }
 
   async function handleSaveRecordEdit(event: FormEvent) {
@@ -277,7 +287,11 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     setSavingRecordEdit(true);
     setError("");
     try {
-      await updateMaintenanceRecord(editingRecordId, { completedDate: editRecordDate, notes: editRecordNotes });
+      await updateMaintenanceRecord(editingRecordId, {
+        completedDate: editRecordDate,
+        notes: editRecordNotes,
+        printerHours: parseHours(editRecordHours),
+      });
       setEditingRecordId(null);
       setNotice("Maintenance record updated.");
     } catch (saveError) {
@@ -303,6 +317,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     setCompleteDate(localDateString());
     setCompleteNotes("");
     setCompleteNextDate("");
+    setCompleteHours("");
     setCompleteError("");
     setCompleting(true);
   }
@@ -319,6 +334,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
         completedDate: completeDate,
         notes: completeNotes,
         nextDueDate: completeNextDate,
+        printerHours: parseHours(completeHours),
       });
       setDetailDueDate(completeNextDate);
       setCompleting(false);
@@ -357,10 +373,11 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     setError("");
     setNotice("");
     try {
-      const printerId = await addPrinter(ownerId, { name: printerName, model });
+      const printerId = await addPrinter(ownerId, { name: printerName, model, currentHours: parseHours(printerHours) });
       setPrinterName("");
       setPrinterModel(PRINTER_MODEL_GROUPS[0].models[0]);
       setCustomModel("");
+      setPrinterHours("");
       setSelectedPrinterId(printerId);
       setNotice("Printer added. You can record its first maintenance below.");
     } catch (saveError) {
@@ -381,9 +398,11 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
         printerId: maintenancePrinterId,
         completedDate,
         notes,
+        printerHours: parseHours(recordHours),
       });
       setCompletedDate(localDateString());
       setNotes("");
+      setRecordHours("");
       setNotice("Maintenance recorded.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Couldn't save that maintenance record.");
@@ -521,6 +540,25 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 />
               </div>
             )}
+            <div>
+              <label htmlFor="printerHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Current print hours <span className="font-normal text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="printerHours"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.1"
+                value={printerHours}
+                onChange={(event) => setPrinterHours(event.target.value)}
+                placeholder="e.g. 1250"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+              />
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                Total hours on the printer&rsquo;s counter. Leave blank if you don&rsquo;t track it.
+              </p>
+            </div>
             <button
               type="submit"
               disabled={savingPrinter}
@@ -607,6 +645,27 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   placeholder="Cleaned build plate, lubricated rails, checked belts…"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
+              </div>
+              <div>
+                <label htmlFor="recordHours" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Printer hours at service <span className="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="recordHours"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.1"
+                  value={recordHours}
+                  onChange={(event) => setRecordHours(event.target.value)}
+                  placeholder="e.g. 1250"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                />
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  {maintenancePrinterHours !== null
+                    ? `Last recorded: ${formatHours(maintenancePrinterHours)}. Entering a reading here updates the printer.`
+                    : "Entering a reading here also sets the printer\u2019s current hours."}
+                </p>
               </div>
               <button
                 type="submit"
@@ -742,6 +801,11 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       ? "No maintenance recorded yet."
                       : `Last service ${formatMaintenanceDate(latest?.completedDate ?? "")} · ${history.length} record${history.length === 1 ? "" : "s"}`}
                   </p>
+                  {printer.currentHours !== null && (
+                    <p className="mt-1 text-xs text-slate-500 tabular-nums dark:text-slate-400">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{formatHours(printer.currentHours)}</span> printed
+                    </p>
+                  )}
 
                   <button
                     type="button"
@@ -776,6 +840,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         ? "No service yet"
                         : `Last service ${formatMaintenanceDate(latest?.completedDate ?? "")}`}{" "}
                       · {history.length} record{history.length === 1 ? "" : "s"}
+                      {printer.currentHours !== null ? ` · ${formatHours(printer.currentHours)} printed` : ""}
                     </p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}>
@@ -811,7 +876,9 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 </span>
                 <div className="min-w-0">
                   <h3 className="font-display text-xl leading-tight font-semibold tracking-[-0.01em] break-words text-slate-950 dark:text-white">{detailPrinter.name}</h3>
-                  <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{detailPrinter.model}</p>
+                  <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{detailPrinter.model}
+                    {detailPrinter.currentHours !== null ? ` · ${formatHours(detailPrinter.currentHours)} printed` : ""}
+                  </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
@@ -897,6 +964,22 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     />
                   </div>
                 )}
+                <div>
+                  <label htmlFor="editPrinterHours" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Current print hours <span className="font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="editPrinterHours"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    value={editHours}
+                    onChange={(event) => setEditHours(event.target.value)}
+                    placeholder="e.g. 1250"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="submit"
@@ -997,6 +1080,22 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         onChange={(event) => setCompleteNotes(event.target.value)}
                         placeholder="Cleaned build plate, lubricated rails, checked belts…"
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="completeHours" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Printer hours now <span className="font-normal text-slate-400">(optional)</span>
+                      </label>
+                      <input
+                        id="completeHours"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.1"
+                        value={completeHours}
+                        onChange={(event) => setCompleteHours(event.target.value)}
+                        placeholder="e.g. 1250"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                       />
                     </div>
                     <div>
@@ -1107,6 +1206,22 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                               />
                             </div>
+                            <div>
+                              <label htmlFor="editRecordHours" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Printer hours at service <span className="font-normal text-slate-400">(optional)</span>
+                              </label>
+                              <input
+                                id="editRecordHours"
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="0.1"
+                                value={editRecordHours}
+                                onChange={(event) => setEditRecordHours(event.target.value)}
+                                placeholder="e.g. 1250"
+                                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                              />
+                            </div>
                             <div className="flex gap-2">
                               <button
                                 type="submit"
@@ -1131,6 +1246,9 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                           <div className="flex items-start justify-between gap-3">
                             <span className="font-semibold text-slate-800 dark:text-slate-200">
                               Completed {formatMaintenanceDate(record.completedDate)}
+                              {record.printerHours !== null && (
+                                <span className="font-normal text-slate-500 dark:text-slate-400"> · at {formatHours(record.printerHours)}</span>
+                              )}
                             </span>
                             <span className="flex shrink-0 gap-3">
                               <button
