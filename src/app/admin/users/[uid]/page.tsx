@@ -10,7 +10,7 @@ import { accountStatus, type AdminAction, type AdminUserDetail, type AdminUserPa
 import { deleteAdminUser, fetchAdminUser, fetchAuditLog, fetchSupportMessages, runAdminAction, updateAdminUser } from "@/lib/admin-api";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AuditList } from "@/components/admin/AuditList";
-import { SupportThread } from "@/components/admin/SupportThread";
+import { SupportSection } from "@/components/admin/SupportSection";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -450,33 +450,28 @@ function AdminUserPageInner() {
             )}
 
             <div className="mt-4">
-              <Card title={`Support messages${support ? ` (${support.length})` : ""}`}>
-                {!support ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-                ) : support.length ? (
-                  <div className="space-y-3">
-                    {support.map((m) => (
-                      <SupportThread
-                        key={m.id}
-                        message={m}
-                        getIdToken={getIdToken}
-                        onChange={(next) => {
-                          setSupport((all) => (all ?? []).map((x) => (x.id === next.id ? next : x)));
-                          void refreshHistory();
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">They haven&rsquo;t contacted support.</p>
-                )}
-              </Card>
+              <SupportSection
+                messages={support}
+                getIdToken={getIdToken}
+                onChange={(next) => {
+                  setSupport((all) => (all ?? []).map((x) => (x.id === next.id ? next : x)));
+                  void refreshHistory();
+                }}
+              />
             </div>
 
             <div className="mt-4">
-              <Card title="Admin history">
-                {history ? <AuditList entries={history} /> : <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
-              </Card>
+              <details className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  <span>
+                    Account history <span className="font-normal text-slate-500 dark:text-slate-400">· {history ? `${history.length} entries` : "Loading…"}</span>
+                  </span>
+                  <span aria-hidden="true" className="text-slate-400 transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="mt-3">
+                  {history ? <AuditList entries={history} showKind /> : <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
+                </div>
+              </details>
             </div>
 
             <div className="mt-4">

@@ -120,8 +120,12 @@ export type AdminUserPatch = {
 
 export type AdminAction = "password_reset" | "send_verification" | "mark_verified" | "view_as";
 
+/** "admin" = an admin action; "system" = something a customer or the app did. Entries from before this field are admin. */
+export type HistoryKind = "admin" | "system";
+
 export type AuditEntry = {
   id: string;
+  kind: HistoryKind;
   actorUid: string;
   actorEmail: string;
   action: string;
@@ -165,4 +169,9 @@ export const AUDIT_LABELS: Record<string, string> = {
   support_reply: "Replied to support message",
   support_resolved: "Resolved support message",
   support_reopened: "Reopened support message",
+  account_created: "Account created",
+  sign_in: "Signed in",
+  support_message: "Sent a support message",
+  export_history: "Exported the history log",
+  purge_history: "Purged history",
 };

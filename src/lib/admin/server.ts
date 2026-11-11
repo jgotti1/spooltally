@@ -192,11 +192,20 @@ export { Timestamp, TRIAL_DAYS };
 /** Server-only log of every admin action. Like adminPrivate, no Firestore rule matches it, so clients can never read it. */
 export const ADMIN_AUDIT_COLLECTION = "adminAudit";
 
-/** Records who did what to which account. Never throws: a logging failure must not undo or block the action itself. */
-export async function audit(actor: DecodedIdToken, action: string, targetUid: string | null, details: Record<string, unknown> = {}) {
+/** One entry in the history log. "admin" = something an admin did; "system" = something a customer or the app did. */
+export type HistoryKind = "admin" | "system";
+
+async function writeHistory(
+  kind: HistoryKind,
+  actor: { uid: string; email?: string | null },
+  action: string,
+  targetUid: string | null,
+  details: Record<string, unknown>,
+) {
   try {
     const { FieldValue } = await import("firebase-admin/firestore");
     await adminDb().collection(ADMIN_AUDIT_COLLECTION).add({
+      kind,
       actorUid: actor.uid,
       actorEmail: actor.email ?? "",
       action,
@@ -205,6 +214,21 @@ export async function audit(actor: DecodedIdToken, action: string, targetUid: st
       at: FieldValue.serverTimestamp(),
     });
   } catch (error) {
-    console.error("[admin] audit log write failed", error);
+    console.error("[history] log write failed", error);
   }
+}
+
+/** Records an admin action: who did what to which account. Never throws: a logging failure must not undo the action. */
+export async function audit(actor: DecodedIdToken, action: string, targetUid: string | null, details: Record<string, unknown> = {}) {
+  await writeHistory("admin", actor, action, targetUid, details);
+}
+
+/** Records something a customer (or the app on their behalf) did: signup, sign-in, support message. Never throws. */
+export async function logEvent(
+  actor: { uid: string; email?: string | null },
+  action: string,
+  targetUid: string | null,
+  details: Record<string, unknown> = {},
+) {
+  await writeHistory("system", actor, action, targetUid, details);
 }

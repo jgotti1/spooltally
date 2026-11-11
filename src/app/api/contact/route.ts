@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
-import { adminDb, requireUser } from "@/lib/admin/server";
+import { adminDb, logEvent, requireUser } from "@/lib/admin/server";
 
 // Server-only: never sent to the browser.
 const SUPPORT_EMAIL = "jgotti711@gmail.com";
@@ -15,10 +15,12 @@ const SUPPORT_EMAIL = "jgotti711@gmail.com";
  */
 export async function POST(request: Request) {
   let ownerId = "";
+  let senderEmail: string | null = null;
   if (request.headers.get("authorization")) {
     const guard = await requireUser(request);
     if (!guard.ok) return guard.response;
     ownerId = guard.token.uid;
+    senderEmail = guard.token.email ?? null;
   }
 
   let body: { name?: string; email?: string; message?: string; website?: string };
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await adminDb().collection("supportMessages").add({
+    const created = await adminDb().collection("supportMessages").add({
       ownerId,
       public: ownerId === "",
       name,
@@ -52,6 +54,10 @@ export async function POST(request: Request) {
       status: "open",
       replies: [],
       createdAt: FieldValue.serverTimestamp(),
+    });
+    await logEvent({ uid: ownerId || "public", email: senderEmail ?? email }, "support_message", ownerId || null, {
+      messageId: created.id,
+      ...(ownerId ? {} : { public: true }),
     });
   } catch (error) {
     console.error("Saving support message failed:", error);

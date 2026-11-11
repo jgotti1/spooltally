@@ -68,3 +68,43 @@ export async function updateSupportMessage(
     })
   ).message;
 }
+
+export type HistoryKindFilter = "all" | "admin" | "system";
+
+export async function fetchHistoryPage(
+  getIdToken: TokenGetter,
+  opts: { kind: HistoryKindFilter; cursor?: string | null },
+): Promise<{ entries: AuditEntry[]; nextCursor: string | null }> {
+  const params = new URLSearchParams({ kind: opts.kind, limit: "100" });
+  if (opts.cursor) params.set("cursor", opts.cursor);
+  return adminRequest(getIdToken, `/api/admin/audit?${params}`);
+}
+
+/** Downloads the log as a CSV file through the browser. */
+export async function downloadHistory(getIdToken: TokenGetter, kind: HistoryKindFilter, days: number | null): Promise<void> {
+  const token = await getIdToken();
+  if (!token) throw new Error("Not signed in.");
+  const params = new URLSearchParams({ kind });
+  if (days) params.set("days", String(days));
+  const response = await fetch(`/api/admin/audit/export?${params}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(typeof body.error === "string" ? body.error : "Couldn't export the history.");
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `spooltally-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function purgeHistory(getIdToken: TokenGetter, olderThanDays: number | null, confirm: string): Promise<number> {
+  const result = await adminRequest<{ deleted: number }>(getIdToken, "/api/admin/audit", {
+    method: "DELETE",
+    body: JSON.stringify({ confirm, ...(olderThanDays ? { olderThanDays } : {}) }),
+  });
+  return result.deleted;
+}
