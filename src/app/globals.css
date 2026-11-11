@@ -5,16 +5,47 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
+}
+
+/* ------------------------------------------------------------------
+   Design tokens — "workshop ledger": a warm layered canvas, hairline
+   surfaces with soft depth, one brand blue, and a display face for
+   headlines. Light values on :root, dark overrides on .dark.
+   ------------------------------------------------------------------ */
+:root {
+  --st-canvas: #f3f5f9;
+  --st-ink: #0b1220;
+  --st-brand: #1d6ff2;
+  --st-brand-deep: #0b1a2b;
+  --st-glow-brand: rgba(29, 111, 242, 0.14);
+  --st-glow-mint: rgba(20, 184, 122, 0.1);
+  --st-ring: rgba(15, 23, 42, 0.07);
+  --st-ring-strong: rgba(15, 23, 42, 0.12);
+  --st-surface: #ffffff;
+  --st-surface-2: #f8fafc;
+  --st-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -16px rgba(16, 24, 40, 0.16);
+  --st-shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.05), 0 22px 44px -18px rgba(16, 24, 40, 0.24);
+  --st-dot: rgba(15, 23, 42, 0.08);
+}
+
+.dark {
+  --st-canvas: #070b12;
+  --st-ink: #e6edf6;
+  --st-glow-brand: rgba(69, 169, 255, 0.12);
+  --st-glow-mint: rgba(40, 223, 152, 0.07);
+  --st-ring: rgba(255, 255, 255, 0.08);
+  --st-ring-strong: rgba(255, 255, 255, 0.14);
+  --st-surface: rgba(255, 255, 255, 0.04);
+  --st-surface-2: rgba(255, 255, 255, 0.03);
+  --st-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 34px -18px rgba(0, 0, 0, 0.65);
+  --st-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 48px -20px rgba(0, 0, 0, 0.8);
+  --st-dot: rgba(255, 255, 255, 0.06);
 }
 
 body {
-  background: #ffffff;
-  color: #0f172a;
-}
-
-.dark body {
-  background: #05080e;
-  color: #e2e8f0;
+  background: var(--st-canvas);
+  color: var(--st-ink);
 }
 
 * {
@@ -22,13 +53,43 @@ body {
 }
 
 ::selection {
-  background: rgba(22, 136, 255, 0.2);
+  background: rgba(29, 111, 242, 0.2);
   color: #071a29;
 }
 
 .dark ::selection {
   background: rgba(69, 169, 255, 0.3);
   color: #f0f7ff;
+}
+
+/* Form controls: brand accent on checks/radios, and a soft focus halo everywhere (adds to each input's own border styles). */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--st-brand);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--st-brand);
+  box-shadow: 0 0 0 4px rgba(29, 111, 242, 0.14);
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+.dark select:focus-visible,
+.dark textarea:focus-visible {
+  border-color: #45a9ff;
+  box-shadow: 0 0 0 4px rgba(69, 169, 255, 0.18);
 }
 
 /* "View as" is read-only: hide the links that start something new and disable save buttons on the customer's pages. */
@@ -39,4 +100,289 @@ html[data-view-as] a[href$="/new"] {
 html[data-view-as] button[type="submit"] {
   pointer-events: none;
   opacity: 0.4;
+}
+
+@layer components {
+  /* ---- Page canvas: a fixed glow + fading dot grid behind every authenticated page. ---- */
+  .st-page {
+    position: relative;
+    isolation: isolate;
+    background: var(--st-canvas);
+    color: var(--st-ink);
+  }
+  .st-page::before,
+  .st-page::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .st-page::before {
+    background:
+      radial-gradient(900px 420px at 10% -8%, var(--st-glow-brand), transparent 62%),
+      radial-gradient(720px 380px at 96% 2%, var(--st-glow-mint), transparent 60%);
+  }
+  .st-page::after {
+    opacity: 0.6;
+    background-image: radial-gradient(var(--st-dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black, transparent 58%);
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent 58%);
+  }
+
+  /* ---- Surfaces ---- */
+  .st-card {
+    @apply rounded-2xl;
+    background: var(--st-surface);
+    box-shadow:
+      inset 0 0 0 1px var(--st-ring),
+      var(--st-shadow);
+  }
+  .st-card-hover {
+    transition:
+      transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 200ms ease;
+  }
+  .st-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 0 0 1px var(--st-ring-strong),
+      var(--st-shadow-hover);
+  }
+  .st-card-hover:active {
+    transform: translateY(0);
+  }
+  /* A floating accent bar on the card's left edge, for status-tinted rows and cards. */
+  .st-accent {
+    position: relative;
+  }
+  .st-accent::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--st-accent, var(--st-brand));
+  }
+  .st-accent-rose {
+    --st-accent: linear-gradient(180deg, #fb7185, #e11d48);
+  }
+  .st-accent-amber {
+    --st-accent: linear-gradient(180deg, #fbbf24, #d97706);
+  }
+  .st-accent-blue {
+    --st-accent: linear-gradient(180deg, #60a5fa, #1d6ff2);
+  }
+  .st-accent-emerald {
+    --st-accent: linear-gradient(180deg, #34d399, #059669);
+  }
+  .st-accent-violet {
+    --st-accent: linear-gradient(180deg, #a78bfa, #7c3aed);
+  }
+
+  .st-empty {
+    @apply rounded-2xl text-center;
+    background:
+      radial-gradient(420px 200px at 50% 0%, var(--st-glow-brand), transparent 70%),
+      var(--st-surface-2);
+    box-shadow: inset 0 0 0 1px var(--st-ring);
+  }
+
+  /* ---- Typography ---- */
+  .st-eyebrow {
+    @apply inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400;
+  }
+  .st-title {
+    @apply font-display text-[2rem] leading-[1.04] font-semibold tracking-[-0.025em] text-slate-950 sm:text-[2.5rem] dark:text-white;
+  }
+  .st-section-title {
+    @apply font-display text-xl leading-tight font-semibold tracking-[-0.02em] text-slate-950 dark:text-white;
+  }
+  .st-lede {
+    @apply text-sm leading-6 text-slate-500 dark:text-slate-400;
+  }
+  .st-stat-value {
+    @apply font-display text-3xl leading-none font-semibold tracking-[-0.03em] text-slate-950 tabular-nums dark:text-white;
+  }
+
+  /* A section's identity chip — used next to eyebrows and on the dashboard tiles. */
+  .st-badge {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm;
+    background: var(--st-badge, linear-gradient(135deg, #3b82f6, #1d4ed8));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 6px 14px -8px var(--st-badge-glow, rgba(29, 78, 216, 0.6));
+  }
+  .st-badge-blue {
+    --st-badge: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    --st-badge-glow: rgba(29, 78, 216, 0.6);
+  }
+  .st-badge-violet {
+    --st-badge: linear-gradient(135deg, #a78bfa, #6d28d9);
+    --st-badge-glow: rgba(109, 40, 217, 0.55);
+  }
+  .st-badge-amber {
+    --st-badge: linear-gradient(135deg, #fbbf24, #d97706);
+    --st-badge-glow: rgba(217, 119, 6, 0.55);
+  }
+  .st-badge-slate {
+    --st-badge: linear-gradient(135deg, #475569, #0f172a);
+    --st-badge-glow: rgba(15, 23, 42, 0.5);
+  }
+  .st-badge-emerald {
+    --st-badge: linear-gradient(135deg, #34d399, #047857);
+    --st-badge-glow: rgba(4, 120, 87, 0.5);
+  }
+
+  /* ---- Buttons ---- */
+  .st-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white;
+    background: linear-gradient(100deg, #0b1a2b 0%, #10294a 55%, #1d6ff2 150%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 10px 22px -12px rgba(29, 111, 242, 0.7);
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      filter 150ms ease;
+  }
+  .st-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 14px 28px -12px rgba(29, 111, 242, 0.8);
+  }
+  .st-btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .st-btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .dark .st-btn-primary {
+    background: linear-gradient(100deg, #1d6ff2 0%, #2f7ff5 55%, #60a5fa 150%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 10px 22px -12px rgba(69, 169, 255, 0.7);
+  }
+
+  .st-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200;
+    background: var(--st-surface);
+    box-shadow: inset 0 0 0 1px var(--st-ring-strong);
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      background-color 150ms ease;
+  }
+  .st-btn-secondary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 0 0 1px var(--st-ring-strong),
+      0 8px 18px -12px rgba(16, 24, 40, 0.3);
+  }
+  .st-btn-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .st-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400;
+    box-shadow: inset 0 0 0 1px rgba(225, 29, 72, 0.25);
+    transition:
+      background-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+  .st-btn-danger:hover:not(:disabled) {
+    background: rgba(244, 63, 94, 0.08);
+  }
+
+  /* ---- Toolbar & segmented controls ---- */
+  .st-toolbar {
+    @apply flex flex-wrap items-center gap-2 rounded-2xl p-2;
+    background: var(--st-surface);
+    box-shadow:
+      inset 0 0 0 1px var(--st-ring),
+      var(--st-shadow);
+  }
+  .st-segment {
+    @apply flex h-11 items-center gap-1 rounded-xl p-1;
+    background: var(--st-surface-2);
+    box-shadow: inset 0 0 0 1px var(--st-ring);
+  }
+  .st-segment-on {
+    @apply bg-white text-slate-950 shadow-sm dark:bg-white/15 dark:text-white;
+  }
+  .st-segment-off {
+    @apply text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white;
+  }
+
+  /* ---- Filament level gauge ---- */
+  .st-gauge {
+    @apply h-1.5 w-full overflow-hidden rounded-full;
+    background: var(--st-surface-2);
+    box-shadow: inset 0 0 0 1px var(--st-ring);
+  }
+  .st-gauge > span {
+    @apply block h-full rounded-full;
+    background: linear-gradient(90deg, #60a5fa, #1d6ff2);
+    transition: width 300ms ease;
+  }
+  .st-gauge-warn > span {
+    background: linear-gradient(90deg, #fbbf24, #d97706);
+  }
+  .st-gauge-low > span {
+    background: linear-gradient(90deg, #fb7185, #e11d48);
+  }
+
+  /* ---- Loading ---- */
+  .st-loading {
+    @apply inline-flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400;
+  }
+  .st-loading::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: 2.5px solid var(--st-ring-strong);
+    border-top-color: var(--st-brand);
+    animation: st-spin 800ms linear infinite;
+  }
+}
+
+@keyframes st-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes st-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.st-rise {
+  animation: st-rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-rise,
+  .st-loading::before {
+    animation: none;
+  }
+  .st-card-hover,
+  .st-btn-primary,
+  .st-btn-secondary {
+    transition: none;
+  }
 }

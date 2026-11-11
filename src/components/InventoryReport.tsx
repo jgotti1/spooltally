@@ -72,9 +72,9 @@ export function InventoryReport({ rolls, settings }: InventoryReportProps) {
   );
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <div className="st-card p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Reorder report</p>
+        <p className="st-section-title text-base">Reorder report</p>
         <div className="flex items-center gap-4">
           <div className="relative">
             <button
@@ -86,7 +86,7 @@ export function InventoryReport({ rolls, settings }: InventoryReportProps) {
               {filter === "all" ? "Filter" : FILTER_OPTIONS.find((o) => o.value === filter)?.label}
             </button>
             {filterOpen && (
-              <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#0b1018]">
+              <div className="st-rise absolute right-0 z-10 mt-2 w-40 rounded-xl bg-white p-1 shadow-[inset_0_0_0_1px_var(--st-ring),0_16px_36px_-14px_rgba(16,24,40,0.3)] dark:bg-[#0d131c]">
                 {FILTER_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -138,7 +138,9 @@ export function InventoryReport({ rolls, settings }: InventoryReportProps) {
             {visibleGroups.map((g) => (
               <li
                 key={g.key}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-sm dark:border-white/10"
+                className={`st-accent flex items-center justify-between gap-3 rounded-xl py-2.5 pr-3 pl-5 text-sm shadow-[inset_0_0_0_1px_var(--st-ring)] ${
+                  g.status === "reorder" ? "st-accent-rose" : "st-accent-amber"
+                }`}
               >
                 <span className="text-slate-700 dark:text-slate-200">
                   {g.brand} {g.color} {g.material}

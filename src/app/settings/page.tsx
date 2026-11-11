@@ -33,8 +33,7 @@ const TABS: { id: Tab; label: string; blurb: string }[] = [
 const inputClass =
   "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500";
 const labelClass = "mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300";
-const saveClass =
-  "flex h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600";
+const saveClass = "st-btn-primary h-11 px-5";
 
 function NumberField({
   id,
@@ -177,8 +176,8 @@ export default function SettingsPage() {
 
   if (loading || !user) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
@@ -186,16 +185,25 @@ export default function SettingsPage() {
   const current = TABS.find((candidate) => candidate.id === tab) ?? TABS[0];
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
         <BackLink />
-        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Account</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">
-          Settings
-        </h1>
+        <div className="flex items-start gap-4">
+          <span className="st-badge st-badge-slate mt-1">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="h-5 w-5" aria-hidden="true">
+              <path d="M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
+              <path d="M10 3v1.6M10 15.4V17M3 10h1.6M15.4 10H17M5.1 5.1l1.1 1.1M13.8 13.8l1.1 1.1M14.9 5.1l-1.1 1.1M6.2 13.8l-1.1 1.1" />
+            </svg>
+          </span>
+          <div>
+            <p className="st-eyebrow">Account</p>
+            <h1 className="st-title mt-1">Settings</h1>
+            <p className="st-lede mt-2">The rates, fees and thresholds behind every number in the app.</p>
+          </div>
+        </div>
 
-        <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Settings sections">
+        <div className="st-segment mt-8 h-auto w-fit max-w-full flex-wrap" role="tablist" aria-label="Settings sections">
           {TABS.map((candidate) => (
             <button
               key={candidate.id}
@@ -207,10 +215,8 @@ export default function SettingsPage() {
                 setNotice("");
                 setError("");
               }}
-              className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors ${
-                tab === candidate.id
-                  ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+              className={`h-9 rounded-lg px-4 text-sm font-semibold transition-colors ${
+                tab === candidate.id ? "st-segment-on" : "st-segment-off"
               }`}
             >
               {candidate.label}
@@ -229,8 +235,8 @@ export default function SettingsPage() {
           </p>
         )}
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
-          <h2 className="text-lg font-semibold text-slate-950 dark:text-white">{current.label}</h2>
+        <section className="mt-6 st-card p-6">
+          <h2 className="st-section-title">{current.label}</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{current.blurb}</p>
 
           {!loaded ? (
@@ -370,7 +376,7 @@ export default function SettingsPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => setPricing({ ...DEFAULT_ESTIMATOR_SETTINGS, channels: pricing.channels })}
-                  className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                  className="st-btn-secondary h-11 px-4"
                 >
                   Reset rates to defaults
                 </button>
@@ -382,7 +388,7 @@ export default function SettingsPage() {
                 Suggested price = (price base + fixed fees) ÷ (1 − percentage fees), so the fees come out of the
                 sale without eating your markup. Check each marketplace&rsquo;s current fee page; these change.
               </p>
-              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+              <div className="overflow-hidden rounded-xl shadow-[inset_0_0_0_1px_var(--st-ring)]">
                 {pricing.channels.map((channel, index) => {
                   const inPerson = channel.id === "in_person";
                   return (
@@ -435,7 +441,7 @@ export default function SettingsPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => setPricing({ ...pricing, channels: DEFAULT_CHANNELS })}
-                  className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                  className="st-btn-secondary h-11 px-4"
                 >
                   Reset fees to defaults
                 </button>

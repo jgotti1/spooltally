@@ -66,12 +66,13 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** Segmented nav: the active section is a raised white pill on a tinted track; the rest sit flat until hovered. */
 function navLinkClass(active: boolean) {
   return [
-    "relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+    "relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-[color,background-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
     active
-      ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white",
+      ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(16,24,40,0.08),0_4px_12px_-6px_rgba(16,24,40,0.2)] dark:bg-white/[0.14] dark:text-white dark:shadow-none [&_svg]:text-blue-600 dark:[&_svg]:text-blue-300"
+      : "text-slate-500 hover:bg-white/60 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white",
   ].join(" ");
 }
 
@@ -83,21 +84,16 @@ export function Header() {
   const items = isAdmin ? [...navItems, adminNavItem] : navItems;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-white/10 dark:bg-[#05080e]/90">
-      <div className="flex items-center justify-between gap-4 px-4 py-2.5 md:grid md:grid-cols-[1fr_auto_1fr] sm:px-6">
-        <Link href="/dashboard" aria-label="SpoolTally home" className="flex shrink-0 items-center gap-3 justify-self-start">
-          <LogoMark className="h-11 w-11 rounded-xl shadow-sm" />
-          <span className="flex flex-col leading-tight">
-            <span className="text-2xl font-bold tracking-[-0.03em] text-slate-950 sm:text-3xl dark:text-white">
-              Spool<span className="text-blue-600 dark:text-blue-400">Tally</span>
-            </span>
-            <span className="hidden text-[11px] font-medium text-slate-400 xl:block dark:text-slate-500">
-              Track your filament. Price your prints. Keep tabs on projects.
-            </span>
+    <header className="sticky top-0 z-30 bg-white/80 shadow-[inset_0_-1px_0_var(--st-ring)] backdrop-blur-xl dark:bg-[#070b12]/80">
+      <div className="flex items-center justify-between gap-4 px-4 py-2.5 sm:px-6 md:grid md:grid-cols-[1fr_auto_1fr]">
+        <Link href="/dashboard" aria-label="SpoolTally home" className="group flex shrink-0 items-center gap-2.5 justify-self-start">
+          <LogoMark className="h-9 w-9 rounded-[10px] shadow-sm ring-1 ring-slate-900/[0.06] transition-transform duration-200 group-hover:-rotate-6 dark:ring-white/10" />
+          <span className="font-display text-[1.45rem] leading-none font-bold tracking-[-0.03em] text-slate-950 dark:text-white">
+            Spool<span className="text-blue-600 dark:text-blue-400">Tally</span>
           </span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1 md:flex dark:border-white/10 dark:bg-white/[0.03]">
+        <nav aria-label="Main" className="hidden items-center gap-1 rounded-xl bg-slate-100/80 p-1 ring-1 ring-slate-900/[0.05] md:flex dark:bg-white/[0.04] dark:ring-white/[0.07]">
           {items.map((item) => {
             const active = isActive(pathname, item.href);
             return (
@@ -109,24 +105,24 @@ export function Header() {
           })}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-3 justify-self-end">
+        <div className="flex shrink-0 items-center gap-2.5 justify-self-end">
           <ThemeToggle />
           <UserMenu />
         </div>
       </div>
 
       {/* Phones: the same links as a scrollable row, since the main nav is hidden below md. */}
-      <nav aria-label="Main" className="flex overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden dark:border-white/5">
-        <div className="mx-auto flex gap-1">
-        {items.map((item) => {
-          const active = isActive(pathname, item.href);
-          return (
-            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={navLinkClass(active)}>
-              {item.icon}
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav aria-label="Main" className="flex overflow-x-auto px-3 pb-2 md:hidden">
+        <div className="mx-auto flex gap-1 rounded-xl bg-slate-100/80 p-1 ring-1 ring-slate-900/[0.05] dark:bg-white/[0.04] dark:ring-white/[0.07]">
+          {items.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={navLinkClass(active)}>
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </header>

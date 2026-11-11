@@ -14,6 +14,7 @@ import { groupLowRolls, groupKey, statusByKey } from "@/lib/inventory-status";
 import { SORT_OPTIONS, sortRolls, type SortOption } from "@/lib/inventory-sort";
 import { exportRollsToExcel } from "@/lib/inventory-export";
 import { subscribeToProjects, type Project } from "@/lib/projects";
+import { SpoolArt } from "@/components/ui/Art";
 
 function PlusIcon() {
   return (
@@ -288,23 +289,30 @@ export default function InventoryPage() {
 
   if (loading || !user) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
         <BackLink />
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Inventory</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">
-              Filament rolls
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="st-badge st-badge-blue mt-1">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5" aria-hidden="true">
+                <circle cx="10" cy="10" r="7" />
+                <circle cx="10" cy="10" r="2.5" />
+              </svg>
+            </span>
+            <div>
+              <p className="st-eyebrow">Inventory</p>
+              <h1 className="st-title mt-1">Filament rolls</h1>
+              <p className="st-lede mt-2">Every spool on the shelf, with how much is left and what needs reordering.</p>
+            </div>
           </div>
           <div className="flex gap-3">
             {selectedRollId && (
@@ -314,7 +322,7 @@ export default function InventoryPage() {
                   setSelectedRollId(null);
                   setQuickAddWarning("");
                 }}
-                className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:bg-white/[0.06]"
+                className="st-btn-secondary h-11 px-3 text-slate-500 dark:text-slate-400"
               >
                 Clear selection
               </button>
@@ -324,14 +332,14 @@ export default function InventoryPage() {
               onClick={handleQuickAdd}
               disabled={rolls.length === 0 || quickAdding}
               title="Select a roll below, then click here: full rolls get +1 to quantity, partial rolls get a new full roll added of the same type"
-              className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+              className="st-btn-secondary h-11 px-4"
             >
               <DuplicateIcon />
               {quickAdding ? "Adding…" : "Quick add"}
             </button>
             <Link
               href="/inventory/new"
-              className="flex h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+              className="flex h-11 items-center gap-2 st-btn-primary px-4"
             >
               <PlusIcon />
               Add roll
@@ -343,17 +351,17 @@ export default function InventoryPage() {
           <InventoryReport rolls={rolls} settings={settings} />
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="st-toolbar mt-6">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search brand, material, color…"
-            className="h-11 flex-1 min-w-[200px] rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            className="h-11 min-w-[200px] flex-1 rounded-xl border border-transparent bg-slate-100/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-white/[0.08]"
           />
           <select
             value={materialFilter}
             onChange={(e) => setMaterialFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
           >
             {materials.map((m) => (
               <option key={m} value={m}>
@@ -364,7 +372,7 @@ export default function InventoryPage() {
           <select
             value={colorFilter}
             onChange={(e) => setColorFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
           >
             {colors.map((c) => (
               <option key={c} value={c}>
@@ -375,7 +383,7 @@ export default function InventoryPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -383,7 +391,7 @@ export default function InventoryPage() {
               </option>
             ))}
           </select>
-          <div className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="st-segment">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
@@ -391,8 +399,8 @@ export default function InventoryPage() {
               aria-pressed={viewMode === "grid"}
               className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                 viewMode === "grid"
-                  ? "bg-slate-950 text-white dark:bg-white/15"
-                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                  ? "st-segment-on"
+                  : "st-segment-off"
               }`}
             >
               <GridIcon />
@@ -404,8 +412,8 @@ export default function InventoryPage() {
               aria-pressed={viewMode === "list"}
               className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                 viewMode === "list"
-                  ? "bg-slate-950 text-white dark:bg-white/15"
-                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                  ? "st-segment-on"
+                  : "st-segment-off"
               }`}
             >
               <ListIcon />
@@ -415,7 +423,7 @@ export default function InventoryPage() {
             type="button"
             onClick={() => exportRollsToExcel(sorted)}
             disabled={sorted.length === 0}
-            className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+            className="st-btn-secondary h-11 px-4"
           >
             <DownloadIcon />
             Export to Excel
@@ -438,14 +446,18 @@ export default function InventoryPage() {
           {rollsLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading rolls…</p>
           ) : sorted.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.02]">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            <div className="st-empty st-rise px-8 py-12">
+              <SpoolArt className="mx-auto h-28 w-auto" />
+              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">
                 {rolls.length === 0 ? "No rolls yet." : "No rolls match your filters."}
               </p>
               {rolls.length === 0 && (
+                <p className="st-lede mx-auto mt-1 max-w-sm">Add the spools you have on hand and SpoolTally will keep track of what&rsquo;s left.</p>
+              )}
+              {rolls.length === 0 && (
                 <Link
                   href="/inventory/new"
-                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
+                  className="st-btn-primary mt-6 h-11 px-5"
                 >
                   <PlusIcon />
                   Add your first roll
@@ -453,7 +465,7 @@ export default function InventoryPage() {
               )}
             </div>
           ) : viewMode === "list" ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+            <div className="st-card overflow-hidden">
               {sorted.map((roll, i) => {
                 const status = stockStatusByKey.get(groupKey(roll));
                 return (
@@ -461,7 +473,7 @@ export default function InventoryPage() {
                     key={roll.id}
                     onDoubleClick={(event) => handleRollDoubleClick(event, roll.id)}
                     title="Double-click to open roll details"
-                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
+                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-slate-50/70 dark:hover:bg-white/[0.03] ${
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${
                       selectedRollId === roll.id
@@ -548,7 +560,7 @@ export default function InventoryPage() {
                           type="button"
                           onClick={() => handleQuickAddOne(roll)}
                           title="Add +1 to this roll's quantity"
-                          className="flex h-8 items-center rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                          className="st-btn-secondary h-8 px-2.5 text-xs"
                         >
                           +1
                         </button>
@@ -556,7 +568,7 @@ export default function InventoryPage() {
                       <Link
                         href={`/inventory/${roll.id}/edit`}
                         aria-label="Edit roll"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        className="st-btn-secondary h-8 w-8"
                       >
                         <PencilIcon />
                       </Link>
@@ -564,7 +576,7 @@ export default function InventoryPage() {
                         type="button"
                         onClick={() => handleDelete(roll)}
                         aria-label="Delete roll"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                        className="st-btn-danger h-8 w-8"
                       >
                         <TrashIcon />
                       </button>
@@ -582,14 +594,14 @@ export default function InventoryPage() {
                   key={roll.id}
                   onDoubleClick={(event) => handleRollDoubleClick(event, roll.id)}
                   title="Double-click to open roll details"
-                  className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
+                  className={`st-card st-card-hover flex flex-col p-4 ${
                     selectedRollId === roll.id
-                      ? "border-blue-400 ring-1 ring-inset ring-blue-300 dark:border-blue-400/60 dark:ring-blue-400/40"
+                      ? "outline outline-2 outline-offset-2 outline-blue-500/70"
                       : status === "reorder"
-                        ? "border-rose-300 dark:border-rose-500/40"
+                        ? "st-accent st-accent-rose pl-6"
                         : status === "warn"
-                          ? "border-amber-300 dark:border-amber-500/40"
-                          : "border-slate-200 dark:border-white/10"
+                          ? "st-accent st-accent-amber pl-6"
+                          : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -610,7 +622,7 @@ export default function InventoryPage() {
                         className="mt-1 h-4 w-4 shrink-0 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-white/20"
                       />
                       <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{roll.color}</p>
+                        <p className="font-display text-base leading-tight font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">{roll.color}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {roll.brand} · {roll.material}
                         </p>
@@ -652,8 +664,20 @@ export default function InventoryPage() {
                     </span>
                   )}
 
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                    <span>{Math.round(roll.remainingGrams)} g on hand</span>
+                  <div
+                    className={`st-gauge mt-4 ${status === "reorder" ? "st-gauge-low" : status === "warn" ? "st-gauge-warn" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <span
+                      style={{
+                        width: `${Math.max(0, Math.min(100, (roll.remainingGrams / Math.max(1, roll.sizeGrams * Math.max(1, roll.quantity || 1))) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-slate-500 tabular-nums dark:text-slate-400">
+                    <span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.round(roll.remainingGrams)} g</span> on hand
+                    </span>
                     <span>${roll.price.toFixed(2)} paid</span>
                   </div>
 
@@ -673,14 +697,14 @@ export default function InventoryPage() {
                         type="button"
                         onClick={() => handleQuickAddOne(roll)}
                         title="Add +1 to this roll's quantity"
-                        className="flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        className="st-btn-secondary h-9 px-3 text-xs"
                       >
                         +1
                       </button>
                     )}
                     <Link
                       href={`/inventory/${roll.id}/edit`}
-                      className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                      className="st-btn-secondary h-9 flex-1 text-xs"
                     >
                       <PencilIcon />
                       Edit
@@ -688,7 +712,7 @@ export default function InventoryPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(roll)}
-                      className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      className="st-btn-danger h-9 flex-1 text-xs"
                     >
                       <TrashIcon />
                       Delete

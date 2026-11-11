@@ -17,6 +17,7 @@ import {
   type EstimatorSettings,
 } from "@/lib/estimator-settings";
 import { calcCostBreakdown, calcSuggestedPrice } from "@/lib/estimator-pricing";
+import { ClipboardArt } from "@/components/ui/Art";
 
 function PlusIcon() {
   return (
@@ -262,27 +263,34 @@ export default function ProjectsPage() {
 
   if (loading || !user) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
         <BackLink />
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Projects</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">
-              Projects
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="st-badge st-badge-violet mt-1">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                <rect x="4" y="3.5" width="12" height="14" rx="2" />
+                <path d="M7.5 3.5V2.5h5v1M7.5 9h5M7.5 12.5h5" />
+              </svg>
+            </span>
+            <div>
+              <p className="st-eyebrow">Projects</p>
+              <h1 className="st-title mt-1">Projects</h1>
+              <p className="st-lede mt-2">Each print job with its colors, costs, and the price worth charging.</p>
+            </div>
           </div>
           <Link
             href="/projects/new"
-            className="flex h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+            className="flex h-11 items-center gap-2 st-btn-primary px-4"
           >
             <PlusIcon />
             New project
@@ -306,21 +314,21 @@ export default function ProjectsPage() {
           ))}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="st-toolbar mt-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, material, color…"
-            className="h-11 flex-1 min-w-[200px] rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            className="h-11 min-w-[200px] flex-1 rounded-xl border border-transparent bg-slate-100/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-white/[0.08]"
           />
           <button
             type="button"
             onClick={() => setReorderOnly((v) => !v)}
             aria-pressed={reorderOnly}
-            className={`h-11 shrink-0 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+            className={`h-11 shrink-0 rounded-xl px-4 text-sm font-semibold transition-colors ${
               reorderOnly
-                ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+                ? "bg-rose-50 text-rose-700 shadow-[inset_0_0_0_1px_rgba(225,29,72,0.35)] dark:bg-rose-500/10 dark:text-rose-300"
+                : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-white/[0.08]"
             }`}
           >
             May run short only
@@ -328,7 +336,7 @@ export default function ProjectsPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as ProjectSortOption)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
           >
             {PROJECT_SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -336,7 +344,7 @@ export default function ProjectsPage() {
               </option>
             ))}
           </select>
-          <div className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="st-segment">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
@@ -344,8 +352,8 @@ export default function ProjectsPage() {
               aria-pressed={viewMode === "grid"}
               className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                 viewMode === "grid"
-                  ? "bg-slate-950 text-white dark:bg-white/15"
-                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                  ? "st-segment-on"
+                  : "st-segment-off"
               }`}
             >
               <GridIcon />
@@ -357,8 +365,8 @@ export default function ProjectsPage() {
               aria-pressed={viewMode === "list"}
               className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                 viewMode === "list"
-                  ? "bg-slate-950 text-white dark:bg-white/15"
-                  : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                  ? "st-segment-on"
+                  : "st-segment-off"
               }`}
             >
               <ListIcon />
@@ -376,14 +384,18 @@ export default function ProjectsPage() {
           {projectsLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading projects…</p>
           ) : sorted.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.02]">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            <div className="st-empty st-rise px-8 py-12">
+              <ClipboardArt className="mx-auto h-28 w-auto" />
+              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">
                 {projects.length === 0 ? "No projects yet." : "No projects match your filters."}
               </p>
               {projects.length === 0 && (
+                <p className="st-lede mx-auto mt-1 max-w-sm">Set up a print job once and get its cost and a suggested price for every channel.</p>
+              )}
+              {projects.length === 0 && (
                 <Link
                   href="/projects/new"
-                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
+                  className="st-btn-primary mt-6 h-11 px-5"
                 >
                   <PlusIcon />
                   Create your first project
@@ -391,7 +403,7 @@ export default function ProjectsPage() {
               )}
             </div>
           ) : viewMode === "list" ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+            <div className="st-card overflow-hidden">
               {sorted.map((project, i) => {
                 const flagged = needsReorder(project);
                 const metrics = projectMetrics.get(project.id);
@@ -399,7 +411,7 @@ export default function ProjectsPage() {
                   <div
                     key={project.id}
                     onDoubleClick={() => router.push(`/projects/${project.id}/edit`)}
-                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm ${
+                    className={`flex flex-wrap items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-slate-50/70 dark:hover:bg-white/[0.03] ${
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
                   >
@@ -441,7 +453,7 @@ export default function ProjectsPage() {
                     <div className="ml-auto flex shrink-0 gap-2">
                       <Link
                         href={`/projects/${project.id}/edit`}
-                        className="flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        className="st-btn-secondary h-8 px-3 text-xs"
                       >
                         Edit
                       </Link>
@@ -449,7 +461,7 @@ export default function ProjectsPage() {
                         type="button"
                         onClick={() => handleDelete(project)}
                         aria-label="Delete project"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                        className="st-btn-danger h-8 w-8"
                       >
                         <TrashIcon />
                       </button>
@@ -467,14 +479,12 @@ export default function ProjectsPage() {
                   <div
                     key={project.id}
                     onDoubleClick={() => router.push(`/projects/${project.id}/edit`)}
-                    className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm dark:bg-white/[0.03] ${
-                      flagged ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-white/10"
-                    }`}
+                    className={`st-card st-card-hover flex flex-col p-4 ${flagged ? "st-accent st-accent-rose" : ""}`}
                   >
-                    <ProjectThumb project={project} className="h-32 w-full rounded-xl" />
+                    <ProjectThumb project={project} className="h-36 w-full rounded-xl shadow-[inset_0_0_0_1px_var(--st-ring)]" />
 
                     <div className="mt-3 flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{project.name}</p>
+                      <p className="font-display text-base leading-tight font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">{project.name}</p>
                       <span
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE_CLASSES[project.status]}`}
                       >
@@ -499,19 +509,23 @@ export default function ProjectsPage() {
                     )}
 
                     <div className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs dark:bg-white/[0.03]">
-                      <div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
-                        <span>Total cost</span>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {metrics ? money(metrics.breakdown.totalCost) : "—"}
-                        </span>
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold tracking-[0.14em] text-slate-400 uppercase dark:text-slate-500">Suggested / unit</p>
+                          <p className="mt-1 font-display text-2xl leading-none font-semibold tracking-[-0.02em] text-slate-950 tabular-nums dark:text-white">
+                            {metrics ? money(metrics.suggestedPrice) : "—"}
+                          </p>
+                        </div>
+                        <div className="text-right text-slate-500 tabular-nums dark:text-slate-400">
+                          <p>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{metrics ? money(metrics.breakdown.costPerUnit) : "—"}</span> cost / unit
+                          </p>
+                          <p className="mt-0.5">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{metrics ? money(metrics.breakdown.totalCost) : "—"}</span> batch total
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
-                        <span>Per unit</span>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {metrics ? `${money(metrics.breakdown.costPerUnit)} cost · ${money(metrics.suggestedPrice)} suggested` : "—"}
-                        </span>
-                      </div>
-                      <p className="border-t border-slate-200 pt-1.5 text-slate-500 dark:border-white/10 dark:text-slate-400">
+                      <p className="border-t border-slate-200 pt-2 text-slate-500 dark:border-white/10 dark:text-slate-400">
                         {measurement(metrics?.totalGrams ?? 0)}g filament · {project.colorsNeeded.length} color
                         {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm === null ? "—" : measurement(project.nozzleSizeMm)}mm nozzle
                       </p>
@@ -534,14 +548,14 @@ export default function ProjectsPage() {
                     <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3 dark:border-white/10">
                       <Link
                         href={`/projects/${project.id}/edit`}
-                        className="flex h-9 flex-1 items-center justify-center rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                        className="st-btn-secondary h-9 flex-1 text-xs"
                       >
                         Edit
                       </Link>
                       <button
                         type="button"
                         onClick={() => handleDelete(project)}
-                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:border-white/10 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                        className="st-btn-danger h-9 flex-1 text-xs"
                       >
                         <TrashIcon />
                         Delete
