@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ADMIN_AUDIT_COLLECTION, adminDb, audit, requireAdmin, requireOwner } from "@/lib/admin/server";
-import { parseKind, scanHistory, toEntry } from "@/lib/admin/history";
+import { parseKind, purgeHistoryOlderThan, scanHistory, toEntry } from "@/lib/admin/history";
 import type { AuditEntry } from "@/lib/account-status";
 
 /**
@@ -46,19 +46,7 @@ export async function DELETE(request: Request) {
   const days = typeof body.olderThanDays === "number" && body.olderThanDays > 0 ? Math.floor(body.olderThanDays) : null;
 
   try {
-    const db = adminDb();
-    const col = db.collection(ADMIN_AUDIT_COLLECTION);
-    const { Timestamp } = await import("firebase-admin/firestore");
-    const cutoff = days ? Timestamp.fromMillis(Date.now() - days * 86_400_000) : null;
-    let deleted = 0;
-    for (;;) {
-      const snap = await (cutoff ? col.where("at", "<", cutoff) : col).limit(400).get();
-      if (snap.empty) break;
-      const batch = db.batch();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-      deleted += snap.size;
-    }
+    const deleted = await purgeHistoryOlderThan(days);
     await audit(guard.token, "purge_history", null, { deleted, olderThanDays: days });
     return NextResponse.json({ ok: true, deleted });
   } catch (error) {

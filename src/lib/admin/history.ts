@@ -4,6 +4,27 @@ import type { AuditEntry, HistoryKind } from "@/lib/account-status";
 
 export type KindFilter = HistoryKind | "all";
 
+/** History older than this is deleted automatically every day (see /api/cron/purge-history). Export first if you need more. */
+export const HISTORY_RETENTION_DAYS = 90;
+
+/** Deletes history older than `days` (or everything when null) in batches, returning how many entries were removed. */
+export async function purgeHistoryOlderThan(days: number | null): Promise<number> {
+  const db = adminDb();
+  const col = db.collection(ADMIN_AUDIT_COLLECTION);
+  const { Timestamp } = await import("firebase-admin/firestore");
+  const cutoff = days ? Timestamp.fromMillis(Date.now() - days * 86_400_000) : null;
+  let deleted = 0;
+  for (;;) {
+    const snap = await (cutoff ? col.where("at", "<", cutoff) : col).limit(400).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snap.size;
+  }
+  return deleted;
+}
+
 export function parseKind(value: string | null): KindFilter {
   return value === "admin" || value === "system" ? value : "all";
 }

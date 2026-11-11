@@ -8,7 +8,7 @@ function detailText(entry: AuditEntry): string {
   const d = entry.details;
   if (typeof d.trialEndsAt === "string") return `→ ${formatAdminDate(d.trialEndsAt)}${typeof d.days === "number" ? ` (+${d.days} days)` : ""}`;
   if (entry.action === "delete_account" && typeof d.email === "string") return d.email;
-  if (entry.action === "purge_history") return `${d.deleted ?? 0} entries removed${typeof d.olderThanDays === "number" ? ` (older than ${d.olderThanDays} days)` : " (everything)"}`;
+  if (entry.action === "purge_history") return `${d.automatic ? "automatic · " : ""}${d.deleted ?? 0} entries removed${typeof d.olderThanDays === "number" ? ` (older than ${d.olderThanDays} days)` : " (everything)"}`;
   if (entry.action === "export_history") return `${d.rows ?? 0} rows`;
   return "";
 }

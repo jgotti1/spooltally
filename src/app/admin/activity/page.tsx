@@ -129,7 +129,7 @@ export default function AdminActivityPage() {
         <AdminNav />
         <h1 className="mt-6 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">History</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Everything recorded about the system, newest first: what admins did, plus signups, sign-ins and support messages from users. Only admins can see
+          Everything recorded about the system, newest first, kept for 90 days and then deleted automatically: what admins did, plus signups, sign-ins and support messages from users. Only admins can see
           this. Changes to customers&rsquo; own inventory and projects aren&rsquo;t logged.
         </p>
 
@@ -214,7 +214,7 @@ export default function AdminActivityPage() {
           <section className="mt-10 rounded-2xl border-2 border-rose-300 bg-rose-50/60 p-5 dark:border-rose-500/40 dark:bg-rose-500/5">
             <h2 className="text-sm font-bold text-rose-800 dark:text-rose-300">Danger zone · Purge history</h2>
             <p className="mt-2 text-sm text-rose-900 dark:text-rose-200">
-              Permanently deletes log entries, admin actions and user activity alike. <strong>This cannot be undone</strong>, so export first if you might
+              History older than 90 days is already deleted automatically every day. This deletes log entries sooner, admin actions and user activity alike. <strong>This cannot be undone</strong>, so export first if you might
               need them. The purge itself is recorded afterwards. Only the owner can do this.
             </p>
             <div className="mt-4 flex flex-wrap items-end gap-3">
