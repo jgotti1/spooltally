@@ -48,22 +48,22 @@ export default function SubscribePage() {
 
   if (loading || !user) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-14 sm:px-10">
         <BackLink />
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">
+          <p className="st-eyebrow">
             {locked ? (info?.status === "canceled" ? "Your subscription ended" : "Your trial has ended") : "Plans"}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">
+          <h1 className="mt-2 st-title">
             {locked ? "Pick a plan to keep going" : "Choose your plan"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">

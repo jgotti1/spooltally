@@ -92,7 +92,7 @@ export function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-white/10 dark:bg-[#0d131c] dark:shadow-black/40">
+        <div className="st-rise absolute top-full right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl bg-white shadow-[inset_0_0_0_1px_var(--st-ring),0_24px_48px_-16px_rgba(16,24,40,0.28)] dark:bg-[#0d131c] dark:shadow-[inset_0_0_0_1px_var(--st-ring),0_24px_48px_-16px_rgba(0,0,0,0.7)]">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4 dark:border-white/10">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-white/10">
               {user.photoURL ? (

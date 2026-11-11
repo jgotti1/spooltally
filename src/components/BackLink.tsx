@@ -13,9 +13,11 @@ export function BackLink({ href = "/dashboard", label = "Back to dashboard" }: {
   return (
     <Link
       href={href}
-      className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+      className="group mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
     >
-      <ArrowLeftIcon />
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-[inset_0_0_0_1px_var(--st-ring)] transition-transform duration-150 group-hover:-translate-x-0.5 dark:bg-white/[0.06]">
+        <ArrowLeftIcon />
+      </span>
       {label}
     </Link>
   );

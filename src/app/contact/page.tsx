@@ -27,8 +27,8 @@ function ContactPageInner() {
 
   if (loading) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
@@ -59,7 +59,7 @@ function ContactPageInner() {
   }
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       {user ? (
         <Header />
       ) : (
@@ -79,15 +79,15 @@ function ContactPageInner() {
       )}
       <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
         {user && <BackLink />}
-        <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase dark:text-blue-400">Support</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Contact us</h1>
+        <p className="st-eyebrow">Support</p>
+        <h1 className="mt-2 st-title">Contact us</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
           {frozen
             ? "Your account is frozen. Tell us your email address and what you need, and we'll get back to you."
             : "Questions, bugs, or feedback — send a note and we’ll get back to you."}
         </p>
 
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="mt-8 st-card p-6 sm:p-8">
           {status === "sent" ? (
             <div className="py-6 text-center">
               <p className="text-lg font-semibold text-slate-900 dark:text-white">Message sent</p>

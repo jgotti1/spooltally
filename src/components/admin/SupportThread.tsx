@@ -36,7 +36,7 @@ export function SupportThread({
 
   const resolved = message.status === "resolved";
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <article className="st-card p-5">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-slate-950 dark:text-white">

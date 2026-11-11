@@ -81,25 +81,25 @@ export default function AdminUsersPage() {
 
   if (loading || !user || !isAdmin) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
 
   const stat = (label: string, value: number, tone = "text-slate-950 dark:text-white") => (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <div className="st-card p-4">
       <p className={`text-2xl font-semibold tracking-[-0.02em] ${tone}`}>{value}</p>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{label}</p>
     </div>
   );
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
-        <h1 className="mt-6 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Users</h1>
+        <h1 className="mt-6 st-title">Users</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Everyone who has signed up. Select a user to see details, comp them, or view their account.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

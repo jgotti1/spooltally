@@ -23,6 +23,7 @@ import {
   type MaintenanceRecord,
   type Printer,
 } from "@/lib/printer-maintenance";
+import { WrenchArt } from "@/components/ui/Art";
 
 type PrinterMaintenanceProps = {
   ownerId: string;
@@ -412,12 +413,12 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     <div className="space-y-8">
       {duePrinters.length > 0 &&
         (urgentDuePrinters.length > 0 ? (
-          <div className="rounded-2xl border border-rose-300 bg-rose-50 p-4 dark:border-rose-500/40 dark:bg-rose-500/10">
-            <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">
+          <div className="st-card st-accent st-accent-rose p-4 pl-6">
+            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
               Maintenance overdue or due today for {urgentDuePrinters.length} printer
               {urgentDuePrinters.length === 1 ? "" : "s"}
             </p>
-            <ul className="mt-1.5 space-y-0.5 text-xs text-rose-700 dark:text-rose-300">
+            <ul className="mt-1.5 space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
               {urgentDuePrinters.map((printer) => (
                 <li key={printer.id}>{printerDueLabel(printer)}</li>
               ))}
@@ -438,12 +439,12 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
             )}
           </div>
         ) : (
-          <div className="rounded-2xl border border-blue-300 bg-blue-50 p-4 dark:border-blue-500/40 dark:bg-blue-500/10">
-            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+          <div className="st-card st-accent st-accent-blue p-4 pl-6">
+            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
               Maintenance coming up within {MAINTENANCE_UPCOMING_WINDOW_DAYS} days for {duePrinters.length} printer
               {duePrinters.length === 1 ? "" : "s"}
             </p>
-            <ul className="mt-1.5 space-y-0.5 text-xs text-blue-700 dark:text-blue-300">
+            <ul className="mt-1.5 space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
               {duePrinters.map((printer) => (
                 <li key={printer.id}>{printerDueLabel(printer)}</li>
               ))}
@@ -465,9 +466,9 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
       <div className="grid gap-6 lg:grid-cols-2">
         <form
           onSubmit={handleAddPrinter}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]"
+          className="st-card p-5"
         >
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Add a printer</h2>
+          <h2 className="st-section-title text-base">Add a printer</h2>
           <div className="mt-4 space-y-4">
             <div>
               <label htmlFor="printerName" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -523,14 +524,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
             <button
               type="submit"
               disabled={savingPrinter}
-              className="flex h-11 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+              className="st-btn-primary h-11 w-full"
             >
               {savingPrinter ? "Adding…" : "Add printer"}
             </button>
           </div>
         </form>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="st-card p-5">
           <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/[0.06]">
             <button
               type="button"
@@ -610,7 +611,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
               <button
                 type="submit"
                 disabled={savingRecord}
-                className="flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="st-btn-primary h-11 w-full"
               >
                 {savingRecord ? "Saving…" : "Save maintenance"}
               </button>
@@ -654,7 +655,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
               <button
                 type="submit"
                 disabled={savingRecord}
-                className="flex h-11 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                className="st-btn-primary h-11 w-full"
               >
                 {savingRecord ? "Saving…" : "Schedule next maintenance"}
               </button>
@@ -666,16 +667,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
       <section>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-[0.14em] text-blue-600 uppercase dark:text-blue-400">Your printers</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-slate-950 dark:text-white">
-              Maintenance history
-            </h2>
+            <p className="st-eyebrow">Your printers</p>
+            <h2 className="st-section-title mt-1 text-2xl">Maintenance history</h2>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {printers.length} printer{printers.length === 1 ? "" : "s"}
             </span>
-            <div className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.03]">
+            <div className="st-segment">
               <button
                 type="button"
                 onClick={() => setViewMode("block")}
@@ -683,8 +682,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 aria-pressed={viewMode === "block"}
                 className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                   viewMode === "block"
-                    ? "bg-slate-950 text-white dark:bg-white/15"
-                    : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                    ? "st-segment-on"
+                    : "st-segment-off"
                 }`}
               >
                 <GridIcon />
@@ -696,8 +695,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 aria-pressed={viewMode === "list"}
                 className={`flex h-full items-center rounded-lg px-2.5 transition-colors ${
                   viewMode === "list"
-                    ? "bg-slate-950 text-white dark:bg-white/15"
-                    : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"
+                    ? "st-segment-on"
+                    : "st-segment-off"
                 }`}
               >
                 <ListViewIcon />
@@ -709,8 +708,10 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
         {loading ? (
           <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">Loading printers…</p>
         ) : printers.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center dark:border-white/15 dark:bg-white/[0.02]">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No printers added yet.</p>
+          <div className="st-empty st-rise mt-5 px-8 py-10">
+            <WrenchArt className="mx-auto h-24 w-auto" />
+            <p className="mt-3 font-display text-lg font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">No printers added yet.</p>
+            <p className="st-lede mt-1">Add one above and its service log starts here.</p>
           </div>
         ) : viewMode === "block" ? (
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -722,11 +723,13 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 <article
                   key={printer.id}
                   onDoubleClick={() => setDetailPrinterId(printer.id)}
-                  className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-blue-400/40"
+                  className={`st-card st-card-hover cursor-pointer p-5 ${
+                    status === "overdue" ? "st-accent st-accent-rose pl-7" : status === "due" ? "st-accent st-accent-amber pl-7" : ""
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-base font-semibold break-words text-slate-950 dark:text-white">{printer.name}</h3>
+                      <h3 className="font-display text-lg leading-tight font-semibold tracking-[-0.01em] break-words text-slate-950 dark:text-white">{printer.name}</h3>
                       <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{printer.model}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}>
@@ -752,7 +755,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
             })}
           </div>
         ) : (
-          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mt-5 st-card overflow-hidden">
             {printers.map((printer, i) => {
               const latest = latestByPrinter.get(printer.id);
               const status = maintenanceDueStatus(printer.nextDueDate);
@@ -794,20 +797,20 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
 
       {detailPrinter && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
           onClick={() => setDetailPrinterId(null)}
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-[#0b1420]"
+            className="st-rise flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_40px_80px_-30px_rgba(6,23,37,0.55)] ring-1 ring-slate-900/[0.06] dark:bg-[#0b1420] dark:ring-white/10"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5 dark:border-white/10">
               <div className="flex items-start gap-3 min-w-0">
-                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                <span className="st-badge st-badge-amber mt-0.5">
                   <WrenchIcon />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-lg font-semibold break-words text-slate-950 dark:text-white">{detailPrinter.name}</h3>
+                  <h3 className="font-display text-xl leading-tight font-semibold tracking-[-0.01em] break-words text-slate-950 dark:text-white">{detailPrinter.name}</h3>
                   <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{detailPrinter.model}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
@@ -898,7 +901,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   <button
                     type="submit"
                     disabled={savingPrinter_}
-                    className="h-10 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                    className="st-btn-primary h-10 px-4 text-xs"
                   >
                     {savingPrinter_ ? "Saving…" : "Save printer"}
                   </button>
@@ -906,7 +909,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     type="button"
                     disabled={savingPrinter_}
                     onClick={() => setEditingPrinter(false)}
-                    className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                    className="st-btn-secondary h-10 px-4 text-xs"
                   >
                     Cancel
                   </button>
@@ -914,7 +917,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     type="button"
                     disabled={savingPrinter_}
                     onClick={handleDeletePrinter}
-                    className="ml-auto h-10 rounded-xl border border-rose-200 px-4 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                    className="st-btn-danger ml-auto h-10 px-4 text-xs"
                   >
                     Delete printer
                   </button>
@@ -952,7 +955,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     <button
                       type="button"
                       onClick={startCompleting}
-                      className="h-10 shrink-0 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white"
+                      className="st-btn-primary h-10 shrink-0 px-4 text-xs"
                     >
                       Mark complete
                     </button>
@@ -1020,7 +1023,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       <button
                         type="submit"
                         disabled={savingComplete}
-                        className="h-10 flex-1 rounded-xl bg-blue-600 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="st-btn-primary h-10 flex-1 text-xs"
                       >
                         {savingComplete ? "Saving…" : "Save as complete"}
                       </button>
@@ -1028,7 +1031,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         type="button"
                         onClick={() => setCompleting(false)}
                         disabled={savingComplete}
-                        className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                        className="st-btn-secondary h-10 px-4 text-xs"
                       >
                         Cancel
                       </button>
@@ -1053,7 +1056,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     <button
                       type="submit"
                       disabled={savingDueDate}
-                      className="h-11 shrink-0 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                      className="st-btn-primary h-11 shrink-0 px-4 text-xs"
                     >
                       {savingDueDate ? "Saving…" : "Save date"}
                     </button>
@@ -1108,7 +1111,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                               <button
                                 type="submit"
                                 disabled={savingRecordEdit}
-                                className="h-9 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600"
+                                className="st-btn-primary h-9 px-4 text-xs"
                               >
                                 {savingRecordEdit ? "Saving…" : "Save changes"}
                               </button>
@@ -1116,7 +1119,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                                 type="button"
                                 disabled={savingRecordEdit}
                                 onClick={() => setEditingRecordId(null)}
-                                className="h-9 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300"
+                                className="st-btn-secondary h-9 px-4 text-xs"
                               >
                                 Cancel
                               </button>
@@ -1124,7 +1127,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                           </form>
                         </li>
                       ) : (
-                        <li key={record.id} className="rounded-xl border border-slate-100 p-3 text-xs dark:border-white/10">
+                        <li key={record.id} className="st-accent st-accent-emerald rounded-xl py-3 pr-3 pl-5 text-xs shadow-[inset_0_0_0_1px_var(--st-ring)]">
                           <div className="flex items-start justify-between gap-3">
                             <span className="font-semibold text-slate-800 dark:text-slate-200">
                               Completed {formatMaintenanceDate(record.completedDate)}

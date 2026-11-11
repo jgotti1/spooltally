@@ -23,7 +23,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <section className="st-card p-5">
       <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
@@ -32,8 +32,8 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 function LoadingScreen() {
   return (
-    <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+    <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+      <p className="st-loading">Loading…</p>
     </main>
   );
 }
@@ -133,8 +133,8 @@ function AdminUserPageInner() {
 
   if (loading || !user || !isAdmin) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
@@ -145,7 +145,7 @@ function AdminUserPageInner() {
     "h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200";
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
@@ -165,7 +165,7 @@ function AdminUserPageInner() {
           <>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h1 className="truncate text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">{detail.name || detail.email || "Unnamed user"}</h1>
+                <h1 className="truncate st-title">{detail.name || detail.email || "Unnamed user"}</h1>
                 <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
                   {detail.email}
                   {detail.shopName ? ` · ${detail.shopName}` : ""}
@@ -461,7 +461,7 @@ function AdminUserPageInner() {
             </div>
 
             <div className="mt-4">
-              <details className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+              <details className="group st-card p-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-200">
                   <span>
                     Account history <span className="font-normal text-slate-500 dark:text-slate-400">· {history ? `${history.length} entries` : "Loading…"}</span>

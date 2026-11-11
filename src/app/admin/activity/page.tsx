@@ -116,18 +116,18 @@ export default function AdminActivityPage() {
 
   if (loading || !user || !isAdmin) {
     return (
-      <main className="flex min-h-svh flex-1 items-center justify-center bg-[#f5f8fc] dark:bg-[#05080e]">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading…</p>
+      <main className="flex min-h-svh flex-1 items-center justify-center st-page">
+        <p className="st-loading">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-svh flex-1 flex-col bg-[#f5f8fc] dark:bg-[#05080e]">
+    <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
-        <h1 className="mt-6 text-3xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">History</h1>
+        <h1 className="mt-6 st-title">History</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Everything recorded about the system, newest first, kept for 90 days and then deleted automatically: what admins did, plus signups, sign-ins and support messages from users. Only admins can see
           this. Changes to customers&rsquo; own inventory and projects aren&rsquo;t logged.

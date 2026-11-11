@@ -34,7 +34,7 @@ export function SupportSection({
       : `${openCount} open${resolvedCount ? ` · ${resolvedCount} resolved` : ""}`;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <section className="st-card p-5">
       <button
         type="button"
         onClick={() => setExpanded(!isOpen)}
