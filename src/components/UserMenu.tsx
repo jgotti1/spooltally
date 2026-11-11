@@ -33,6 +33,15 @@ function GearIcon() {
   );
 }
 
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+      <path d="M10 2.5 4 5v4.5c0 3.6 2.4 6.4 6 8 3.6-1.6 6-4.4 6-8V5l-6-2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M7.5 10l2 2 3.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function SignOutIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
@@ -143,6 +152,14 @@ export function UserMenu() {
             >
               <GearIcon />
               Settings
+            </Link>
+            <Link
+              href="/settings?tab=privacy"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+            >
+              <ShieldIcon />
+              Privacy
             </Link>
             <Link
               href="/contact"

@@ -136,6 +136,8 @@ export function accountFromDoc(data: FirebaseFirestore.DocumentData | undefined)
     disabled: d.disabled === true,
     subscriptionStatus: typeof d.subscriptionStatus === "string" ? d.subscriptionStatus : "",
     adminNotes: typeof d.adminNotes === "string" ? d.adminNotes : "",
+    privacyAcknowledgedAt: iso(d.privacyAcknowledgedAt),
+    privacyVersion: typeof d.privacyVersion === "number" ? d.privacyVersion : null,
   };
 }
 

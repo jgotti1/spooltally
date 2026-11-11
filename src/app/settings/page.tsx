@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { updateProfile } from "firebase/auth";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
@@ -14,6 +14,8 @@ import {
   type EstimatorSettings,
 } from "@/lib/estimator-settings";
 import { DEFAULT_CHANNELS, type ChannelFeeProfile } from "@/lib/estimator-constants";
+import { PrivacyPanel } from "@/components/PrivacyPanel";
+import { useAccountStatus } from "@/lib/use-account";
 import {
   DEFAULT_INVENTORY_SETTINGS,
   getInventorySettings,
@@ -21,13 +23,14 @@ import {
   type InventorySettings,
 } from "@/lib/inventory-settings";
 
-type Tab = "shop" | "pricing" | "channels" | "inventory";
+type Tab = "shop" | "pricing" | "channels" | "inventory" | "privacy";
 
 const TABS: { id: Tab; label: string; blurb: string }[] = [
   { id: "shop", label: "Shop", blurb: "Your name and shop name." },
   { id: "pricing", label: "Pricing", blurb: "Hourly rates and per-order costs behind every project's cost breakdown." },
   { id: "channels", label: "Sales channels", blurb: "Fees per channel, used to gross up suggested prices." },
   { id: "inventory", label: "Inventory", blurb: "When the reorder report flags a color." },
+  { id: "privacy", label: "Privacy", blurb: "How your information and payments are handled." },
 ];
 
 const inputClass =
@@ -85,15 +88,24 @@ function NumberField({
   );
 }
 
-export default function SettingsPage() {
+function asTab(value: string | null): Tab | null {
+  return TABS.some((candidate) => candidate.id === value) ? (value as Tab) : null;
+}
+
+function SettingsPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  // Deep links like /settings?tab=pricing open straight on that tab.
-  const [tab, setTab] = useState<Tab>(() => {
-    if (typeof window === "undefined") return "shop";
-    const requested = new URLSearchParams(window.location.search).get("tab");
-    return requested && TABS.some((candidate) => candidate.id === requested) ? (requested as Tab) : "shop";
-  });
+  const { privacyAcknowledgedAt } = useAccountStatus();
+  // Deep links like /settings?tab=pricing open straight on that tab, including when you are already on /settings
+  // (the profile menu's Privacy link): the URL is followed whenever its ?tab= changes.
+  const searchTab = useSearchParams().get("tab");
+  const [tab, setTab] = useState<Tab>(() => asTab(searchTab) ?? "shop");
+  const [seenSearchTab, setSeenSearchTab] = useState(searchTab);
+  if (seenSearchTab !== searchTab) {
+    setSeenSearchTab(searchTab);
+    const next = asTab(searchTab);
+    if (next) setTab(next);
+  }
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -214,6 +226,8 @@ export default function SettingsPage() {
                 setTab(candidate.id);
                 setNotice("");
                 setError("");
+                // Keep the address in step with the tab, so a later link to ?tab=… always registers as a change.
+                router.replace(`/settings?tab=${candidate.id}`, { scroll: false });
               }}
               className={`h-9 rounded-lg px-4 text-sm font-semibold transition-colors ${
                 tab === candidate.id ? "st-segment-on" : "st-segment-off"
@@ -447,6 +461,8 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+          ) : tab === "privacy" ? (
+            <PrivacyPanel acknowledgedAt={privacyAcknowledgedAt} />
           ) : (
             <form onSubmit={handleSaveInventory} className="mt-6 max-w-lg space-y-5">
               <NumberField
@@ -474,5 +490,14 @@ export default function SettingsPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function SettingsPage() {
+  // useSearchParams must sit inside Suspense on a prerendered route.
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
   );
 }

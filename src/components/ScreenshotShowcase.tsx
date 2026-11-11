@@ -155,6 +155,8 @@ export function ScreenshotShowcase({ className = "" }: { className?: string }) {
               height={screen.height}
               alt={screen.alt}
               unoptimized
+              // The main viewer is the largest image above the fold, so load it right away.
+              loading="eager"
               className={`${styles.screen} block h-auto w-full`}
             />
           </div>

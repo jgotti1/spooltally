@@ -4,6 +4,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ViewAsBanner } from "@/components/ViewAsBanner";
 import { AccessGate } from "@/components/AccessGate";
+import { PrivacyGate } from "@/components/PrivacyGate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AuthProvider>
           {children}
           <ViewAsBanner />
+          <PrivacyGate />
           {/* Reads the current path, which Next requires to sit inside Suspense on prerendered routes. */}
           <Suspense fallback={null}>
             <AccessGate />

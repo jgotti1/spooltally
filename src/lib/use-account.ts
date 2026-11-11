@@ -12,7 +12,14 @@ type AccountState = {
   /** When the trial ends, for display. */
   trialEndsAt: string | null;
   loading: boolean;
+  /** False when the account record couldn't be read (offline, error), so callers don't act on missing data. */
+  ready: boolean;
+  /** The privacy summary version this account has acknowledged; null when none yet. */
+  privacyVersion: number | null;
+  privacyAcknowledgedAt: string | null;
 };
+
+const EMPTY = { info: null, trialEndsAt: null, ready: false, privacyVersion: null, privacyAcknowledgedAt: null } as const;
 
 /**
  * Live access status for the account on screen (the customer's, during view-as). Reads the server-managed `users/{uid}`
@@ -21,7 +28,7 @@ type AccountState = {
 export function useAccountStatus(): AccountState {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
-  const [state, setState] = useState<{ uid: string | null } & AccountState>({ uid: null, info: null, trialEndsAt: null, loading: true });
+  const [state, setState] = useState<{ uid: string | null } & AccountState>({ uid: null, ...EMPTY, loading: true });
 
   useEffect(() => {
     if (!uid || !db) return;
@@ -30,7 +37,8 @@ export function useAccountStatus(): AccountState {
       (snap) => {
         const d = snap.data();
         if (!d) {
-          setState({ uid, info: null, trialEndsAt: null, loading: false });
+          // No record yet is a normal brand-new signup (the server creates it a moment later).
+          setState({ uid, ...EMPTY, loading: false, ready: true });
           return;
         }
         const trialEndsAt = d.trialEndsAt instanceof Timestamp ? d.trialEndsAt.toDate().toISOString() : null;
@@ -38,6 +46,9 @@ export function useAccountStatus(): AccountState {
           uid,
           trialEndsAt,
           loading: false,
+          ready: true,
+          privacyVersion: typeof d.privacyVersion === "number" ? d.privacyVersion : null,
+          privacyAcknowledgedAt: d.privacyAcknowledgedAt instanceof Timestamp ? d.privacyAcknowledgedAt.toDate().toISOString() : null,
           info: accountStatus({
             isComped: d.isComped === true,
             disabled: d.disabled === true,
@@ -46,11 +57,11 @@ export function useAccountStatus(): AccountState {
           }),
         });
       },
-      () => setState({ uid, info: null, trialEndsAt: null, loading: false }),
+      () => setState({ uid, ...EMPTY, loading: false }),
     );
   }, [uid]);
 
   // A result for a previous account never applies to the current one.
-  if (state.uid !== uid) return { info: null, trialEndsAt: null, loading: Boolean(uid) };
-  return { info: state.info, trialEndsAt: state.trialEndsAt, loading: state.loading };
+  if (state.uid !== uid) return { ...EMPTY, loading: Boolean(uid) };
+  return state;
 }

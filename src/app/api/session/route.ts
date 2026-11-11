@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { TRIAL_DAYS } from "@/lib/account-status";
 import { adminAuth, adminDb, logEvent, requireUser } from "@/lib/admin/server";
+import { createUserRecordIfMissing } from "@/lib/admin/user-record";
 
 /**
  * Called once per app load while signed in. Creates the `users/{uid}` doc the first time (trial starts at the Auth
@@ -29,25 +29,13 @@ export async function POST(request: Request) {
     claimsUpdated = true;
   }
   const ref = adminDb().collection("users").doc(uid);
-  const snap = await ref.get();
 
-  if (!snap.exists) {
-    const created = new Date(authUser.metadata.creationTime);
-    await ref.set({
-      name: authUser.displayName ?? "",
-      email: authUser.email ?? "",
-      createdAt: Timestamp.fromDate(created),
-      trialEndsAt: Timestamp.fromDate(new Date(created.getTime() + TRIAL_DAYS * 86_400_000)),
-      plan: "trial",
-      isComped: false,
-      disabled: false,
-      subscriptionStatus: "",
-      lastLogin: FieldValue.serverTimestamp(),
-    });
+  if (await createUserRecordIfMissing(authUser)) {
     await logEvent({ uid, email: authUser.email }, "account_created", uid, {
       method: authUser.providerData.map((p) => p.providerId).join(", "),
     });
   } else {
+    const snap = await ref.get();
     // This route runs on every app load, so a sign-in is only recorded after 30 quiet minutes.
     const last = snap.data()?.lastLogin;
     if (!(last instanceof Timestamp) || Date.now() - last.toMillis() > 30 * 60_000) {

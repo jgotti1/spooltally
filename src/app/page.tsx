@@ -25,7 +25,7 @@ function CheckIcon() {
 export default function LoginPage() {
   return (
     <main className={`${styles.shell} min-h-svh lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(480px,.92fr)]`}>
-      <section className={`${styles.brandPanel} relative overflow-hidden px-6 pb-12 pt-6 text-white sm:px-10 lg:flex lg:min-h-svh lg:flex-col lg:px-12 lg:py-6 xl:px-16`}>
+      <section className={`${styles.brandPanel} relative overflow-hidden px-6 pb-12 pt-6 text-white sm:px-10 lg:flex lg:min-h-svh lg:flex-col lg:py-6 lg:pr-5 lg:pl-8 xl:pr-7 xl:pl-14`}>
         <div className={styles.gridPattern} aria-hidden="true" />
         <div className={`${styles.orb} ${styles.orbOne}`} aria-hidden="true" />
         <div className={`${styles.orb} ${styles.orbTwo}`} aria-hidden="true" />
@@ -43,7 +43,7 @@ export default function LoginPage() {
           </span>
         </header>
 
-        <div className="relative z-10 mx-auto mt-8 w-full max-w-2xl lg:mt-6">
+        <div className="relative z-10 mt-8 w-full max-w-2xl lg:mt-6">
           <p className="mb-3 flex items-center gap-3 text-xs font-bold tracking-[0.2em] text-blue-300 uppercase">
             <span className="h-px w-8 bg-blue-400" />
             Your workshop, finally in sync
@@ -77,7 +77,7 @@ export default function LoginPage() {
         <div className={`${styles.authGlow} pointer-events-none absolute inset-0`} aria-hidden="true" />
         <ThemeToggle className="fixed top-5 right-5 z-50 lg:top-6 lg:right-6" />
         <div className="relative z-10 w-full max-w-[440px]">
-          <div className="mb-8 flex items-center justify-between gap-4">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><CheckIcon /></span>
               14-day free trial
@@ -89,13 +89,13 @@ export default function LoginPage() {
                 <LoginForm />
               </Suspense>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-emerald-500" />Secure sign-in</span>
             <a href="#" className="hover:text-slate-600 dark:hover:text-slate-300">Terms</a>
             <a href="#" className="hover:text-slate-600 dark:hover:text-slate-300">Privacy</a>
           </div>
 
-          <p className="mt-4 text-center text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="mt-2 text-center text-[11px] text-slate-400 dark:text-slate-500">
             &copy; 2026 margotticode.com
           </p>
         </div>

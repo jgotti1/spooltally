@@ -125,13 +125,13 @@ export function LoginForm() {
   }
 
   return (
-    <div className={`${styles.authCard} rounded-[28px] border border-white/80 bg-white/88 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:p-9 dark:shadow-black/40`}>
-      <div className="mb-7">
-        <Logo className="h-[77px] w-auto" />
-        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-slate-950 dark:text-white">
+    <div className={`${styles.authCard} rounded-[28px] border border-white/80 bg-white/88 p-5 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:p-7 dark:shadow-black/40`}>
+      <div className="mb-5">
+        <Logo className="h-[56px] w-auto" />
+        <h2 className="mt-3 text-[1.65rem] font-semibold tracking-[-0.045em] text-slate-950 dark:text-white">
           {mode === "signin" ? "Sign in to your workshop" : "Start your free trial"}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">
           {mode === "signin"
             ? "Your inventory, projects, and printer maintenance are ready."
             : "14 days free. No credit card required."}
@@ -142,7 +142,7 @@ export function LoginForm() {
         type="button"
         onClick={handleGoogle}
         disabled={busy !== null}
-        className={`${styles.googleButton} flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-[13px] font-semibold whitespace-nowrap text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 sm:gap-3 sm:text-sm dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:shadow-none`}
+        className={`${styles.googleButton} flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-[13px] font-semibold whitespace-nowrap text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 sm:gap-3 sm:text-sm dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:shadow-none`}
       >
         <span className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]">
           <GoogleIcon className="h-full w-full" />
@@ -150,16 +150,16 @@ export function LoginForm() {
         {busy === "google" ? "Connecting…" : "Continue with Google"}
       </button>
 
-      <div className="my-6 flex items-center gap-3" aria-hidden="true">
+      <div className="my-4 flex items-center gap-3" aria-hidden="true">
         <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
         <span className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase dark:text-slate-500">or use email</span>
         <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
       </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
         {mode === "signup" && (
           <div>
-            <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Full name</label>
+            <label htmlFor="name" className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">Full name</label>
             <div className="relative">
               <span className={`${styles.inputIcon} pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500`}><UserIcon /></span>
               <input
@@ -171,14 +171,14 @@ export function LoginForm() {
                 placeholder="Jane Maker"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
+                className={`${styles.input} h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
               />
             </div>
           </div>
         )}
         {mode === "signup" && (
           <div>
-            <label htmlFor="shopName" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <label htmlFor="shopName" className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">
               Shop name <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
             </label>
             <input
@@ -189,13 +189,13 @@ export function LoginForm() {
               placeholder="North Shore Prints"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
+              className={`${styles.input} h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">You can add or change this anytime in Settings.</p>
           </div>
         )}
         <div>
-          <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Email address</label>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">Email address</label>
           <div className="relative">
             <span className={`${styles.inputIcon} pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500`}><MailIcon /></span>
             <input
@@ -207,13 +207,13 @@ export function LoginForm() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
+              className={`${styles.input} h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
             />
           </div>
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between gap-4">
+          <div className="mb-1.5 flex items-center justify-between gap-4">
             <label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Password</label>
             {mode === "signin" && (
               <button
@@ -238,7 +238,7 @@ export function LoginForm() {
               placeholder={mode === "signin" ? "Enter your password" : "Create a password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${styles.input} h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
+              className={`${styles.input} h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-12 text-sm text-slate-950 placeholder:text-slate-400 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500`}
             />
           </div>
         </div>
@@ -264,14 +264,14 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={busy !== null}
-          className={`${styles.submitButton} group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 disabled:cursor-not-allowed disabled:opacity-70`}
+          className={`${styles.submitButton} group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 disabled:cursor-not-allowed disabled:opacity-70`}
         >
           {busy === "email" ? (mode === "signin" ? "Signing in…" : "Creating account…") : mode === "signin" ? "Sign in" : "Create account"}
           <span className="h-4 w-4 transition-transform group-hover:translate-x-1"><ArrowIcon /></span>
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
         {mode === "signin" ? (
           <>
             New to SpoolTally?{" "}

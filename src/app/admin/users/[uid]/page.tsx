@@ -220,6 +220,11 @@ function AdminUserPageInner() {
                     {detail.providers.map((p) => (p === "google.com" ? "Google" : p === "password" ? "Email & password" : p)).join(", ") || "—"}
                   </Row>
                   <Row label="Email verified">{detail.emailVerified ? "Yes" : "No"}</Row>
+                  <Row label="Privacy acknowledged">
+                    {detail.account.privacyAcknowledgedAt
+                      ? `${formatAdminDate(detail.account.privacyAcknowledgedAt)} (v${detail.account.privacyVersion ?? 1})`
+                      : "Not yet"}
+                  </Row>
                   <Row label="User ID">
                     <span className="font-mono text-xs break-all">{detail.uid}</span>
                   </Row>

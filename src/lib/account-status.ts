@@ -20,6 +20,9 @@ export type AccountRecord = {
   /** Mirrors Stripe's subscription status once billing is connected: active, trialing, past_due, unpaid, canceled… */
   subscriptionStatus: string;
   adminNotes: string;
+  /** When the person acknowledged the privacy summary, and which version they saw. Null until they do. */
+  privacyAcknowledgedAt: string | null;
+  privacyVersion: number | null;
 };
 
 export type AccountStatus = "disabled" | "comped" | "subscribed" | "past_due" | "trial" | "trial_expired" | "canceled";
@@ -174,4 +177,5 @@ export const AUDIT_LABELS: Record<string, string> = {
   support_message: "Sent a support message",
   export_history: "Exported the history log",
   purge_history: "Purged history",
+  privacy_acknowledged: "Acknowledged the privacy summary",
 };
