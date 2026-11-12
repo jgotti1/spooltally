@@ -10,6 +10,7 @@ import { CloseLink } from "@/components/CloseLink";
 import { RollForm } from "@/components/RollForm";
 import { getRoll, type Roll } from "@/lib/rolls";
 import { subscribeToProjects, type Project } from "@/lib/projects";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 
 function LoadingScreen() {
   return (
@@ -60,6 +61,8 @@ function EditRollPageInner() {
     () => projects.filter((project) => project.colorsNeeded.some((color) => color.rollIds.includes(params.id))),
     [params.id, projects],
   );
+  // A popular color can be linked to many projects: 8 per page inside a scrolling box keeps this panel a steady size.
+  const pagedProjects = usePaged(linkedProjects, params.id, 8);
 
   if (loading || !user || (roll === undefined && !notFound)) {
     return <LoadingScreen />;
@@ -102,8 +105,10 @@ function EditRollPageInner() {
                     This roll is not currently linked to any projects.
                   </p>
                 ) : (
-                  <ul className="mt-3 space-y-2">
-                    {linkedProjects.map((project) => {
+                  <>
+                  <ListScroll page={pagedProjects.pager.page} className="mt-3 pr-1">
+                  <ul className="space-y-2">
+                    {pagedProjects.pageItems.map((project) => {
                       const usages = project.colorsNeeded.filter((color) => color.rollIds.includes(params.id));
                       return (
                         <li key={project.id}>
@@ -132,6 +137,9 @@ function EditRollPageInner() {
                       );
                     })}
                   </ul>
+                  </ListScroll>
+                  <Pager {...pagedProjects.pager} noun="projects" className="mt-3" />
+                  </>
                 )}
               </section>
             </>

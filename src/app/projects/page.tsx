@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ListScroll, Pager, usePaged } from "@/components/Pager";
+import { addedLabel } from "@/lib/format-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -436,6 +437,7 @@ export default function ProjectsPage() {
                       <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
                         {measurement(metrics?.totalGrams ?? 0)}g filament · {project.colorsNeeded.length} color
                         {project.colorsNeeded.length === 1 ? "" : "s"} · {project.nozzleSizeMm === null ? "—" : measurement(project.nozzleSizeMm)}mm nozzle · {project.printHours ? measurement(project.printHours) : "—"}h · batch of {project.quantity}
+                        {addedLabel(project.createdAt) && ` · ${addedLabel(project.createdAt)}`}
                       </p>
                     </div>
                     <span
@@ -546,6 +548,7 @@ export default function ProjectsPage() {
                       <p className="text-slate-500 dark:text-slate-400">
                         {project.printHours ? measurement(project.printHours) : "—"}h print · batch of {project.quantity} · {metrics?.channel?.label ?? "No channel"}
                       </p>
+                      {addedLabel(project.createdAt) && <p className="text-slate-400 dark:text-slate-500">{addedLabel(project.createdAt)}</p>}
                       {project.colorsNeeded.length > 0 && (
                         <p className="truncate text-slate-400 dark:text-slate-500">
                           {project.colorsNeeded.map((need) => `${need.color} ${need.material}`).join(", ")}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ListScroll, Pager, usePaged } from "@/components/Pager";
+import { addedLabel } from "@/lib/format-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -470,6 +471,17 @@ export default function InventoryPage() {
           ) : viewMode === "list" ? (
             <div className="st-card overflow-hidden">
               <ListScroll page={paged.pager.page}>
+              {/* Column headings share the row widths below, so everything lines up on wide screens. */}
+              <div className="sticky top-0 z-10 hidden items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:bg-[#0b1420] text-[11px] font-bold tracking-[0.12em] text-slate-400 uppercase lg:flex dark:border-white/10">
+                <span className="w-4 shrink-0" />
+                <span className="min-w-[160px] flex-1">Roll</span>
+                <span className="w-24 shrink-0 text-center">Level</span>
+                <span className="w-20 shrink-0">On hand</span>
+                <span className="w-20 shrink-0">Price</span>
+                <span className="w-36 shrink-0 pl-3">Reorder</span>
+                <span className="w-24 shrink-0 text-center">Status</span>
+                <span className="w-[124px] shrink-0 text-center">Actions</span>
+              </div>
               {paged.pageItems.map((roll, i) => {
                 const status = stockStatusByKey.get(groupKey(roll));
                 return (
@@ -508,37 +520,40 @@ export default function InventoryPage() {
                       <p className="font-semibold text-slate-900 dark:text-white">
                         {roll.color} {roll.material}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{roll.brand}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {roll.brand}
+                        {addedLabel(roll.createdAt) && ` · ${addedLabel(roll.createdAt)}`}
+                      </p>
                       {roll.notes && (
                         <p className="mt-0.5 text-[11px] text-slate-400 italic dark:text-slate-500" title={roll.notes}>
                           {roll.notes}
                         </p>
                       )}
                       {(projectsByRollId.get(roll.id)?.length ?? 0) > 0 && (
-                        <p className="text-[11px] text-blue-600 dark:text-blue-400">
-                          Used in:{" "}
-                          {projectsByRollId.get(roll.id)!.map((p, i, arr) => (
-                            <span key={p.id}>
-                              <Link href={`/projects/${p.id}/edit`} className="hover:underline">
-                                {p.name}
-                              </Link>
-                              {i < arr.length - 1 ? ", " : ""}
-                            </span>
-                          ))}
+                        <p className="text-[11px]">
+                          <Link
+                            href={`/inventory/${roll.id}/edit`}
+                            title="Open roll details to see which projects use this roll"
+                            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            Used in {projectsByRollId.get(roll.id)!.length} project{projectsByRollId.get(roll.id)!.length === 1 ? "" : "s"}
+                          </Link>
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
-                      {ROLL_LEVEL_LABELS[roll.level]}
-                      {roll.level === "full" && roll.quantity > 1 ? ` ×${roll.quantity}` : ""}
+                    <span className="shrink-0 lg:w-24 lg:text-center">
+                      <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                        {ROLL_LEVEL_LABELS[roll.level]}
+                        {roll.level === "full" && roll.quantity > 1 ? ` ×${roll.quantity}` : ""}
+                      </span>
                     </span>
-                    <span className="w-24 shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                      {Math.round(roll.remainingGrams)} g
+                    <span className="w-20 shrink-0 text-xs text-slate-600 tabular-nums dark:text-slate-300">
+                      {Math.round(roll.remainingGrams).toLocaleString()} g
                     </span>
-                    <span className="w-16 shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="w-20 shrink-0 text-xs text-slate-600 tabular-nums dark:text-slate-300">
                       ${roll.price.toFixed(2)}
                     </span>
-                    <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-slate-500 lg:w-36 lg:pl-3 dark:text-slate-400">
                       <input
                         type="checkbox"
                         checked={roll.excludeFromReorder}
@@ -547,24 +562,28 @@ export default function InventoryPage() {
                       />
                       Hide from reorder
                     </label>
-                    {status && (
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          status === "reorder"
-                            ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-                        }`}
-                      >
-                        {status === "reorder" ? "Order soon" : "Last roll"}
-                      </span>
-                    )}
-                    <div className="ml-auto flex shrink-0 gap-2">
+                    <span className={`shrink-0 lg:block lg:w-24 lg:text-center ${status ? "" : "hidden"}`}>
+                      {status && (
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            status === "reorder"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                          }`}
+                        >
+                          {status === "reorder" ? "Order soon" : "Last roll"}
+                        </span>
+                      )}
+                    </span>
+                    <div className="ml-auto flex shrink-0 justify-end gap-2 lg:w-[124px] lg:justify-center">
+                      {/* Keeps the edit and delete buttons in the same spot on rows without a +1 button. */}
+                      {roll.level !== "full" && <span aria-hidden="true" className="hidden h-8 w-[38px] lg:block" />}
                       {roll.level === "full" && (
                         <button
                           type="button"
                           onClick={() => handleQuickAddOne(roll)}
                           title="Add +1 to this roll's quantity"
-                          className="st-btn-secondary h-8 px-2.5 text-xs"
+                          className="st-btn-secondary h-8 px-2.5 text-xs lg:w-[38px] lg:px-0"
                         >
                           +1
                         </button>
@@ -631,6 +650,7 @@ export default function InventoryPage() {
                         <p className="font-display text-base leading-tight font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">{roll.color}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {roll.brand} · {roll.material}
+                          {addedLabel(roll.createdAt) && <span className="block text-[11px] text-slate-400 dark:text-slate-500">{addedLabel(roll.createdAt)}</span>}
                         </p>
                         {roll.notes && (
                           <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-400 italic dark:text-slate-500" title={roll.notes}>

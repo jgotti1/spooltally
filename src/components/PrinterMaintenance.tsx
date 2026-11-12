@@ -856,11 +856,12 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       ? "No maintenance recorded yet."
                       : `Last service ${formatMaintenanceDate(latest?.completedDate ?? "")} · ${history.length} record${history.length === 1 ? "" : "s"}`}
                   </p>
-                  {printer.currentHours !== null && (
-                    <p className="mt-1 text-xs text-slate-500 tabular-nums dark:text-slate-400">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{formatHours(printer.currentHours)}</span> printed
-                    </p>
-                  )}
+                  <p className="mt-1 text-xs text-slate-500 tabular-nums dark:text-slate-400">
+                    Print hours:{" "}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {printer.currentHours !== null ? formatHours(printer.currentHours) : "not entered"}
+                    </span>
+                  </p>
 
                   <button
                     type="button"
@@ -896,7 +897,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         ? "No service yet"
                         : `Last service ${formatMaintenanceDate(latest?.completedDate ?? "")}`}{" "}
                       · {history.length} record{history.length === 1 ? "" : "s"}
-                      {printer.currentHours !== null ? ` · ${formatHours(printer.currentHours)} printed` : ""}
+                      {` · Print hours: ${printer.currentHours !== null ? formatHours(printer.currentHours) : "not entered"}`}
                     </p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${printer.outOfService ? OUT_OF_SERVICE_STYLE : STATUS_STYLES[status]}`}>
