@@ -37,18 +37,23 @@ export async function POST(request: Request) {
   if (await createUserRecordIfMissing(authUser)) {
     // A new account's first visit is also its first sign-in.
     await recordLogin(request, uid, loginMethod);
+    await ref.update({ lastSignInSeen: authUser.metadata.lastSignInTime ?? "" });
     await logEvent({ uid, email: authUser.email }, "account_created", uid, {
       method: authUser.providerData.map((p) => p.providerId).join(", "),
     });
   } else {
     const snap = await ref.get();
-    // This route runs on every app load, so a sign-in is only recorded after 30 quiet minutes.
+    // This route runs on every app load, so a sign-in is recorded when the person comes back after 30 quiet minutes, or
+    // whenever Firebase reports a genuinely new sign-in (signing out and back in) — so two logins in one day are both kept.
     const last = snap.data()?.lastLogin;
-    if (!(last instanceof Timestamp) || Date.now() - last.toMillis() > 30 * 60_000) {
+    const authSignIn = authUser.metadata.lastSignInTime ?? "";
+    const newSignIn = authSignIn !== "" && snap.data()?.lastSignInSeen !== authSignIn;
+    if (newSignIn || !(last instanceof Timestamp) || Date.now() - last.toMillis() > 30 * 60_000) {
       await recordLogin(request, uid, loginMethod);
     }
     await ref.update({
       lastLogin: FieldValue.serverTimestamp(),
+      lastSignInSeen: authSignIn,
       email: authUser.email ?? "",
       ...(authUser.displayName ? { name: authUser.displayName } : {}),
     });

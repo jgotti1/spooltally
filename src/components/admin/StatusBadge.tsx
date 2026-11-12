@@ -21,6 +21,20 @@ export function formatAdminDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+/** Admin times are always shown in Eastern time, e.g. "Nov 12, 2026, 3:42 PM EST". */
+export function formatAdminDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
 /** "Today", "3 days ago", or the date for anything older than a month. */
 export function formatAdminRelative(iso: string | null): string {
   if (!iso) return "Never";

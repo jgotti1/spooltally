@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import {
   addMaintenanceRecord,
   addPrinter,
@@ -201,6 +202,9 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
     () => printers.filter((printer) => (shownTab === "out" ? printer.outOfService : !printer.outOfService)),
     [printers, shownTab],
   );
+
+  // List view only: 10 printers per page inside a scrolling box.
+  const pagedPrinters = usePaged(shownPrinters, shownTab, 10);
 
   async function handleToggleService(printer: Printer) {
     setTogglingService(true);
@@ -871,7 +875,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
           </div>
         ) : (
           <div className="mt-5 st-card overflow-hidden">
-            {shownPrinters.map((printer, i) => {
+            <ListScroll page={pagedPrinters.pager.page}>
+            {pagedPrinters.pageItems.map((printer, i) => {
               const latest = latestByPrinter.get(printer.id);
               const status = maintenanceDueStatus(printer.nextDueDate);
               const history = recordsByPrinter.get(printer.id) ?? [];
@@ -907,6 +912,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 </div>
               );
             })}
+            </ListScroll>
+            <Pager {...pagedPrinters.pager} noun="printers" className="border-t border-slate-100 px-5 py-3 dark:border-white/10" />
           </div>
         )}
       </section>

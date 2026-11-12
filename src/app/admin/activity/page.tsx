@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
@@ -15,6 +15,9 @@ const KINDS: { id: HistoryKindFilter; label: string }[] = [
   { id: "system", label: "User activity" },
 ];
 
+/** Safety cap on how much history the page pulls in; export the CSV for anything beyond it. */
+const MAX_LOADED = 5000;
+
 const selectClass =
   "h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100";
 
@@ -23,7 +26,7 @@ export default function AdminActivityPage() {
   const router = useRouter();
   const [kind, setKind] = useState<HistoryKindFilter>("all");
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
-  const [cursor, setCursor] = useState<string | null>(null);
+  // True while older pages are still arriving in the background.
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -46,31 +49,31 @@ export default function AdminActivityPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntries(null);
     setError("");
-    fetchHistoryPage(getIdToken, { kind })
-      .then((page) => {
-        if (!active) return;
-        setEntries(page.entries);
-        setCursor(page.nextCursor);
-      })
-      .catch((err: Error) => active && setError(err.message));
+    // The first page shows right away; the rest of the log (90 days at most) follows in the background so the page
+    // numbers and the search cover everything.
+    (async () => {
+      try {
+        let cursor: string | null = null;
+        let all: AuditEntry[] = [];
+        do {
+          const page = await fetchHistoryPage(getIdToken, { kind, cursor });
+          if (!active) return;
+          all = [...all, ...page.entries];
+          cursor = all.length >= MAX_LOADED ? null : page.nextCursor;
+          setEntries(all);
+          setLoadingMore(cursor !== null);
+        } while (cursor);
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Couldn't load the history.");
+          setLoadingMore(false);
+        }
+      }
+    })();
     return () => {
       active = false;
     };
   }, [isAdmin, getIdToken, kind, reloadKey]);
-
-  const loadMore = useCallback(async () => {
-    if (!cursor) return;
-    setLoadingMore(true);
-    try {
-      const page = await fetchHistoryPage(getIdToken, { kind, cursor });
-      setEntries((prev) => [...(prev ?? []), ...page.entries]);
-      setCursor(page.nextCursor);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't load more.");
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [cursor, getIdToken, kind]);
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -156,7 +159,7 @@ export default function AdminActivityPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search loaded entries"
+              placeholder="Search history"
               aria-label="Search history"
               className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 sm:w-60 dark:border-white/10 dark:bg-white/5 dark:text-white"
             />
@@ -186,28 +189,14 @@ export default function AdminActivityPage() {
 
         <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-5 py-2 shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
           {entries ? (
-            <AuditList entries={visible} showTarget showKind />
+            <AuditList entries={visible} showTarget showKind resetKey={`${kind}|${search}`} />
           ) : (
             !error && <p className="py-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
           )}
         </div>
-        {entries && (
-          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              Showing {visible.length}
-              {search.trim() ? ` of ${entries.length} loaded` : ""} entries{cursor ? "" : " · end of history"}
-            </span>
-            {cursor && (
-              <button
-                type="button"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-              >
-                {loadingMore ? "Loading…" : "Load more"}
-              </button>
-            )}
-          </div>
+        {entries && loadingMore && <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Loading older entries…</p>}
+        {entries && !loadingMore && entries.length >= MAX_LOADED && (
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Showing the newest {MAX_LOADED} entries. Export the CSV to see everything.</p>
         )}
 
         {isOwner && (

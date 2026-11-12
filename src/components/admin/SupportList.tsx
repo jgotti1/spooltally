@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SupportMessage } from "@/lib/account-status";
 import { SupportThread } from "@/components/admin/SupportThread";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 
 function shortDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -27,6 +28,7 @@ export function SupportList({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
+  const paged = usePaged(messages);
 
   useEffect(() => {
     if (!open) return;
@@ -48,8 +50,9 @@ export function SupportList({
           <span>Replies</span>
           <span />
         </div>
+        <ListScroll page={paged.pager.page}>
         <ul className="divide-y divide-slate-100 dark:divide-white/5">
-          {messages.map((m) => {
+          {paged.pageItems.map((m) => {
             const resolved = m.status === "resolved";
             return (
               <li
@@ -91,6 +94,8 @@ export function SupportList({
             );
           })}
         </ul>
+        </ListScroll>
+        <Pager {...paged.pager} noun="messages" className="border-t border-slate-100 px-5 py-2.5 dark:border-white/5" />
         <p className="border-t border-slate-100 px-5 py-2.5 text-xs text-slate-400 dark:border-white/5 dark:text-slate-500">
           Double-click a message to read it and reply.
         </p>

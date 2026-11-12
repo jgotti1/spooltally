@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -176,6 +177,8 @@ export default function InventoryPage() {
     return true;
   });
   const sorted = useMemo(() => sortRolls(filtered, sortBy), [filtered, sortBy]);
+  // List view only: 15 rows per page inside a scrolling box, so a big inventory doesn't stretch the page.
+  const paged = usePaged(sorted, `${search}|${materialFilter}|${colorFilter}|${sortBy}`, 15);
 
   async function handleDelete(roll: Roll) {
     if (!window.confirm(`Delete this ${roll.brand} ${roll.color} ${roll.material} roll?`)) return;
@@ -466,7 +469,8 @@ export default function InventoryPage() {
             </div>
           ) : viewMode === "list" ? (
             <div className="st-card overflow-hidden">
-              {sorted.map((roll, i) => {
+              <ListScroll page={paged.pager.page}>
+              {paged.pageItems.map((roll, i) => {
                 const status = stockStatusByKey.get(groupKey(roll));
                 return (
                   <div
@@ -584,6 +588,8 @@ export default function InventoryPage() {
                   </div>
                 );
               })}
+              </ListScroll>
+              <Pager {...paged.pager} noun="rolls" className="border-t border-slate-100 px-5 py-3 dark:border-white/10" />
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

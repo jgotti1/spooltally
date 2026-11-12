@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -252,6 +253,8 @@ export default function ProjectsPage() {
   }, [projects, statusFilter, reorderOnly, search, needsReorder]);
 
   const sorted = useMemo(() => sortProjects(filtered, sortBy), [filtered, sortBy]);
+  // List view only: 15 rows per page inside a scrolling box, so a long project list doesn't stretch the page.
+  const paged = usePaged(sorted, `${search}|${statusFilter}|${reorderOnly}|${sortBy}`, 15);
 
   async function handleDelete(project: Project) {
     if (
@@ -412,7 +415,8 @@ export default function ProjectsPage() {
             </div>
           ) : viewMode === "list" ? (
             <div className="st-card overflow-hidden">
-              {sorted.map((project, i) => {
+              <ListScroll page={paged.pager.page}>
+              {paged.pageItems.map((project, i) => {
                 const flagged = needsReorder(project);
                 const metrics = projectMetrics.get(project.id);
                 return (
@@ -477,6 +481,8 @@ export default function ProjectsPage() {
                   </div>
                 );
               })}
+              </ListScroll>
+              <Pager {...paged.pager} noun="projects" className="border-t border-slate-100 px-5 py-3 dark:border-white/10" />
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

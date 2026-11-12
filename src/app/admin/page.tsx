@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import { AdminNav } from "@/components/admin/AdminNav";
-import { StatusBadge, formatAdminDate, formatAdminRelative } from "@/components/admin/StatusBadge";
+import { StatusBadge, formatAdminDate, formatAdminDateTime } from "@/components/admin/StatusBadge";
 import { accountStatus, type AccountStatus, type AdminUserSummary } from "@/lib/account-status";
 import { fetchAdminUsers } from "@/lib/admin-api";
 
@@ -78,6 +79,8 @@ export default function AdminUsersPage() {
       .filter(({ user: u }) => !query || [u.name, u.email, u.shopName].some((field) => field.toLowerCase().includes(query)))
       .sort((a, b) => (b.user.lastLogin ?? b.user.lastSignIn ?? "").localeCompare(a.user.lastLogin ?? a.user.lastSignIn ?? ""));
   }, [rows, search, filter]);
+
+  const paged = usePaged(visible, `${filter}|${search}`);
 
   if (loading || !user || !isAdmin) {
     return (
@@ -153,8 +156,9 @@ export default function AdminUsersPage() {
           </div>
           {users === null && !error && <p className="px-5 py-8 text-sm text-slate-500 dark:text-slate-400">Loading users…</p>}
           {users !== null && visible.length === 0 && <p className="px-5 py-8 text-sm text-slate-500 dark:text-slate-400">No users match.</p>}
+          <ListScroll page={paged.pager.page}>
           <ul className="divide-y divide-slate-100 dark:divide-white/5">
-            {visible.map(({ user: u, info }) => (
+            {paged.pageItems.map(({ user: u, info }) => (
               <li key={u.uid}>
                 <Link
                   href={`/admin/users/${u.uid}`}
@@ -182,7 +186,7 @@ export default function AdminUsersPage() {
                   </span>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     <span className="md:hidden text-xs text-slate-400">Last active </span>
-                    {formatAdminRelative(u.lastLogin ?? u.lastSignIn)}
+                    {formatAdminDateTime(u.lastLogin ?? u.lastSignIn)}
                   </span>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     <span className="md:hidden text-xs text-slate-400">Signed up </span>
@@ -192,6 +196,8 @@ export default function AdminUsersPage() {
               </li>
             ))}
           </ul>
+          </ListScroll>
+          <Pager {...paged.pager} noun="users" className="border-t border-slate-100 px-5 py-3 dark:border-white/5" />
         </div>
       </div>
     </main>

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
-import { StatusBadge, formatAdminDate, formatAdminRelative } from "@/components/admin/StatusBadge";
+import { StatusBadge, formatAdminDate, formatAdminDateTime } from "@/components/admin/StatusBadge";
 import { accountStatus, type AdminAction, type AdminUserDetail, type AdminUserPatch, type AuditEntry, type LoginEntry, type SupportMessage } from "@/lib/account-status";
 import { deleteAdminUser, fetchAdminUser, fetchAuditLog, fetchLogins, fetchSupportMessages, runAdminAction, updateAdminUser } from "@/lib/admin-api";
+import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AuditList } from "@/components/admin/AuditList";
 import { SupportSection } from "@/components/admin/SupportSection";
@@ -27,6 +28,25 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
+  );
+}
+
+function SignInList({ logins }: { logins: LoginEntry[] }) {
+  const paged = usePaged(logins);
+  return (
+    <>
+      <ListScroll page={paged.pager.page}>
+        <ul className="divide-y divide-slate-100 text-sm dark:divide-white/10">
+          {paged.pageItems.map((login) => (
+            <li key={login.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+              <span className="font-medium text-slate-800 dark:text-slate-200">{formatAdminDateTime(login.at)}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{[login.method, login.device, login.country].filter(Boolean).join(" · ")}</span>
+            </li>
+          ))}
+        </ul>
+      </ListScroll>
+      <Pager {...paged.pager} noun="sign-ins" className="border-t border-slate-100 pt-3 dark:border-white/10" />
+    </>
   );
 }
 
@@ -218,8 +238,8 @@ function AdminUserPageInner() {
               <Card title="Account">
                 <dl>
                   <Row label="Signed up">{formatAdminDate(detail.createdAt)}</Row>
-                  <Row label="Last sign-in">{formatAdminRelative(detail.lastSignIn)}</Row>
-                  <Row label="Last active in app">{formatAdminRelative(detail.lastLogin)}</Row>
+                  <Row label="Last sign-in">{formatAdminDateTime(detail.lastSignIn)}</Row>
+                  <Row label="Last active in app">{formatAdminDateTime(detail.lastLogin)}</Row>
                   <Row label="Sign-in method">
                     {detail.providers.map((p) => (p === "google.com" ? "Google" : p === "password" ? "Email & password" : p)).join(", ") || "—"}
                   </Row>
@@ -483,16 +503,7 @@ function AdminUserPageInner() {
                   ) : logins.length === 0 ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">Nothing logged yet. Sign-ins are recorded as they happen and kept for 60 days, so this fills in the next time they sign in.</p>
                   ) : (
-                    <ul className="divide-y divide-slate-100 text-sm dark:divide-white/10">
-                      {logins.map((login) => (
-                        <li key={login.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
-                          <span className="font-medium text-slate-800 dark:text-slate-200">{formatAdminDate(login.at)}</span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {[login.method, login.device, login.country].filter(Boolean).join(" · ")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                    <SignInList logins={logins} />
                   )}
                 </div>
               </details>
