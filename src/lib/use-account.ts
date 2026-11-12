@@ -26,8 +26,10 @@ const EMPTY = { info: null, trialEndsAt: null, ready: false, privacyVersion: nul
  * doc, so a freeze, comp or trial change made by an admin shows up immediately. Firestore rules enforce the same rule.
  */
 export function useAccountStatus(): AccountState {
-  const { user } = useAuth();
+  const { user, isOwner, viewingAs } = useAuth();
   const uid = user?.uid ?? null;
+  // The owner flag belongs to the signed-in person, so it never applies to a customer's account seen through view-as.
+  const ownerAccount = isOwner && !viewingAs;
   const [state, setState] = useState<{ uid: string | null } & AccountState>({ uid: null, ...EMPTY, loading: true });
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export function useAccountStatus(): AccountState {
           privacyVersion: typeof d.privacyVersion === "number" ? d.privacyVersion : null,
           privacyAcknowledgedAt: d.privacyAcknowledgedAt instanceof Timestamp ? d.privacyAcknowledgedAt.toDate().toISOString() : null,
           info: accountStatus({
+            isOwner: ownerAccount,
             isComped: d.isComped === true,
             disabled: d.disabled === true,
             trialEndsAt,
@@ -59,7 +62,7 @@ export function useAccountStatus(): AccountState {
       },
       () => setState({ uid, ...EMPTY, loading: false }),
     );
-  }, [uid]);
+  }, [uid, ownerAccount]);
 
   // A result for a previous account never applies to the current one.
   if (state.uid !== uid) return { ...EMPTY, loading: Boolean(uid) };

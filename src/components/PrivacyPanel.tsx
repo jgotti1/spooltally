@@ -15,12 +15,32 @@ function Check() {
   );
 }
 
-function Block({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+function Block({
+  icon,
+  title,
+  link,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  link?: { href: string; label: string };
+  children: ReactNode;
+}) {
   return (
     <section className="rounded-2xl p-5 shadow-[inset_0_0_0_1px_var(--st-ring)]">
       <div className="flex items-center gap-3">
         <span className="st-badge st-badge-blue h-9 w-9">{icon}</span>
         <h3 className="font-display text-base font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">{title}</h3>
+        {link && (
+          <a
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto shrink-0 text-xs font-semibold text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
+          >
+            {link.label} <span aria-hidden="true">↗</span>
+          </a>
+        )}
       </div>
       <ul className="mt-4 space-y-2.5 text-sm leading-6 text-slate-600 dark:text-slate-300">{children}</ul>
     </section>
@@ -56,7 +76,8 @@ export function PrivacyPanel({ hideContact = false, acknowledgedAt = null }: { h
       </Block>
 
       <Block
-        title="Payments are handled by Stripe"
+        title="Secure payments, handled by Stripe"
+        link={{ href: "https://stripe.com/docs/security", label: "How Stripe protects you" }}
         icon={
           <svg {...iconProps}>
             <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
@@ -72,6 +93,25 @@ export function PrivacyPanel({ hideContact = false, acknowledgedAt = null }: { h
           All we keep is what the app needs to know your access: your plan and whether your subscription is active, past due, or ended.
         </Point>
         <Point>You can update your payment method or cancel through Stripe&rsquo;s customer portal.</Point>
+      </Block>
+
+      <Block
+        title="About price estimates"
+        icon={
+          <svg {...iconProps}>
+            <rect x="4" y="2.5" width="12" height="15" rx="2" />
+            <path d="M7 6h6M7.5 10h.01M10 10h.01M12.5 10h.01M7.5 13h.01M10 13h.01M12.5 13h.01" />
+          </svg>
+        }
+      >
+        <Point>
+          The costs and suggested prices in SpoolTally are estimates, our best guess based on what you enter. Your real costs may end up higher or
+          lower.
+        </Point>
+        <Point>
+          Please use your own best judgment when you set your prices. SpoolTally isn&rsquo;t financially responsible if an item ends up
+          mispriced.
+        </Point>
       </Block>
 
       <Block
@@ -97,14 +137,19 @@ export function PrivacyPanel({ hideContact = false, acknowledgedAt = null }: { h
         }
       >
         <Point>
-          Your account is private to you. To run the app we rely on a few service providers that process data for us: Google Firebase
-          (sign-in, database, file storage), Vercel (hosting), Resend (support email), and Stripe (payments).
+          Your account is yours alone. To keep SpoolTally running, we lean on a few trusted partners: Google Firebase (sign-in, your data, and
+          file storage), Vercel (hosting), Resend (support emails), and Stripe (payments).
         </Point>
         <Point>
-          To help with a support request, the SpoolTally owner can open your account in a read-only view. They can&rsquo;t change your data, and
-          each time it happens it&rsquo;s logged.
+          If your free trial ends, your data stays safe and subscribing unlocks it right back up. We can only keep data for a limited time, so
+          we think 6 months is a fair window: if an account has been inactive for 6 months after its trial or subscription ends, it and
+          everything in it will be removed, and we won&rsquo;t be able to send a heads-up first. To keep your account for good, just
+          subscribe. And if you have any questions, we&rsquo;re always happy to help.
         </Point>
-        <Point>If your free trial ends, your data is kept safe, not deleted, and subscribing unlocks it again.</Point>
+        <Point>
+          If you ever ask support for a hand, the SpoolTally admin may take a look at your account in a read-only view. They can&rsquo;t change
+          anything, and they only do it when you&rsquo;ve asked for help.
+        </Point>
       </Block>
 
       {!hideContact && (

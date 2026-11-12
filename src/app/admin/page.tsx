@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
                   </span>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     <span className="md:hidden text-xs text-slate-400">Trial ends </span>
-                    {u.isComped ? "—" : formatAdminDate(u.trialEndsAt)}
+                    {u.isComped || u.isOwner ? "—" : formatAdminDate(u.trialEndsAt)}
                   </span>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     <span className="md:hidden text-xs text-slate-400">Last active </span>

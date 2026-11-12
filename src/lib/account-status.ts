@@ -25,7 +25,7 @@ export type AccountRecord = {
   privacyVersion: number | null;
 };
 
-export type AccountStatus = "disabled" | "comped" | "subscribed" | "past_due" | "trial" | "trial_expired" | "canceled";
+export type AccountStatus = "owner" | "disabled" | "comped" | "subscribed" | "past_due" | "trial" | "trial_expired" | "canceled";
 
 export type AccountStatusInfo = {
   status: AccountStatus;
@@ -39,9 +39,11 @@ export type AccountStatusInfo = {
 
 /** Access rule from the spec: comped OR active trial OR active/trialing subscription. The owner's freeze overrides everything. */
 export function accountStatus(
-  account: Pick<AccountRecord, "isComped" | "disabled" | "trialEndsAt" | "subscriptionStatus">,
+  account: Pick<AccountRecord, "isComped" | "disabled" | "trialEndsAt" | "subscriptionStatus"> & { isOwner?: boolean },
   now = new Date(),
 ): AccountStatusInfo {
+  // The owner's account is always free and never counts down, locks, or freezes.
+  if (account.isOwner) return { status: "owner", label: "Owner account", locked: false, daysLeft: null, tone: "info" };
   if (account.disabled) return { status: "disabled", label: "Frozen by admin", locked: true, daysLeft: null, tone: "bad" };
   if (account.isComped) return { status: "comped", label: "Free account (comped)", locked: false, daysLeft: null, tone: "info" };
   const sub = account.subscriptionStatus;
@@ -60,6 +62,8 @@ export function accountStatus(
 export function planBadge(info: AccountStatusInfo | null): { label: string; warn: boolean; detail: string } {
   if (!info) return { label: "Free trial", warn: false, detail: `You're on the ${TRIAL_DAYS}-day free trial. No credit card on file — nothing will be charged automatically.` };
   switch (info.status) {
+    case "owner":
+      return { label: "Owner account", warn: false, detail: "This is the owner account of this SpoolTally workspace. It's always free, with no trial or subscription." };
     case "comped":
       return { label: "Free account", warn: false, detail: "Your account is free. No payment is needed." };
     case "subscribed":
@@ -80,6 +84,9 @@ export function planBadge(info: AccountStatusInfo | null): { label: string; warn
       return { label: "Trial ended", warn: true, detail: "Your free trial has ended. Your data is saved; pick a plan to unlock it." };
   }
 }
+
+/** One recorded sign-in (kept 60 days). */
+export type LoginEntry = { id: string; at: string | null; method: string; device: string; country: string };
 
 export type AdminUserSummary = {
   uid: string;
@@ -169,6 +176,7 @@ export const AUDIT_LABELS: Record<string, string> = {
   send_verification: "Sent verification email",
   mark_verified: "Marked email as verified",
   view_as: "Viewed as user",
+  admin_message: "Emailed a message to users",
   support_reply: "Replied to support message",
   support_resolved: "Resolved support message",
   support_reopened: "Reopened support message",

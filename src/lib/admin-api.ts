@@ -1,4 +1,4 @@
-import type { AdminAction, AdminUserDetail, AdminUserPatch, AdminUserSummary, AuditEntry, SupportMessage, SupportStatus } from "@/lib/account-status";
+import type { AdminAction, AdminUserDetail, AdminUserPatch, AdminUserSummary, AuditEntry, LoginEntry, SupportMessage, SupportStatus } from "@/lib/account-status";
 
 type TokenGetter = () => Promise<string | null>;
 
@@ -107,4 +107,15 @@ export async function purgeHistory(getIdToken: TokenGetter, olderThanDays: numbe
     body: JSON.stringify({ confirm, ...(olderThanDays ? { olderThanDays } : {}) }),
   });
   return result.deleted;
+}
+
+export async function sendAdminMessage(
+  getIdToken: TokenGetter,
+  input: { to: string; subject: string; message: string },
+): Promise<{ sent: number; failed: number }> {
+  return adminRequest<{ sent: number; failed: number }>(getIdToken, "/api/admin/message", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function fetchLogins(getIdToken: TokenGetter, uid: string): Promise<LoginEntry[]> {
+  return (await adminRequest<{ logins: LoginEntry[] }>(getIdToken, `/api/admin/users/${encodeURIComponent(uid)}/logins`)).logins;
 }

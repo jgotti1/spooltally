@@ -6,8 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/Header";
 import { StatusBadge, formatAdminDate, formatAdminRelative } from "@/components/admin/StatusBadge";
-import { accountStatus, type AdminAction, type AdminUserDetail, type AdminUserPatch, type AuditEntry, type SupportMessage } from "@/lib/account-status";
-import { deleteAdminUser, fetchAdminUser, fetchAuditLog, fetchSupportMessages, runAdminAction, updateAdminUser } from "@/lib/admin-api";
+import { accountStatus, type AdminAction, type AdminUserDetail, type AdminUserPatch, type AuditEntry, type LoginEntry, type SupportMessage } from "@/lib/account-status";
+import { deleteAdminUser, fetchAdminUser, fetchAuditLog, fetchLogins, fetchSupportMessages, runAdminAction, updateAdminUser } from "@/lib/admin-api";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AuditList } from "@/components/admin/AuditList";
 import { SupportSection } from "@/components/admin/SupportSection";
@@ -52,6 +52,7 @@ function AdminUserPageInner() {
   const [deleting, setDeleting] = useState(false);
   const [trialDate, setTrialDate] = useState("");
   const [history, setHistory] = useState<AuditEntry[] | null>(null);
+  const [logins, setLogins] = useState<LoginEntry[] | null>(null);
   const [support, setSupport] = useState<SupportMessage[] | null>(null);
 
   useEffect(() => {
@@ -74,6 +75,9 @@ function AdminUserPageInner() {
     fetchAuditLog(getIdToken, uid)
       .then((next) => active && setHistory(next))
       .catch(() => active && setHistory([]));
+    fetchLogins(getIdToken, uid)
+      .then((next) => active && setLogins(next))
+      .catch(() => active && setLogins([]));
     return () => {
       active = false;
     };
@@ -139,7 +143,7 @@ function AdminUserPageInner() {
     );
   }
 
-  const info = detail ? accountStatus(detail.account) : null;
+  const info = detail ? accountStatus({ ...detail.account, isOwner: detail.isOwner }) : null;
   const isSelf = detail?.uid === user.uid;
   const buttonClass =
     "h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200";
@@ -200,8 +204,8 @@ function AdminUserPageInner() {
                 <dl>
                   <Row label="Status">{info.label}</Row>
                   <Row label="Locked out">{info.locked ? "Yes" : "No"}</Row>
-                  <Row label="Plan">{detail.account.plan}</Row>
-                  <Row label="Trial ends">{detail.account.isComped ? "n/a (comped)" : formatAdminDate(detail.account.trialEndsAt)}</Row>
+                  <Row label="Plan">{detail.isOwner ? "owner" : detail.account.plan}</Row>
+                  <Row label="Trial ends">{detail.isOwner ? "n/a (owner)" : detail.account.isComped ? "n/a (comped)" : formatAdminDate(detail.account.trialEndsAt)}</Row>
                   <Row label="Payment status">
                     {detail.account.subscriptionStatus ? detail.account.subscriptionStatus.replace("_", " ") : "No subscription yet"}
                   </Row>
@@ -466,6 +470,32 @@ function AdminUserPageInner() {
             </div>
 
             <div className="mt-4">
+              <details className="group st-card mb-4 p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  <span>
+                    Sign-in history <span className="font-normal text-slate-500 dark:text-slate-400">· {logins ? (logins.length ? `${logins.length} in the last 60 days` : "none logged yet") : "Loading…"}</span>
+                  </span>
+                  <span aria-hidden="true" className="text-slate-400 transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="mt-3">
+                  {!logins ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+                  ) : logins.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Nothing logged yet. Sign-ins are recorded as they happen and kept for 60 days, so this fills in the next time they sign in.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 text-sm dark:divide-white/10">
+                      {logins.map((login) => (
+                        <li key={login.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+                          <span className="font-medium text-slate-800 dark:text-slate-200">{formatAdminDate(login.at)}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {[login.method, login.device, login.country].filter(Boolean).join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
               <details className="group st-card p-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-200">
                   <span>

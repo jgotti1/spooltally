@@ -36,6 +36,7 @@ import {
   type EstimatorSettings,
 } from "@/lib/estimator-settings";
 import type { SalesChannelId } from "@/lib/estimator-constants";
+import { EstimateDisclaimer } from "@/components/EstimateDisclaimer";
 import { calcCostBreakdown, calcSuggestedPrice, DEFAULT_ROLL_PRICE, type ColorUsage } from "@/lib/estimator-pricing";
 
 type ProjectFormProps = {
@@ -1066,6 +1067,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
               <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                 Suggested price via {selectedChannel?.label}: {Number.isFinite(suggestedPrice) ? money(suggestedPrice) : "—"} / unit
               </p>
+              <EstimateDisclaimer className="mt-3" />
             </div>
           </div>
         </>

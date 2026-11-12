@@ -81,6 +81,8 @@ export type Printer = {
   nextDueDate: string;
   /** Optional running total of print hours on the printer. Informational — it never affects due status. */
   currentHours: number | null;
+  /** Parked printers (broken, stored, sold) stay on file but never raise a maintenance reminder. Can be switched back any time. */
+  outOfService: boolean;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
@@ -128,6 +130,7 @@ export function subscribeToPrinters(
           model: data.model,
           nextDueDate: data.nextDueDate ?? "",
           currentHours: typeof data.currentHours === "number" ? data.currentHours : null,
+          outOfService: data.outOfService === true,
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
         } satisfies Printer;
@@ -186,6 +189,7 @@ export async function addPrinter(
     model: input.model.trim(),
     nextDueDate: input.nextDueDate ?? "",
     currentHours: input.currentHours ?? null,
+    outOfService: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -198,6 +202,16 @@ export async function updatePrinterNextDueDate(printerId: string, nextDueDate: s
   if (!db) throw configError;
   await updateDoc(doc(printersCollection(), printerId), {
     nextDueDate,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Parks a printer (no reminders, kept on file) or returns it to service. History and the due date are left untouched. */
+export async function setPrinterOutOfService(printerId: string, outOfService: boolean): Promise<void> {
+  assertWritable();
+  if (!db) throw configError;
+  await updateDoc(doc(printersCollection(), printerId), {
+    outOfService,
     updatedAt: serverTimestamp(),
   });
 }
@@ -379,6 +393,11 @@ export function maintenanceDueStatus(nextDueDate: string | undefined, today = lo
   const daysUntilDue = Math.round((dueDate.getTime() - todayDate.getTime()) / 86_400_000);
   if (daysUntilDue <= MAINTENANCE_UPCOMING_WINDOW_DAYS) return "upcoming";
   return "scheduled";
+}
+
+/** A printer worth reminding about: in service, with a due date that is overdue, due today, or coming up. */
+export function needsMaintenanceAttention(printer: Pick<Printer, "outOfService" | "nextDueDate">, today = localDateString()): boolean {
+  return !printer.outOfService && isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate, today));
 }
 
 /** True for anything that needs attention soon — overdue, due today, or due within the upcoming window. */

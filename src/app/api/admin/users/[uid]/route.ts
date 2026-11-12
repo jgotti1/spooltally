@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { deleteLoginsFor } from "@/lib/admin/logins";
 import { ADMIN_PRIVATE_COLLECTION, accountForAuthUser, adminAuth, adminBucket, adminDb, audit, requireAdmin, requireOwner, summarize } from "@/lib/admin/server";
 import { TRIAL_DAYS, type AdminUserDetail, type AdminUserPatch } from "@/lib/account-status";
 
@@ -201,6 +202,7 @@ async function deleteAllUserData(uid: string) {
   const batch = db.batch();
   for (const name of ["settings", "users", ADMIN_PRIVATE_COLLECTION]) batch.delete(db.collection(name).doc(uid));
   await batch.commit();
+  await deleteLoginsFor(uid);
   // Uploaded models and previews live under projects/{uid}/.
   await adminBucket().deleteFiles({ prefix: `projects/${uid}/`, force: true });
 }

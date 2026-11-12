@@ -149,12 +149,13 @@ export default function DashboardPage() {
     [activeProjects, rolls],
   );
   const maintenanceDuePrinters = useMemo(
-    () => printers.filter((printer) => isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
+    () => printers.filter((printer) => !printer.outOfService && isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
     [printers],
   );
   const maintenanceUrgentPrinters = useMemo(
     () =>
       printers.filter((printer) => {
+        if (printer.outOfService) return false;
         const status = maintenanceDueStatus(printer.nextDueDate);
         return status === "overdue" || status === "due";
       }),

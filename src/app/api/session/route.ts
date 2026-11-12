@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminAuth, adminDb, logEvent, requireUser } from "@/lib/admin/server";
 import { createUserRecordIfMissing } from "@/lib/admin/user-record";
+import { recordLogin } from "@/lib/admin/logins";
 
 /**
  * Called once per app load while signed in. Creates the `users/{uid}` doc the first time (trial starts at the Auth
@@ -30,7 +31,12 @@ export async function POST(request: Request) {
   }
   const ref = adminDb().collection("users").doc(uid);
 
+  const provider = (guard.token.firebase as { sign_in_provider?: string } | undefined)?.sign_in_provider ?? "";
+  const loginMethod = provider === "google.com" ? "Google" : provider === "password" ? "Email & password" : provider || "Unknown";
+
   if (await createUserRecordIfMissing(authUser)) {
+    // A new account's first visit is also its first sign-in.
+    await recordLogin(request, uid, loginMethod);
     await logEvent({ uid, email: authUser.email }, "account_created", uid, {
       method: authUser.providerData.map((p) => p.providerId).join(", "),
     });
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
     // This route runs on every app load, so a sign-in is only recorded after 30 quiet minutes.
     const last = snap.data()?.lastLogin;
     if (!(last instanceof Timestamp) || Date.now() - last.toMillis() > 30 * 60_000) {
-      await logEvent({ uid, email: authUser.email }, "sign_in", uid);
+      await recordLogin(request, uid, loginMethod);
     }
     await ref.update({
       lastLogin: FieldValue.serverTimestamp(),

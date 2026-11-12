@@ -16,6 +16,7 @@ import {
   getEstimatorSettings,
   type EstimatorSettings,
 } from "@/lib/estimator-settings";
+import { EstimateDisclaimer } from "@/components/EstimateDisclaimer";
 import { calcCostBreakdown, calcSuggestedPrice } from "@/lib/estimator-pricing";
 import { ClipboardArt } from "@/components/ui/Art";
 
@@ -84,7 +85,7 @@ function CubeIcon() {
   );
 }
 
-function ProjectThumb({ project, className }: { project: Project; className: string }) {
+function ProjectThumb({ project, className, compact = false }: { project: Project; className: string; compact?: boolean }) {
   const image = project.files.find((f) => f.type === "image");
   if (image) {
     return (
@@ -103,11 +104,16 @@ function ProjectThumb({ project, className }: { project: Project; className: str
         href={model.url}
         target="_blank"
         rel="noreferrer"
-        title={`Download ${model.name}`}
+        title={`No preview available — click to download ${model.name}`}
         className={`${className} flex shrink-0 flex-col items-center justify-center gap-1 bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/15`}
       >
         <CubeIcon />
-        <span className="text-[10px] font-semibold uppercase tracking-wide">{ext} file</span>
+        {!compact && (
+          <>
+            <span className="text-[11px] font-semibold">No preview available</span>
+            <span className="text-[10px] font-medium opacity-70">from your {ext} upload</span>
+          </>
+        )}
       </a>
     );
   }
@@ -331,7 +337,7 @@ export default function ProjectsPage() {
                 : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-white/[0.08]"
             }`}
           >
-            May run short only
+            Low filament only
           </button>
           <select
             value={sortBy}
@@ -380,6 +386,8 @@ export default function ProjectsPage() {
           </p>
         )}
 
+        <EstimateDisclaimer className="mt-5" />
+
         <div className="mt-6">
           {projectsLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading projects…</p>
@@ -415,7 +423,7 @@ export default function ProjectsPage() {
                       i > 0 ? "border-t border-slate-100 dark:border-white/10" : ""
                     } ${flagged ? "bg-rose-50/60 dark:bg-rose-500/[0.06]" : ""}`}
                   >
-                    <ProjectThumb project={project} className="h-11 w-11 shrink-0 rounded-lg" />
+                    <ProjectThumb project={project} compact className="h-11 w-11 shrink-0 rounded-lg" />
                     <div className="min-w-[240px] flex-1">
                       <p className="font-semibold [overflow-wrap:anywhere] text-slate-900 dark:text-white">{project.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -441,7 +449,7 @@ export default function ProjectsPage() {
                         className="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
                         title={describeShortage(stockByProject.get(project.id)!)}
                       >
-                        May run short
+                        Low filament
                       </span>
                     ) : (
                       stockByProject.get(project.id)?.unitsPossible !== null && (
@@ -494,7 +502,7 @@ export default function ProjectsPage() {
 
                     {flagged ? (
                       <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-500/30 dark:bg-rose-500/10">
-                        <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">May run short — order soon</p>
+                        <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">Low filament — order soon</p>
                         <p className="mt-0.5 text-[11px] leading-4 text-rose-700/80 dark:text-rose-300/80">
                           {describeShortage(stockByProject.get(project.id)!)}
                         </p>

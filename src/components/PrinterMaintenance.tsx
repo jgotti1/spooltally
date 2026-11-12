@@ -7,6 +7,7 @@ import {
   completeScheduledMaintenance,
   deleteMaintenanceRecord,
   deletePrinter,
+  setPrinterOutOfService,
   formatHours,
   formatMaintenanceDate,
   isMaintenanceSoon,
@@ -72,6 +73,8 @@ function WrenchIcon() {
   );
 }
 
+const OUT_OF_SERVICE_STYLE = "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300";
+
 const STATUS_STYLES = {
   overdue: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   due: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
@@ -110,6 +113,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   const [savingRecord, setSavingRecord] = useState(false);
 
   const [viewMode, setViewMode] = useState<"block" | "list">("block");
+  const [listFilter, setListFilter] = useState<"active" | "out">("active");
+  const [togglingService, setTogglingService] = useState(false);
   const [detailPrinterId, setDetailPrinterId] = useState<string | null>(null);
   const [detailDueDate, setDetailDueDate] = useState("");
   const [savingDueDate, setSavingDueDate] = useState(false);
@@ -177,7 +182,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
   }, [records]);
   /** Overdue, due today, or due within the upcoming window — everything worth surfacing up top. */
   const duePrinters = useMemo(
-    () => printers.filter((printer) => isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
+    () => printers.filter((printer) => !printer.outOfService && isMaintenanceSoon(maintenanceDueStatus(printer.nextDueDate))),
     [printers],
   );
   const urgentDuePrinters = useMemo(
@@ -188,6 +193,31 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
       }),
     [duePrinters],
   );
+
+  const activeCount = printers.filter((printer) => !printer.outOfService).length;
+  const outCount = printers.length - activeCount;
+  const shownTab = listFilter === "out" && outCount === 0 ? "active" : listFilter;
+  const shownPrinters = useMemo(
+    () => printers.filter((printer) => (shownTab === "out" ? printer.outOfService : !printer.outOfService)),
+    [printers, shownTab],
+  );
+
+  async function handleToggleService(printer: Printer) {
+    setTogglingService(true);
+    setError("");
+    try {
+      await setPrinterOutOfService(printer.id, !printer.outOfService);
+      setNotice(
+        printer.outOfService
+          ? `${printer.name} is back in service.`
+          : `${printer.name} is out of service — it won't raise maintenance reminders until you bring it back.`,
+      );
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : "Couldn't update the printer.");
+    } finally {
+      setTogglingService(false);
+    }
+  }
 
   function printerDueLabel(printer: Printer): string {
     return printer.nextDueDate ? `${printer.name} (${formatMaintenanceDate(printer.nextDueDate)})` : printer.name;
@@ -764,6 +794,25 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
           </div>
         </div>
 
+        {printers.length > 0 && outCount > 0 && (
+          <div className="st-segment mt-4 w-fit" role="tablist" aria-label="Printer list">
+            {(["active", "out"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={shownTab === tab}
+                onClick={() => setListFilter(tab)}
+                className={`flex h-full items-center rounded-lg px-3 text-xs font-semibold transition-colors ${
+                  shownTab === tab ? "st-segment-on" : "st-segment-off"
+                }`}
+              >
+                {tab === "active" ? `In service (${activeCount})` : `Out of service (${outCount})`}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">Loading printers…</p>
         ) : printers.length === 0 ? (
@@ -772,9 +821,11 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
             <p className="mt-3 font-display text-lg font-semibold tracking-[-0.01em] text-slate-950 dark:text-white">No printers added yet.</p>
             <p className="st-lede mt-1">Add one above and its service log starts here.</p>
           </div>
+        ) : shownPrinters.length === 0 ? (
+          <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">No printers in service. Open one under &ldquo;Out of service&rdquo; to bring it back.</p>
         ) : viewMode === "block" ? (
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {printers.map((printer) => {
+            {shownPrinters.map((printer) => {
               const latest = latestByPrinter.get(printer.id);
               const status = maintenanceDueStatus(printer.nextDueDate);
               const history = recordsByPrinter.get(printer.id) ?? [];
@@ -782,8 +833,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 <article
                   key={printer.id}
                   onDoubleClick={() => setDetailPrinterId(printer.id)}
-                  className={`st-card st-card-hover cursor-pointer p-5 ${
-                    status === "overdue" ? "st-accent st-accent-rose pl-7" : status === "due" ? "st-accent st-accent-amber pl-7" : ""
+                  className={`st-card st-card-hover cursor-pointer p-5 ${printer.outOfService ? "opacity-70" : ""} ${
+                    printer.outOfService ? "" : status === "overdue" ? "st-accent st-accent-rose pl-7" : status === "due" ? "st-accent st-accent-amber pl-7" : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -791,8 +842,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       <h3 className="font-display text-lg leading-tight font-semibold tracking-[-0.01em] break-words text-slate-950 dark:text-white">{printer.name}</h3>
                       <p className="mt-0.5 text-xs break-words text-slate-500 dark:text-slate-400">{printer.model}</p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}>
-                      {statusLabel(status, printer.nextDueDate)}
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${printer.outOfService ? OUT_OF_SERVICE_STYLE : STATUS_STYLES[status]}`}>
+                      {printer.outOfService ? "Out of service" : statusLabel(status, printer.nextDueDate)}
                     </span>
                   </div>
 
@@ -820,7 +871,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
           </div>
         ) : (
           <div className="mt-5 st-card overflow-hidden">
-            {printers.map((printer, i) => {
+            {shownPrinters.map((printer, i) => {
               const latest = latestByPrinter.get(printer.id);
               const status = maintenanceDueStatus(printer.nextDueDate);
               const history = recordsByPrinter.get(printer.id) ?? [];
@@ -843,8 +894,8 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       {printer.currentHours !== null ? ` · ${formatHours(printer.currentHours)} printed` : ""}
                     </p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}>
-                    {statusLabel(status, printer.nextDueDate)}
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${printer.outOfService ? OUT_OF_SERVICE_STYLE : STATUS_STYLES[status]}`}>
+                    {printer.outOfService ? "Out of service" : statusLabel(status, printer.nextDueDate)}
                   </span>
                   <button
                     type="button"
@@ -881,9 +932,9 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${detailPrinter.outOfService ? OUT_OF_SERVICE_STYLE : STATUS_STYLES[maintenanceDueStatus(detailPrinter.nextDueDate)]}`}
                     >
-                      {statusLabel(maintenanceDueStatus(detailPrinter.nextDueDate), detailPrinter.nextDueDate)}
+                      {detailPrinter.outOfService ? "Out of service" : statusLabel(maintenanceDueStatus(detailPrinter.nextDueDate), detailPrinter.nextDueDate)}
                     </span>
                     {!editingPrinter && (
                       <button
@@ -894,6 +945,14 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         Edit printer
                       </button>
                     )}
+                    <button
+                      type="button"
+                      disabled={togglingService}
+                      onClick={() => handleToggleService(detailPrinter)}
+                      className="text-[11px] font-semibold text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
+                    >
+                      {detailPrinter.outOfService ? "Return to service" : "Mark out of service"}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { logEvent } from "@/lib/admin/server";
 import { HISTORY_RETENTION_DAYS, purgeHistoryOlderThan } from "@/lib/admin/history";
+import { LOGIN_RETENTION_DAYS, purgeLoginsOlderThan } from "@/lib/admin/logins";
 
 function validSecret(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -23,7 +24,8 @@ export async function GET(request: Request) {
     if (deleted > 0) {
       await logEvent({ uid: "system", email: "automatic cleanup" }, "purge_history", null, { deleted, olderThanDays: HISTORY_RETENTION_DAYS, automatic: true });
     }
-    return NextResponse.json({ ok: true, deleted });
+    const loginsDeleted = await purgeLoginsOlderThan(LOGIN_RETENTION_DAYS);
+    return NextResponse.json({ ok: true, deleted, loginsDeleted });
   } catch (error) {
     console.error("[history] retention purge failed", error);
     return NextResponse.json({ error: "Purge failed." }, { status: 500 });
