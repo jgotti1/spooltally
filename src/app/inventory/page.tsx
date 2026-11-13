@@ -473,7 +473,7 @@ export default function InventoryPage() {
             <div className="st-card overflow-hidden">
               <ListScroll page={paged.pager.page}>
               {/* Column headings share the row widths below, so everything lines up on wide screens. */}
-              <div className="sticky top-0 z-10 hidden items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:bg-[#0b1420] text-[11px] font-bold tracking-[0.12em] text-slate-400 uppercase lg:flex dark:border-white/10">
+              <div className="sticky top-0 z-10 hidden items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:bg-[#0e1623] text-[11px] font-bold tracking-[0.12em] text-slate-400 uppercase lg:flex dark:border-white/10">
                 <span className="w-4 shrink-0" />
                 <span className="min-w-[160px] flex-1">Roll</span>
                 <span className="w-24 shrink-0 text-center">Level</span>

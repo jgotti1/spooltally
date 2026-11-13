@@ -58,7 +58,7 @@ export default function SubscriptionInfoPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <Link
               href="/subscribe"
-              className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+              className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               Subscribe
             </Link>

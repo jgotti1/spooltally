@@ -14,17 +14,22 @@
    headlines. Light values on :root, dark overrides on .dark.
    ------------------------------------------------------------------ */
 :root {
-  --st-canvas: #f3f5f9;
+  --st-canvas: #e7edf5;
   --st-ink: #0b1220;
   --st-brand: #1d6ff2;
   --st-brand-deep: #0b1a2b;
-  --st-glow-brand: rgba(29, 111, 242, 0.14);
-  --st-glow-mint: rgba(20, 184, 122, 0.1);
-  --st-ring: rgba(15, 23, 42, 0.07);
-  --st-ring-strong: rgba(15, 23, 42, 0.12);
+  --st-glow-brand: rgba(29, 111, 242, 0.16);
+  --st-glow-mint: rgba(20, 184, 122, 0.11);
+  --st-ring: rgba(15, 23, 42, 0.12);
+  --st-ring-strong: rgba(15, 23, 42, 0.2);
   --st-surface: #ffffff;
-  --st-surface-2: #f8fafc;
-  --st-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -16px rgba(16, 24, 40, 0.16);
+  --st-surface-2: #f3f7fb;
+  /* Form fields sit lighter than the card with a clearly visible edge. */
+  --st-field: #ffffff;
+  --st-field-border: #b4c1d1;
+  --st-field-border-hover: #8497ad;
+  --st-field-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.07);
+  --st-shadow: 0 1px 2px rgba(16, 24, 40, 0.07), 0 16px 36px -16px rgba(16, 24, 40, 0.28);
   --st-shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.05), 0 22px 44px -18px rgba(16, 24, 40, 0.24);
   --st-dot: rgba(15, 23, 42, 0.08);
 }
@@ -32,14 +37,19 @@
 .dark {
   /* Tells the browser the page is dark, so native dropdown lists, date pickers and scrollbars are drawn dark too. */
   color-scheme: dark;
-  --st-canvas: #070b12;
+  --st-canvas: #05080e;
   --st-ink: #e6edf6;
   --st-glow-brand: rgba(69, 169, 255, 0.12);
   --st-glow-mint: rgba(40, 223, 152, 0.07);
-  --st-ring: rgba(255, 255, 255, 0.08);
-  --st-ring-strong: rgba(255, 255, 255, 0.14);
-  --st-surface: rgba(255, 255, 255, 0.04);
-  --st-surface-2: rgba(255, 255, 255, 0.03);
+  --st-ring: rgba(255, 255, 255, 0.13);
+  --st-ring-strong: rgba(255, 255, 255, 0.22);
+  --st-surface: #0e1623;
+  --st-surface-2: #0a111c;
+  /* Fields are darker than the card (inset look) with a light edge. */
+  --st-field: #070c14;
+  --st-field-border: rgba(255, 255, 255, 0.22);
+  --st-field-border-hover: rgba(255, 255, 255, 0.38);
+  --st-field-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   --st-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 34px -18px rgba(0, 0, 0, 0.65);
   --st-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 48px -20px rgba(0, 0, 0, 0.8);
   --st-dot: rgba(255, 255, 255, 0.06);
@@ -62,6 +72,35 @@ body {
 .dark ::selection {
   background: rgba(69, 169, 255, 0.3);
   color: #f0f7ff;
+}
+
+/* Form fields on the app pages: one consistent, clearly visible look (white field with a defined edge in light mode, an inset dark
+   field with a light edge in dark mode). :where() keeps the specificity at zero, so the focus halo below still wins, and being
+   unlayered it overrides each field's own pale Tailwind border/background classes. */
+:where(.st-page) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]), textarea, button[aria-haspopup="listbox"]) {
+  background-color: var(--st-field);
+  border-color: var(--st-field-border);
+  box-shadow: var(--st-field-shadow);
+}
+:where(.st-page) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]), textarea, button[aria-haspopup="listbox"]):hover {
+  border-color: var(--st-field-border-hover);
+}
+:where(.st-page) :is(input, textarea):disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+/* Secondary text was too faint against the deeper canvas. */
+.st-page .text-slate-500 {
+  color: #475569;
+}
+.st-page .text-slate-400 {
+  color: #667589;
+}
+.dark .st-page .text-slate-500 {
+  color: #a4b3c6;
+}
+.dark .st-page .text-slate-400 {
+  color: #8798ae;
 }
 
 /* Form controls: brand accent on checks/radios, and a soft focus halo everywhere (adds to each input's own border styles). */

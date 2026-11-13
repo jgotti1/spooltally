@@ -169,7 +169,7 @@ function ContactPageInner() {
                 type="submit"
                 disabled={status === "sending" || !!viewingAs}
                 title={viewingAs ? "You're viewing a customer's account. Exit view-as to send a message." : undefined}
-                className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors dark:bg-blue-600 dark:shadow-blue-500/20 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "sending" ? "Sending…" : "Send message"}
               </button>
