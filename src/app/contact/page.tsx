@@ -78,14 +78,16 @@ function ContactPageInner() {
         </header>
       )}
       <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
-        {user && <BackLink />}
-        <p className="st-eyebrow">Support</p>
-        <h1 className="mt-2 st-title">Contact us</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-          {frozen
-            ? "Your account is frozen. Tell us your email address and what you need, and we'll get back to you."
-            : "Questions, bugs, or feedback — send a note and we’ll get back to you."}
-        </p>
+        <div className="st-pagehead">
+          {user && <BackLink />}
+          <p className="st-eyebrow">Support</p>
+          <h1 className="mt-2 st-title">Contact us</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+            {frozen
+              ? "Your account is frozen. Tell us your email address and what you need, and we'll get back to you."
+              : "Questions, bugs, or feedback — send a note and we’ll get back to you."}
+          </p>
+        </div>
 
         <div className="mt-8 st-card p-6 sm:p-8">
           {status === "sent" ? (
@@ -169,7 +171,7 @@ function ContactPageInner() {
                 type="submit"
                 disabled={status === "sending" || !!viewingAs}
                 title={viewingAs ? "You're viewing a customer's account. Exit view-as to send a message." : undefined}
-                className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors dark:bg-blue-600 dark:shadow-blue-500/20 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex h-12 w-full items-center justify-center st-btn-primary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "sending" ? "Sending…" : "Send message"}
               </button>

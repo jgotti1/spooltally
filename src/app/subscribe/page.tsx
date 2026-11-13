@@ -58,21 +58,23 @@ export default function SubscribePage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink />
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="st-eyebrow justify-center">
-            {locked ? (info?.status === "canceled" ? "Your subscription ended" : "Your trial has ended") : "Plans"}
-          </p>
-          <h1 className="mt-2 st-title">
-            {locked ? "Pick a plan to keep going" : "Choose your plan"}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            {locked
-              ? "Your rolls and projects are saved and waiting — they're locked, not deleted. Choose a plan below to pick up right where you left off."
-              : info?.status === "trial"
-                ? `Your free trial has ${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"} left. Subscribe any time to keep everything going without a break.`
-                : "Subscribe to keep using SpoolTally after your free trial."}
-          </p>
+        <div className="st-pagehead">
+          <BackLink />
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="st-eyebrow justify-center">
+              {locked ? (info?.status === "canceled" ? "Your subscription ended" : "Your trial has ended") : "Plans"}
+            </p>
+            <h1 className="mt-2 st-title">
+              {locked ? "Pick a plan to keep going" : "Choose your plan"}
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              {locked
+                ? "Your rolls and projects are saved and waiting — they're locked, not deleted. Choose a plan below to pick up right where you left off."
+                : info?.status === "trial"
+                  ? `Your free trial has ${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"} left. Subscribe any time to keep everything going without a break.`
+                  : "Subscribe to keep using SpoolTally after your free trial."}
+            </p>
+          </div>
         </div>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-3">

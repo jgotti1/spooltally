@@ -1177,7 +1177,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         <button
           type="submit"
           disabled={saving}
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex h-12 w-full items-center justify-center st-btn-primary disabled:cursor-not-allowed disabled:opacity-70"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
@@ -1196,7 +1196,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             <button
               type="button"
               onClick={goNext}
-              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors"
+              className="flex h-12 flex-1 items-center justify-center st-btn-primary"
             >
               Next
             </button>
@@ -1204,7 +1204,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             <button
               type="submit"
               disabled={saving || !canSubmit}
-              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex h-12 flex-1 items-center justify-center st-btn-primary disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? "Saving…" : "Create project"}
             </button>

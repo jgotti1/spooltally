@@ -81,9 +81,11 @@ export default function ChangePasswordPage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink />
-        <p className="st-eyebrow">Account</p>
-        <h1 className="mt-2 st-title">Change password</h1>
+        <div className="st-pagehead">
+          <BackLink />
+          <p className="st-eyebrow">Account</p>
+          <h1 className="mt-2 st-title">Change password</h1>
+        </div>
 
         <div className="mt-8 st-card p-6 sm:p-8">
           {!hasPassword ? (

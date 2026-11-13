@@ -45,6 +45,28 @@ export const COLOR_OPTIONS = [
   "Silver",
 ] as const;
 
+/** A representative swatch for each named color, for previews. Custom colors fall back to a neutral tone. */
+export const COLOR_SWATCHES: Record<string, string> = {
+  Black: "#1f2937",
+  White: "#f8fafc",
+  Gray: "#94a3b8",
+  Red: "#dc2626",
+  Orange: "#f97316",
+  Yellow: "#facc15",
+  Green: "#16a34a",
+  Blue: "#2563eb",
+  Purple: "#7c3aed",
+  Pink: "#ec4899",
+  Brown: "#92400e",
+  "Natural / Clear": "#e7e5d8",
+  Gold: "#d4a017",
+  Silver: "#cbd5e1",
+};
+
+export function swatchFor(color: string): string {
+  return COLOR_SWATCHES[color] ?? "#64748b";
+}
+
 export const SIZE_OPTIONS_GRAMS = [750, 1000, 2000, 5000] as const;
 
 export const ROLL_LEVELS = ["full", "3/4", "1/2", "1/4", "empty"] as const;

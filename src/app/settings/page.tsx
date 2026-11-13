@@ -200,18 +200,20 @@ function SettingsPageInner() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
-        <BackLink />
-        <div className="flex items-start gap-4">
-          <span className="st-badge st-badge-slate mt-1">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="h-5 w-5" aria-hidden="true">
-              <path d="M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
-              <path d="M10 3v1.6M10 15.4V17M3 10h1.6M15.4 10H17M5.1 5.1l1.1 1.1M13.8 13.8l1.1 1.1M14.9 5.1l-1.1 1.1M6.2 13.8l-1.1 1.1" />
-            </svg>
-          </span>
-          <div>
-            <p className="st-eyebrow">Account</p>
-            <h1 className="st-title mt-1">Settings</h1>
-            <p className="st-lede mt-2">The rates, fees and thresholds behind every number in the app.</p>
+        <div className="st-pagehead">
+          <BackLink />
+          <div className="flex items-start gap-4">
+            <span className="st-badge st-badge-slate mt-1">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="h-5 w-5" aria-hidden="true">
+                <path d="M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
+                <path d="M10 3v1.6M10 15.4V17M3 10h1.6M15.4 10H17M5.1 5.1l1.1 1.1M13.8 13.8l1.1 1.1M14.9 5.1l-1.1 1.1M6.2 13.8l-1.1 1.1" />
+              </svg>
+            </span>
+            <div>
+              <p className="st-eyebrow">Account</p>
+              <h1 className="st-title mt-1">Settings</h1>
+              <p className="st-lede mt-2">The rates, fees and thresholds behind every number in the app.</p>
+            </div>
           </div>
         </div>
 

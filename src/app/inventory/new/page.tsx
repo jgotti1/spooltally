@@ -28,13 +28,15 @@ export default function NewRollPage() {
   return (
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
-      <div className="mx-auto w-full max-w-xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink href="/inventory" label="Back to inventory" />
-        <p className="st-eyebrow">Inventory</p>
-        <h1 className="mt-2 st-title">Add a roll</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-          Log a new spool of filament. Partial rolls are tracked individually.
-        </p>
+      <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-14 sm:px-10">
+        <div className="st-pagehead">
+          <BackLink href="/inventory" label="Back to inventory" />
+          <p className="st-eyebrow">Inventory</p>
+          <h1 className="mt-2 st-title">Add a roll</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+            Log a new spool of filament. Partial rolls are tracked individually.
+          </p>
+        </div>
 
         <div className="mt-8 st-card p-6 sm:p-8">
           <RollForm />

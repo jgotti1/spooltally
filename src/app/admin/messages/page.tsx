@@ -79,10 +79,13 @@ export default function AdminMessagePage() {
       <Header />
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
-        <h1 className="mt-6 st-title">Message users</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Sent as email. When you choose all users, each person gets their own separate email, so nobody sees who else received it.
-        </p>
+        <div className="st-pagehead mt-5">
+          <p className="st-eyebrow">Admin</p>
+          <h1 className="mt-1 st-title">Message users</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+            Sent as email. When you choose all users, each person gets their own separate email, so nobody sees who else received it.
+          </p>
+        </div>
 
         <form onSubmit={handleSend} className="st-card mt-6 space-y-4 p-6">
           <div>

@@ -304,51 +304,53 @@ export default function InventoryPage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
-        <BackLink />
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="st-badge st-badge-blue mt-1">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5" aria-hidden="true">
-                <circle cx="10" cy="10" r="7" />
-                <circle cx="10" cy="10" r="2.5" />
-              </svg>
-            </span>
-            <div>
-              <p className="st-eyebrow">Inventory</p>
-              <h1 className="st-title mt-1">Filament rolls</h1>
-              <p className="st-lede mt-2">Every spool on the shelf, with how much is left and what needs reordering.</p>
+        <div className="st-pagehead">
+          <BackLink />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="st-badge st-badge-blue mt-1">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5" aria-hidden="true">
+                  <circle cx="10" cy="10" r="7" />
+                  <circle cx="10" cy="10" r="2.5" />
+                </svg>
+              </span>
+              <div>
+                <p className="st-eyebrow">Inventory</p>
+                <h1 className="st-title mt-1">Filament rolls</h1>
+                <p className="st-lede mt-2">Every spool on the shelf, with how much is left and what needs reordering.</p>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-3">
-            {selectedRollId && (
+            <div className="flex gap-3">
+              {selectedRollId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRollId(null);
+                    setQuickAddWarning("");
+                  }}
+                  className="st-btn-secondary h-11 px-3 text-slate-500 dark:text-slate-400"
+                >
+                  Clear selection
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedRollId(null);
-                  setQuickAddWarning("");
-                }}
-                className="st-btn-secondary h-11 px-3 text-slate-500 dark:text-slate-400"
+                onClick={handleQuickAdd}
+                disabled={rolls.length === 0 || quickAdding}
+                title="Select a roll below, then click here: full rolls get +1 to quantity, partial rolls get a new full roll added of the same type"
+                className="st-btn-secondary h-11 px-4"
               >
-                Clear selection
+                <DuplicateIcon />
+                {quickAdding ? "Adding…" : "Quick add"}
               </button>
-            )}
-            <button
-              type="button"
-              onClick={handleQuickAdd}
-              disabled={rolls.length === 0 || quickAdding}
-              title="Select a roll below, then click here: full rolls get +1 to quantity, partial rolls get a new full roll added of the same type"
-              className="st-btn-secondary h-11 px-4"
-            >
-              <DuplicateIcon />
-              {quickAdding ? "Adding…" : "Quick add"}
-            </button>
-            <Link
-              href="/inventory/new"
-              className="flex h-11 items-center gap-2 st-btn-primary px-4"
-            >
-              <PlusIcon />
-              Add roll
-            </Link>
+              <Link
+                href="/inventory/new"
+                className="flex h-11 items-center gap-2 st-btn-primary px-4"
+              >
+                <PlusIcon />
+                Add roll
+              </Link>
+            </div>
           </div>
         </div>
 

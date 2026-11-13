@@ -284,28 +284,30 @@ export default function ProjectsPage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:px-10">
-        <BackLink />
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="st-badge st-badge-violet mt-1">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
-                <rect x="4" y="3.5" width="12" height="14" rx="2" />
-                <path d="M7.5 3.5V2.5h5v1M7.5 9h5M7.5 12.5h5" />
-              </svg>
-            </span>
-            <div>
-              <p className="st-eyebrow">Projects</p>
-              <h1 className="st-title mt-1">Projects</h1>
-              <p className="st-lede mt-2">Each print job with its colors, costs, and the price worth charging.</p>
+        <div className="st-pagehead">
+          <BackLink />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="st-badge st-badge-violet mt-1">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                  <rect x="4" y="3.5" width="12" height="14" rx="2" />
+                  <path d="M7.5 3.5V2.5h5v1M7.5 9h5M7.5 12.5h5" />
+                </svg>
+              </span>
+              <div>
+                <p className="st-eyebrow">Projects</p>
+                <h1 className="st-title mt-1">Projects</h1>
+                <p className="st-lede mt-2">Each print job with its colors, costs, and the price worth charging.</p>
+              </div>
             </div>
+            <Link
+              href="/projects/new"
+              className="flex h-11 items-center gap-2 st-btn-primary px-4"
+            >
+              <PlusIcon />
+              New project
+            </Link>
           </div>
-          <Link
-            href="/projects/new"
-            className="flex h-11 items-center gap-2 st-btn-primary px-4"
-          >
-            <PlusIcon />
-            New project
-          </Link>
         </div>
 
         <div className="mt-6 flex gap-2">

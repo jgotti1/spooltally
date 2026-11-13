@@ -32,11 +32,13 @@ export default function SubscriptionInfoPage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink />
-        <p className="st-eyebrow">Account</p>
-        <h1 className="mt-2 st-title">
-          Subscription information
-        </h1>
+        <div className="st-pagehead">
+          <BackLink />
+          <p className="st-eyebrow">Account</p>
+          <h1 className="mt-2 st-title">
+            Subscription information
+          </h1>
+        </div>
 
         <div className="mt-8 st-card p-6">
           <div className="flex items-center justify-between">

@@ -29,9 +29,11 @@ export default function NewProjectPage() {
     <main className="flex min-h-svh flex-1 flex-col st-page">
       <Header />
       <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-14 sm:px-10">
-        <BackLink href="/projects" label="Back to projects" />
-        <p className="st-eyebrow">Projects</p>
-        <h1 className="mt-2 st-title">New project</h1>
+        <div className="st-pagehead">
+          <BackLink href="/projects" label="Back to projects" />
+          <p className="st-eyebrow">Projects</p>
+          <h1 className="mt-2 st-title">New project</h1>
+        </div>
 
         <div className="mt-8 st-card p-6 sm:p-8">
           <ProjectForm key={router.bfcacheId} />

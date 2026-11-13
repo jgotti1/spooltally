@@ -55,10 +55,13 @@ export default function AdminSupportPage() {
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
-        <h1 className="mt-6 st-title">Support</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Messages from the Contact page. {messages ? `${openCount} open.` : ""} Replies are emailed to the customer.
-        </p>
+        <div className="st-pagehead mt-5">
+          <p className="st-eyebrow">Admin</p>
+          <h1 className="mt-1 st-title">Support</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+            Messages from the Contact page. {messages ? `${openCount} open.` : ""} Replies are emailed to the customer.
+          </p>
+        </div>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1.5">
           {(["open", "resolved", "all"] as const).map((f) => (

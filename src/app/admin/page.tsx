@@ -102,8 +102,11 @@ export default function AdminUsersPage() {
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
         <AdminNav />
-        <h1 className="mt-6 st-title">Users</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Everyone who has signed up. Select a user to see details, comp them, or view their account.</p>
+        <div className="st-pagehead mt-5">
+          <p className="st-eyebrow">Admin</p>
+          <h1 className="mt-1 st-title">Users</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Everyone who has signed up. Select a user to see details, comp them, or view their account.</p>
+        </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {stat("Total users", counts.total)}
