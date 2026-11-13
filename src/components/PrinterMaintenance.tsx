@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import {
@@ -540,7 +541,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
               <label htmlFor="printerModel" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Printer model
               </label>
-              <select
+              <Select
                 id="printerModel"
                 value={printerModel}
                 onChange={(event) => setPrinterModel(event.target.value)}
@@ -556,7 +557,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   </optgroup>
                 ))}
                 <option value={OTHER_PRINTER_MODEL}>{OTHER_PRINTER_MODEL}</option>
-              </select>
+              </Select>
             </div>
             {printerModel === OTHER_PRINTER_MODEL && (
               <div>
@@ -639,7 +640,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 <label htmlFor="maintenancePrinter" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Printer
                 </label>
-                <select
+                <Select
                   id="maintenancePrinter"
                   required
                   value={maintenancePrinterId}
@@ -651,7 +652,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       {printer.name} — {printer.model}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label htmlFor="completedDate" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -718,7 +719,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 <label htmlFor="schedulePrinter" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Printer
                 </label>
-                <select
+                <Select
                   id="schedulePrinter"
                   required
                   value={maintenancePrinterId}
@@ -730,7 +731,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                       {printer.name} — {printer.model}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label htmlFor="scheduleDate" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -997,7 +998,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                     <label htmlFor="editPrinterModel" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Model
                     </label>
-                    <select
+                    <Select
                       id="editPrinterModel"
                       value={editModel}
                       onChange={(event) => setEditModel(event.target.value)}
@@ -1013,7 +1014,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                         </optgroup>
                       ))}
                       <option value={OTHER_PRINTER_MODEL}>{OTHER_PRINTER_MODEL}</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 {editModel === OTHER_PRINTER_MODEL && (

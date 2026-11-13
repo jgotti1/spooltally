@@ -81,6 +81,7 @@ textarea {
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
 select:focus-visible,
+button[aria-haspopup="listbox"]:focus-visible,
 textarea:focus-visible {
   outline: none;
   border-color: var(--st-brand);
@@ -89,6 +90,7 @@ textarea:focus-visible {
 
 .dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
 .dark select:focus-visible,
+.dark button[aria-haspopup="listbox"]:focus-visible,
 .dark textarea:focus-visible {
   border-color: #45a9ff;
   box-shadow: 0 0 0 4px rgba(69, 169, 255, 0.18);

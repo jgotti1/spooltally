@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useState } from "react";
 import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import { addedLabel } from "@/lib/format-date";
@@ -343,7 +344,7 @@ export default function ProjectsPage() {
           >
             Low filament only
           </button>
-          <select
+          <Select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as ProjectSortOption)}
             className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
@@ -353,7 +354,7 @@ export default function ProjectsPage() {
                 Sort: {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="st-segment">
             <button
               type="button"

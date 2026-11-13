@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -163,12 +164,12 @@ export default function AdminActivityPage() {
               aria-label="Search history"
               className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 sm:w-60 dark:border-white/10 dark:bg-white/5 dark:text-white"
             />
-            <select value={exportDays} onChange={(e) => setExportDays(e.target.value)} aria-label="Export period" className={selectClass}>
+            <Select value={exportDays} onChange={(e) => setExportDays(e.target.value)} aria-label="Export period" className={selectClass}>
               <option value="0">All time</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
               <option value="365">Last year</option>
-            </select>
+            </Select>
             <button
               type="button"
               disabled={exporting}
@@ -209,12 +210,12 @@ export default function AdminActivityPage() {
             <div className="mt-4 flex flex-wrap items-end gap-3">
               <label className="text-xs font-semibold text-rose-900 dark:text-rose-200">
                 Delete
-                <select value={purgeDays} onChange={(e) => setPurgeDays(e.target.value)} className={`${selectClass} mt-1 block`}>
+                <Select value={purgeDays} onChange={(e) => setPurgeDays(e.target.value)} className={`${selectClass} mt-1 block`}>
                   <option value="30">Older than 30 days</option>
                   <option value="90">Older than 90 days</option>
                   <option value="365">Older than 1 year</option>
                   <option value="0">Everything</option>
-                </select>
+                </Select>
               </label>
               <label className="text-xs font-semibold text-rose-900 dark:text-rose-200">
                 Type <span className="font-mono">PURGE</span> to confirm

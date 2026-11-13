@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ListScroll, Pager, usePaged } from "@/components/Pager";
 import { addedLabel } from "@/lib/format-date";
@@ -362,7 +363,7 @@ export default function InventoryPage() {
             placeholder="Search brand, material, color…"
             className="h-11 min-w-[200px] flex-1 rounded-xl border border-transparent bg-slate-100/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-white/[0.08]"
           />
-          <select
+          <Select
             value={materialFilter}
             onChange={(e) => setMaterialFilter(e.target.value)}
             className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
@@ -372,8 +373,8 @@ export default function InventoryPage() {
                 {m === "All" ? "All materials" : m}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={colorFilter}
             onChange={(e) => setColorFilter(e.target.value)}
             className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
@@ -383,8 +384,8 @@ export default function InventoryPage() {
                 {c === "All" ? "All colors" : c}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             className="h-11 rounded-xl border border-transparent bg-slate-100/70 px-3 text-sm text-slate-950 focus:bg-white dark:bg-white/[0.05] dark:text-white dark:focus:bg-white/[0.08]"
@@ -394,7 +395,7 @@ export default function InventoryPage() {
                 Sort: {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="st-segment">
             <button
               type="button"

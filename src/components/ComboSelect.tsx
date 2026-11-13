@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useState } from "react";
 import { CUSTOM_OPTION } from "@/lib/inventory-constants";
 
@@ -18,7 +19,7 @@ export function ComboSelect({ label, value, onChange, options, customPlaceholder
   return (
     <div>
       <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</label>
-      <select
+      <Select
         value={isCustom ? CUSTOM_OPTION : value}
         onChange={(e) => {
           if (e.target.value === CUSTOM_OPTION) {
@@ -37,7 +38,7 @@ export function ComboSelect({ label, value, onChange, options, customPlaceholder
           </option>
         ))}
         <option value={CUSTOM_OPTION}>{CUSTOM_OPTION}</option>
-      </select>
+      </Select>
       {isCustom && (
         <input
           autoFocus

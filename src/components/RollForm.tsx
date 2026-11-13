@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -204,7 +205,7 @@ export function RollForm({ roll }: RollFormProps) {
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Roll size</label>
-          <select
+          <Select
             value={sizeIsCustom ? CUSTOM_OPTION : sizeGrams}
             onChange={(e) => {
               if (e.target.value === CUSTOM_OPTION) {
@@ -222,7 +223,7 @@ export function RollForm({ roll }: RollFormProps) {
               </option>
             ))}
             <option value={CUSTOM_OPTION}>{CUSTOM_OPTION}</option>
-          </select>
+          </Select>
           {sizeIsCustom && (
             <input
               autoFocus

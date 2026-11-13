@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -88,7 +89,7 @@ export default function AdminMessagePage() {
             <label htmlFor="msgTo" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
               Send to
             </label>
-            <select id="msgTo" required value={to} onChange={(e) => setTo(e.target.value)} className={`${field} h-12`}>
+            <Select id="msgTo" required value={to} onChange={(e) => setTo(e.target.value)} className={`${field} h-12`}>
               <option value="">Choose…</option>
               <option value="all">All users ({reachable.length})</option>
               <optgroup label="Single user">
@@ -98,7 +99,7 @@ export default function AdminMessagePage() {
                   </option>
                 ))}
               </optgroup>
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor="msgSubject" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">

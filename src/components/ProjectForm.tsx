@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -729,7 +730,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                   >
                     Inventory roll <span className="text-rose-600 dark:text-rose-400">(required)</span>
                   </label>
-                  <select
+                  <Select
                     id={`inventory-roll-${index}`}
                     required
                     aria-invalid={need.rollIds.length === 0}
@@ -767,7 +768,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                       </option>
                     ))}
                     <option value={ADD_NEW_ROLL_OPTION}>＋ Add a new roll</option>
-                  </select>
+                  </Select>
                   <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                     Required: choose a roll already in your inventory, or add a new one for this project.
                   </p>
@@ -782,7 +783,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                         pricing uses the {money(DEFAULT_ROLL_PRICE)}/roll default until you enter the real price.
                       </p>
                       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                        <select
+                        <Select
                           value={draft.brand}
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, brand: e.target.value } }))
@@ -794,8 +795,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
                               {b}
                             </option>
                           ))}
-                        </select>
-                        <select
+                        </Select>
+                        <Select
                           value={draft.sizeGrams}
                           onChange={(e) =>
                             setPlaceholderDraft((d) => ({ ...d, [index]: { ...draft, sizeGrams: Number(e.target.value) } }))
@@ -807,8 +808,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
                               {g} g
                             </option>
                           ))}
-                        </select>
-                        <select
+                        </Select>
+                        <Select
                           value={draft.level}
                           title="How much is on the roll"
                           onChange={(e) =>
@@ -821,7 +822,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
                               {l === "empty" ? "Don't have it yet (0g)" : ROLL_LEVEL_LABELS[l]}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                         {draft.level === "full" && (
                           <input
                             type="number"
