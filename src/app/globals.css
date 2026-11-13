@@ -30,6 +30,8 @@
 }
 
 .dark {
+  /* Tells the browser the page is dark, so native dropdown lists, date pickers and scrollbars are drawn dark too. */
+  color-scheme: dark;
   --st-canvas: #070b12;
   --st-ink: #e6edf6;
   --st-glow-brand: rgba(69, 169, 255, 0.12);
@@ -90,6 +92,14 @@ textarea:focus-visible {
 .dark textarea:focus-visible {
   border-color: #45a9ff;
   box-shadow: 0 0 0 4px rgba(69, 169, 255, 0.18);
+}
+
+/* Dropdown options: some browsers (Windows especially) draw the open list on white while keeping the field's white
+   text, which made every option unreadable in dark mode. Give the options their own solid dark colors. */
+.dark select option,
+.dark select optgroup {
+  background-color: #0f1a27;
+  color: #e6edf6;
 }
 
 /* "View as" is read-only: hide the links that start something new and disable save buttons on the customer's pages. */

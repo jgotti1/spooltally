@@ -34,7 +34,7 @@ const TABS: { id: Tab; label: string; blurb: string }[] = [
 ];
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500";
+  "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500";
 const labelClass = "mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300";
 const saveClass = "st-btn-primary h-11 px-5";
 

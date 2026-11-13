@@ -533,7 +533,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 value={printerName}
                 onChange={(event) => setPrinterName(event.target.value)}
                 placeholder="Shop P1S, Garage printer…"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
               />
             </div>
             <div>
@@ -544,7 +544,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 id="printerModel"
                 value={printerModel}
                 onChange={(event) => setPrinterModel(event.target.value)}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
               >
                 {PRINTER_MODEL_GROUPS.map((group) => (
                   <optgroup key={group.brand} label={group.brand}>
@@ -570,7 +570,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   value={customModel}
                   onChange={(event) => setCustomModel(event.target.value)}
                   placeholder="Manufacturer and model"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
               </div>
             )}
@@ -587,7 +587,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                 value={printerHours}
                 onChange={(event) => setPrinterHours(event.target.value)}
                 placeholder="e.g. 1250"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
               />
               <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                 Total hours on the printer&rsquo;s counter. Leave blank if you don&rsquo;t track it.
@@ -644,7 +644,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   required
                   value={maintenancePrinterId}
                   onChange={(event) => setSelectedPrinterId(event.target.value)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 >
                   {printers.map((printer) => (
                     <option key={printer.id} value={printer.id}>
@@ -663,7 +663,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   required
                   value={completedDate}
                   onChange={(event) => setCompletedDate(event.target.value)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
               </div>
               <div>
@@ -677,7 +677,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Cleaned build plate, lubricated rails, checked belts…"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
               </div>
               <div>
@@ -693,7 +693,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   value={recordHours}
                   onChange={(event) => setRecordHours(event.target.value)}
                   placeholder="e.g. 1250"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                   {maintenancePrinterHours !== null
@@ -723,7 +723,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   required
                   value={maintenancePrinterId}
                   onChange={(event) => setSelectedPrinterId(event.target.value)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 >
                   {printers.map((printer) => (
                     <option key={printer.id} value={printer.id}>
@@ -742,7 +742,7 @@ export function PrinterMaintenance({ ownerId }: PrinterMaintenanceProps) {
                   required
                   value={scheduleDate}
                   onChange={(event) => setScheduleDate(event.target.value)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
                 />
               </div>
               <button

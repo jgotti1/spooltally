@@ -550,7 +550,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Hex planters — craft fair batch"
-            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
           />
         </div>
       )}
@@ -623,7 +623,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
               value={nozzleSizeMm ?? ""}
               onChange={(e) => setNozzleSizeMm(e.target.value === "" ? null : Number(e.target.value))}
               placeholder="e.g. 0.3"
-              className="mt-2 h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+              className="mt-2 h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
             />
           )}
           {!project && (
@@ -894,7 +894,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
               value={printHours}
               onChange={(e) => setPrintHours(e.target.value)}
               placeholder="3.5"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               Please check your slicer for the exact print time.
@@ -912,7 +912,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
               onFocus={(e) => e.currentTarget.select()}
               onClick={(e) => e.currentTarget.select()}
               onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
             />
           </div>
         </div>
@@ -935,7 +935,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             value={slicerFilamentCost}
             onChange={(e) => setSlicerFilamentCost(e.target.value)}
             placeholder="e.g. 0.65"
-            className="h-12 w-40 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+            className="h-12 w-40 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
           />
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
             If your slicer shows a filament cost (for example, Bambu Studio&rsquo;s &ldquo;Cost&rdquo; line), enter it here.

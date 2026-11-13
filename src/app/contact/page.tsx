@@ -125,7 +125,7 @@ function ContactPageInner() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Maker"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-white/[0.03] px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                 />
               </div>
 
@@ -140,7 +140,7 @@ function ContactPageInner() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-white/[0.03] px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                 />
               </div>
 
@@ -155,7 +155,7 @@ function ContactPageInner() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="How can we help?"
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-white/[0.03] p-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                 />
               </div>
 

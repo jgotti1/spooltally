@@ -214,7 +214,7 @@ export function RollForm({ roll }: RollFormProps) {
                 setSizeGrams(Number(e.target.value));
               }
             }}
-            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
           >
             {SIZE_OPTIONS_GRAMS.map((g) => (
               <option key={g} value={g}>
@@ -232,7 +232,7 @@ export function RollForm({ roll }: RollFormProps) {
               value={sizeGrams}
               onChange={(e) => setSizeGrams(Number(e.target.value))}
               placeholder="Grams"
-              className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+              className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
             />
           )}
         </div>
@@ -252,7 +252,7 @@ export function RollForm({ roll }: RollFormProps) {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="18.99"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-8 pr-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-8 pr-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -289,7 +289,7 @@ export function RollForm({ roll }: RollFormProps) {
             min={1}
             value={quantity}
             onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-            className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
+            className="h-12 w-32 rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-950 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white"
           />
         </div>
       )}
@@ -304,7 +304,7 @@ export function RollForm({ roll }: RollFormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Lot number, where you bought it, temps that worked, runs stringy…"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-white/[0.08] focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-slate-500"
         />
       </div>
 
