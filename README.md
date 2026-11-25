@@ -149,3 +149,48 @@ Admin tooling, the trial lock, and the support/history systems above were built 
 ---
 
 Private project — not licensed for outside use.
+
+
+## Portfolio card
+
+The block below is machine-readable project info for a portfolio site (invisible on GitHub). Keep it in sync when the project, URL or tech changes. To build a card: read this JSON and use `title`, `tagline`/`description`, `thumbnail`, `tech`, and link to `liveUrl` and `repoUrl`.
+
+<!-- portfolio-card:start
+{
+  "title": "SpoolTally",
+  "category": "web app",
+  "tagline": "Filament inventory, project pricing, and printer maintenance for 3D print sellers.",
+  "description": "SpoolTally started as a personal tool to track my own 3D printing side business and is now being developed into a software-as-a-service product for other 3D print shops. Log your filament rolls, build projects that pull their costs from your real inventory, get a suggested sale price for each sales channel, and keep every printer on a maintenance schedule. Sign in with Google or email, with your data stored securely in Firebase. Try it out for free, no payment is currently necessary.",
+  "liveUrl": "https://spooltally.com",
+  "repoUrl": "https://github.com/jgotti1/spooltally",
+  "thumbnail": "https://raw.githubusercontent.com/jgotti1/spooltally/main/docs/preview.jpg",
+  "tech": [
+    "Next.js",
+    "React",
+    "TypeScript",
+    "Tailwind CSS",
+    "Firebase Authentication",
+    "Google Sign-In",
+    "Cloud Firestore",
+    "Firebase Storage",
+    "Three.js",
+    "Resend",
+    "Vercel"
+  ],
+  "features": [
+    "Filament inventory with roll levels and a low-stock reorder report",
+    "Project pricing that reads costs and weights from sliced 3MF, G-code, and STL files",
+    "Suggested sale prices for Etsy, eBay, Amazon Handmade, your own site, and more",
+    "Printer maintenance schedule with due-date reminders and service history",
+    "Google and email sign-in with light and dark modes",
+    "Admin tools with a support inbox for the owner"
+  ],
+  "platforms": [
+    "desktop",
+    "tablet",
+    "mobile"
+  ],
+  "status": "live",
+  "origin": "Built to run my own 3D printing side business, now growing into a product for other print shops."
+}
+portfolio-card:end -->

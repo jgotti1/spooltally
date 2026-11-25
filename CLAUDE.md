@@ -105,3 +105,7 @@ Web app for 3D print sellers: price estimation, filament inventory, project trac
 - Rolls carry an optional free-text `notes` field (lot number, where bought, settings that worked); show it as a secondary line, never as a filter key.
 - Printers can be renamed, re-modeled, and deleted (with their records, in one batch) from the detail panel; finished maintenance entries can be edited and deleted there too.
 - No screenshot-reading (Claude API) or Etsy integration in v1 — those are explicitly deferred (see spec's "Later" section).
+
+## Portfolio card
+
+The README ends with a hidden JSON block (`portfolio-card:start` to `portfolio-card:end`) that the owner's portfolio site reads, plus a screenshot at [docs/preview.jpg](docs/preview.jpg). Keep it in sync when features, tech, or URLs change, keep it valid JSON (no `--` inside), and describe only what is actually built (no Stripe or other unbuilt features yet).
